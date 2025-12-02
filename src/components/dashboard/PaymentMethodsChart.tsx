@@ -1,10 +1,10 @@
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { Transaction } from '@/hooks/useTransactions';
+import { useMemo } from 'react';
 
-const data = [
-  { name: 'PIX', value: 45, color: 'hsl(142, 76%, 45%)' },
-  { name: 'Boleto', value: 30, color: 'hsl(217, 91%, 60%)' },
-  { name: 'Cartão', value: 25, color: 'hsl(280, 65%, 60%)' },
-];
+interface PaymentMethodsChartProps {
+  transactions: Transaction[];
+}
 
 const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
@@ -19,7 +19,28 @@ const CustomTooltip = ({ active, payload }: any) => {
   return null;
 };
 
-export function PaymentMethodsChart() {
+export function PaymentMethodsChart({ transactions }: PaymentMethodsChartProps) {
+  const data = useMemo(() => {
+    const total = transactions.length;
+    if (total === 0) {
+      return [
+        { name: 'PIX', value: 33, color: 'hsl(142, 76%, 45%)' },
+        { name: 'Boleto', value: 33, color: 'hsl(217, 91%, 60%)' },
+        { name: 'Cartão', value: 34, color: 'hsl(280, 65%, 60%)' },
+      ];
+    }
+
+    const pixCount = transactions.filter((t) => t.type === 'pix').length;
+    const boletoCount = transactions.filter((t) => t.type === 'boleto').length;
+    const cartaoCount = transactions.filter((t) => t.type === 'cartao').length;
+
+    return [
+      { name: 'PIX', value: Math.round((pixCount / total) * 100), color: 'hsl(142, 76%, 45%)' },
+      { name: 'Boleto', value: Math.round((boletoCount / total) * 100), color: 'hsl(217, 91%, 60%)' },
+      { name: 'Cartão', value: Math.round((cartaoCount / total) * 100), color: 'hsl(280, 65%, 60%)' },
+    ].filter((d) => d.value > 0);
+  }, [transactions]);
+
   return (
     <div className="glass-card rounded-xl p-6 animate-slide-up" style={{ animationDelay: "350ms" }}>
       <div className="mb-4">

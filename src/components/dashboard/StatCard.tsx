@@ -1,9 +1,10 @@
 import { cn } from "@/lib/utils";
 import { LucideIcon } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface StatCardProps {
   title: string;
-  value: string;
+  value: string | number;
   subtitle?: string;
   icon: LucideIcon;
   trend?: {
@@ -12,6 +13,7 @@ interface StatCardProps {
   };
   variant?: "success" | "info" | "warning" | "default";
   delay?: number;
+  isLoading?: boolean;
 }
 
 const variantStyles = {
@@ -35,8 +37,24 @@ export function StatCard({
   icon: Icon, 
   trend, 
   variant = "default",
-  delay = 0 
+  delay = 0,
+  isLoading = false
 }: StatCardProps) {
+  if (isLoading) {
+    return (
+      <div className={cn("glass-card rounded-xl p-6", variantStyles[variant])}>
+        <div className="flex items-start justify-between">
+          <div className="space-y-2 flex-1">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-8 w-20" />
+            <Skeleton className="h-3 w-32" />
+          </div>
+          <Skeleton className="h-12 w-12 rounded-lg" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div 
       className={cn(
