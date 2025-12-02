@@ -1,9 +1,10 @@
-import { Bell, LogOut, Search, Settings } from "lucide-react";
+import { Bell, LogOut, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { SettingsDialog } from "./SettingsDialog";
 
 export function Header() {
   const { user, signOut } = useAuth();
@@ -46,9 +47,7 @@ export function Header() {
           </span>
         </Button>
         
-        <Button variant="ghost" size="icon">
-          <Settings className="h-5 w-5" />
-        </Button>
+        <SettingsDialog />
 
         <Button variant="ghost" size="icon" onClick={handleSignOut} title="Sair">
           <LogOut className="h-5 w-5" />
