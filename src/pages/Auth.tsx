@@ -68,11 +68,13 @@ const Auth = () => {
         return;
       }
 
-      await supabase.auth.signOut();
-      setPendingUserId(data.user.id);
+      // Store user ID BEFORE signOut
+      const userId = data.user.id;
+      setPendingUserId(userId);
 
+      // Call setup-totp BEFORE signOut to avoid state reset
       const response = await supabase.functions.invoke("setup-totp", {
-        body: { userId: data.user.id, email },
+        body: { userId, email },
       });
 
       console.log("setup-totp response:", response);
@@ -84,16 +86,27 @@ const Auth = () => {
           description: "Erro ao configurar autenticação",
           variant: "destructive",
         });
+        await supabase.auth.signOut();
         return;
       }
 
-      if (response.data?.alreadySetup) {
+      // Extract data before signOut
+      const totpData = response.data;
+      const isAlreadySetup = totpData?.alreadySetup;
+      const secret = totpData?.secret || "";
+      const url = totpData?.otpauthUrl || "";
+
+      // Now sign out
+      await supabase.auth.signOut();
+
+      // Update state after signOut completes
+      if (isAlreadySetup) {
         console.log("TOTP already setup, going to verify");
         setStep("totp-verify");
       } else {
-        console.log("Setting up TOTP with secret:", response.data?.secret);
-        setTotpSecret(response.data?.secret || "");
-        setOtpauthUrl(response.data?.otpauthUrl || "");
+        console.log("Setting up TOTP with secret:", secret);
+        setTotpSecret(secret);
+        setOtpauthUrl(url);
         setStep("totp-setup");
       }
     } catch (error) {
