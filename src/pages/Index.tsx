@@ -94,14 +94,23 @@ const Index = () => {
         </div>
         
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-8">
           <StatCard
             title="Boletos Gerados"
             value={stats.boletosGerados.toLocaleString('pt-BR')}
-            subtitle={calculateConversionRate(stats.boletosPagos, stats.boletosGerados)}
+            subtitle="No período"
             icon={FileText}
             variant="info"
             delay={0}
+            isLoading={isLoading}
+          />
+          <StatCard
+            title="Boletos Pagos"
+            value={stats.boletosPagos.toLocaleString('pt-BR')}
+            subtitle={calculateConversionRate(stats.boletosPagos, stats.boletosGerados)}
+            icon={FileText}
+            variant="success"
+            delay={50}
             isLoading={isLoading}
           />
           <StatCard
@@ -110,7 +119,7 @@ const Index = () => {
             subtitle={calculateConversionRate(stats.pixPago, stats.pixGerado)}
             icon={QrCode}
             variant="success"
-            delay={50}
+            delay={100}
             isLoading={isLoading}
           />
           <StatCard
@@ -119,7 +128,7 @@ const Index = () => {
             subtitle={calculateConversionRate(stats.cartaoPago, stats.pedidosCartao)}
             icon={CreditCard}
             variant="warning"
-            delay={100}
+            delay={150}
             isLoading={isLoading}
           />
           {isRealAdmin && (
@@ -130,7 +139,7 @@ const Index = () => {
                 subtitle="Todos os pedidos"
                 icon={Receipt}
                 variant="default"
-                delay={150}
+                delay={200}
                 isLoading={isLoading}
               />
               <StatCard
@@ -139,7 +148,7 @@ const Index = () => {
                 subtitle="Pedidos pagos"
                 icon={DollarSign}
                 variant="success"
-                delay={200}
+                delay={250}
                 isLoading={isLoading}
               />
             </>

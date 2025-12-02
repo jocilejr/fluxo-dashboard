@@ -1,17 +1,14 @@
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Transaction } from '@/hooks/useTransactions';
-import { useMemo, useState } from 'react';
-import { format, startOfDay, startOfWeek, startOfMonth, startOfYear, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, isWithinInterval } from 'date-fns';
+import { useMemo } from 'react';
+import { format, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, isWithinInterval, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Button } from '@/components/ui/button';
 import { DateFilterValue } from './DateFilter';
 
 interface RevenueChartProps {
   transactions: Transaction[];
   dateFilter: DateFilterValue;
 }
-
-type ChartPeriod = 'day' | 'week' | 'month' | 'year';
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
@@ -34,13 +31,13 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export function RevenueChart({ transactions, dateFilter }: RevenueChartProps) {
-  const [period, setPeriod] = useState<ChartPeriod>('day');
-
   const chartData = useMemo(() => {
     const filteredTransactions = transactions.filter((t) => {
       const date = new Date(t.created_at);
       return isWithinInterval(date, { start: dateFilter.startDate, end: dateFilter.endDate }) && t.status === 'pago';
     });
+
+    const daysDiff = differenceInDays(dateFilter.endDate, dateFilter.startDate);
 
     const aggregateData = (
       intervals: Date[],
@@ -65,85 +62,63 @@ export function RevenueChart({ transactions, dateFilter }: RevenueChartProps) {
       return Object.values(dataMap);
     };
 
-    switch (period) {
-      case 'day': {
-        const days = eachDayOfInterval({ start: dateFilter.startDate, end: dateFilter.endDate });
-        return aggregateData(
-          days,
-          (d) => format(d, 'yyyy-MM-dd'),
-          (d) => format(d, 'dd/MM', { locale: ptBR })
-        );
-      }
-      case 'week': {
-        const weeks = eachWeekOfInterval({ start: dateFilter.startDate, end: dateFilter.endDate }, { locale: ptBR });
-        return aggregateData(
-          weeks,
-          (d) => format(startOfWeek(d, { locale: ptBR }), 'yyyy-ww'),
-          (d) => `Sem ${format(d, 'dd/MM', { locale: ptBR })}`
-        );
-      }
-      case 'month': {
-        const months = eachMonthOfInterval({ start: dateFilter.startDate, end: dateFilter.endDate });
-        return aggregateData(
-          months,
-          (d) => format(d, 'yyyy-MM'),
-          (d) => format(d, 'MMM', { locale: ptBR })
-        );
-      }
-      case 'year': {
-        const years = new Set(
-          transactions
-            .filter((t) => t.status === 'pago')
-            .map((t) => new Date(t.created_at).getFullYear())
-        );
-        const yearDates = Array.from(years).sort().map((y) => new Date(y, 0, 1));
-        return aggregateData(
-          yearDates,
-          (d) => format(d, 'yyyy'),
-          (d) => format(d, 'yyyy')
-        );
-      }
+    // Auto-select period based on date range
+    if (daysDiff <= 7) {
+      // Up to 7 days: show by day
+      const days = eachDayOfInterval({ start: dateFilter.startDate, end: dateFilter.endDate });
+      return aggregateData(
+        days,
+        (d) => format(d, 'yyyy-MM-dd'),
+        (d) => format(d, 'dd/MM', { locale: ptBR })
+      );
+    } else if (daysDiff <= 60) {
+      // Up to 60 days: show by week
+      const weeks = eachWeekOfInterval({ start: dateFilter.startDate, end: dateFilter.endDate }, { locale: ptBR });
+      return aggregateData(
+        weeks,
+        (d) => format(d, 'yyyy-ww'),
+        (d) => `Sem ${format(d, 'dd/MM', { locale: ptBR })}`
+      );
+    } else {
+      // More than 60 days: show by month
+      const months = eachMonthOfInterval({ start: dateFilter.startDate, end: dateFilter.endDate });
+      return aggregateData(
+        months,
+        (d) => format(d, 'yyyy-MM'),
+        (d) => format(d, 'MMM/yy', { locale: ptBR })
+      );
     }
-  }, [transactions, dateFilter, period]);
+  }, [transactions, dateFilter]);
 
   const hasData = chartData.some((d) => d.boleto > 0 || d.pix > 0 || d.cartao > 0);
+
+  const periodLabel = useMemo(() => {
+    const daysDiff = differenceInDays(dateFilter.endDate, dateFilter.startDate);
+    if (daysDiff <= 7) return "por dia";
+    if (daysDiff <= 60) return "por semana";
+    return "por mês";
+  }, [dateFilter]);
 
   return (
     <div className="glass-card rounded-xl p-6 animate-slide-up" style={{ animationDelay: "300ms" }}>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h3 className="text-lg font-semibold">Faturamento</h3>
-          <p className="text-sm text-muted-foreground">Receita por período</p>
+          <p className="text-sm text-muted-foreground">Receita {periodLabel}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
-            {(['day', 'week', 'month', 'year'] as ChartPeriod[]).map((p) => (
-              <Button
-                key={p}
-                variant={period === p ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setPeriod(p)}
-                className="h-7 px-3 text-xs"
-              >
-                {p === 'day' ? 'Dia' : p === 'week' ? 'Semana' : p === 'month' ? 'Mês' : 'Ano'}
-              </Button>
-            ))}
+        <div className="flex items-center gap-4 text-xs">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-info" />
+            <span className="text-muted-foreground">Boleto</span>
           </div>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-4 text-xs mb-4">
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-info" />
-          <span className="text-muted-foreground">Boleto</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-success" />
-          <span className="text-muted-foreground">PIX</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-chart-4" />
-          <span className="text-muted-foreground">Cartão</span>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-success" />
+            <span className="text-muted-foreground">PIX</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-chart-4" />
+            <span className="text-muted-foreground">Cartão</span>
+          </div>
         </div>
       </div>
       
