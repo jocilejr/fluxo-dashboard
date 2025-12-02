@@ -21,6 +21,11 @@ interface WebhookPayload {
   paid_at?: string;
 }
 
+function normalizePhone(phone?: string): string | undefined {
+  if (!phone) return undefined;
+  return phone.replace(/^\+/, '');
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -105,7 +110,7 @@ Deno.serve(async (req) => {
         description: payload.description,
         customer_name: payload.customer_name,
         customer_email: payload.customer_email,
-        customer_phone: payload.customer_phone,
+        customer_phone: normalizePhone(payload.customer_phone),
         customer_document: payload.customer_document,
         metadata: { ...(payload.metadata || {}), boleto_url: payload.boleto_url },
         webhook_source: req.headers.get('user-agent') || 'unknown',
