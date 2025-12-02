@@ -11,6 +11,7 @@ export interface Transaction {
   description: string | null;
   customer_name: string | null;
   customer_email: string | null;
+  customer_phone: string | null;
   created_at: string;
   paid_at: string | null;
 }
