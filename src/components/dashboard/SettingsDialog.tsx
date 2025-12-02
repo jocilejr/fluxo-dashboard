@@ -63,6 +63,7 @@ export const SettingsDialog = ({ trigger }: SettingsDialogProps) => {
       });
 
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
       toast({
         title: "Sucesso",
@@ -72,9 +73,14 @@ export const SettingsDialog = ({ trigger }: SettingsDialogProps) => {
       setNewUserPassword("");
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
     } catch (error: any) {
+      const errorMessage = error.message || "Não foi possível criar o usuário";
+      const friendlyMessage = errorMessage.includes("already been registered") 
+        ? "Este email já está cadastrado no sistema"
+        : errorMessage;
+      
       toast({
         title: "Erro ao criar usuário",
-        description: error.message || "Não foi possível criar o usuário",
+        description: friendlyMessage,
         variant: "destructive",
       });
     } finally {
