@@ -75,7 +75,10 @@ const Auth = () => {
         body: { userId: data.user.id, email },
       });
 
+      console.log("setup-totp response:", response);
+
       if (response.error) {
+        console.error("setup-totp error:", response.error);
         toast({
           title: "Erro",
           description: "Erro ao configurar autenticação",
@@ -84,11 +87,13 @@ const Auth = () => {
         return;
       }
 
-      if (response.data.alreadySetup) {
+      if (response.data?.alreadySetup) {
+        console.log("TOTP already setup, going to verify");
         setStep("totp-verify");
       } else {
-        setTotpSecret(response.data.secret);
-        setOtpauthUrl(response.data.otpauthUrl);
+        console.log("Setting up TOTP with secret:", response.data?.secret);
+        setTotpSecret(response.data?.secret || "");
+        setOtpauthUrl(response.data?.otpauthUrl || "");
         setStep("totp-setup");
       }
     } catch (error) {
@@ -258,7 +263,13 @@ const Auth = () => {
           {step === "totp-setup" && (
             <div className="space-y-6">
               <div className="flex justify-center p-4 bg-white rounded-lg">
-                <QRCode value={otpauthUrl} size={200} />
+                {otpauthUrl ? (
+                  <QRCode value={otpauthUrl} size={200} />
+                ) : (
+                  <div className="w-[200px] h-[200px] flex items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                  </div>
+                )}
               </div>
               
               <div className="text-center space-y-2">
