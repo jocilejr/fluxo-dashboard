@@ -14,7 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          customer_document: string | null
+          customer_email: string | null
+          customer_name: string | null
+          description: string | null
+          external_id: string | null
+          id: string
+          metadata: Json | null
+          paid_at: string | null
+          status: Database["public"]["Enums"]["transaction_status"]
+          type: Database["public"]["Enums"]["transaction_type"]
+          updated_at: string
+          webhook_source: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          customer_document?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          description?: string | null
+          external_id?: string | null
+          id?: string
+          metadata?: Json | null
+          paid_at?: string | null
+          status?: Database["public"]["Enums"]["transaction_status"]
+          type: Database["public"]["Enums"]["transaction_type"]
+          updated_at?: string
+          webhook_source?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          customer_document?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          description?: string | null
+          external_id?: string | null
+          id?: string
+          metadata?: Json | null
+          paid_at?: string | null
+          status?: Database["public"]["Enums"]["transaction_status"]
+          type?: Database["public"]["Enums"]["transaction_type"]
+          updated_at?: string
+          webhook_source?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +73,13 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      transaction_status:
+        | "gerado"
+        | "pago"
+        | "pendente"
+        | "cancelado"
+        | "expirado"
+      transaction_type: "boleto" | "pix" | "cartao"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +206,15 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      transaction_status: [
+        "gerado",
+        "pago",
+        "pendente",
+        "cancelado",
+        "expirado",
+      ],
+      transaction_type: ["boleto", "pix", "cartao"],
+    },
   },
 } as const
