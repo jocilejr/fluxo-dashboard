@@ -16,13 +16,22 @@ export function WebhookInfo() {
 
   const examplePayload = {
     event: "payment.created",
-    type: "pix",
-    external_id: "ext_12345",
-    amount: 150.00,
-    status: "pago",
+    type: "boleto",
+    external_id: "23793.38128 60000.000003 00000.000408 1 84340000012345",
+    amount: 123.45,
+    status: "gerado",
     description: "Pagamento do pedido #123",
     customer_name: "João Silva",
+    customer_phone: "11999999999",
     customer_email: "joao@email.com"
+  };
+
+  const exampleUpdatePayload = {
+    event: "payment.paid",
+    type: "boleto",
+    external_id: "23793.38128 60000.000003 00000.000408 1 84340000012345",
+    amount: 123.45,
+    status: "pago"
   };
 
   return (
@@ -48,16 +57,24 @@ export function WebhookInfo() {
         </div>
 
         <div>
-          <label className="text-sm text-muted-foreground block mb-2">Exemplo de Payload (JSON)</label>
+          <label className="text-sm text-muted-foreground block mb-2">Exemplo de Payload - Criar Transação</label>
           <pre className="bg-secondary/50 px-4 py-3 rounded-lg text-xs font-mono overflow-x-auto">
             {JSON.stringify(examplePayload, null, 2)}
           </pre>
         </div>
 
+        <div>
+          <label className="text-sm text-muted-foreground block mb-2">Exemplo de Payload - Atualizar Status (Boleto Pago)</label>
+          <pre className="bg-secondary/50 px-4 py-3 rounded-lg text-xs font-mono overflow-x-auto">
+            {JSON.stringify(exampleUpdatePayload, null, 2)}
+          </pre>
+        </div>
+
         <div className="text-xs text-muted-foreground space-y-1">
           <p><strong>Campos obrigatórios:</strong> type (boleto, pix, cartao), amount</p>
+          <p><strong>Campos do cliente:</strong> customer_name, customer_phone, customer_email, customer_document</p>
           <p><strong>Status aceitos:</strong> gerado, pago, pendente, cancelado, expirado</p>
-          <p><strong>Eventos:</strong> Se o evento contém "paid/pago", status será automaticamente "pago"</p>
+          <p><strong>Atualização:</strong> Use o mesmo external_id (código de barras) para atualizar o status de um boleto existente</p>
         </div>
       </div>
     </div>
