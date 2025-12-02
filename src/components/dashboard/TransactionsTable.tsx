@@ -84,6 +84,7 @@ export function TransactionsTable({ transactions, isLoading }: TransactionsTable
             <thead>
               <tr className="border-b border-border/50">
                 <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Tipo</th>
+                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Cliente</th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Descrição</th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Data</th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Valor</th>
@@ -101,8 +102,11 @@ export function TransactionsTable({ transactions, isLoading }: TransactionsTable
                       {typeLabels[transaction.type]}
                     </Badge>
                   </td>
-                  <td className="py-4 px-4 text-sm">
-                    {transaction.description || transaction.customer_name || `ID: ${transaction.external_id?.slice(0, 8) || transaction.id.slice(0, 8)}...`}
+                  <td className="py-4 px-4 text-sm font-medium">
+                    {transaction.customer_name || '-'}
+                  </td>
+                  <td className="py-4 px-4 text-sm text-muted-foreground">
+                    {transaction.description || `Cód: ${transaction.external_id?.slice(0, 12) || '-'}...`}
                   </td>
                   <td className="py-4 px-4 text-sm text-muted-foreground">{formatDate(transaction.created_at)}</td>
                   <td className="py-4 px-4 text-sm font-medium">{formatCurrency(Number(transaction.amount))}</td>
