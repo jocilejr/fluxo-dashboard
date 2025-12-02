@@ -85,7 +85,7 @@ export function TransactionsTable({ transactions, isLoading }: TransactionsTable
               <tr className="border-b border-border/50">
                 <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Tipo</th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Cliente</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Descrição</th>
+                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Telefone</th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Data</th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Valor</th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Status</th>
@@ -106,7 +106,7 @@ export function TransactionsTable({ transactions, isLoading }: TransactionsTable
                     {transaction.customer_name || '-'}
                   </td>
                   <td className="py-4 px-4 text-sm text-muted-foreground">
-                    {transaction.description || `Cód: ${transaction.external_id?.slice(0, 12) || '-'}...`}
+                    {transaction.customer_phone || '-'}
                   </td>
                   <td className="py-4 px-4 text-sm text-muted-foreground">{formatDate(transaction.created_at)}</td>
                   <td className="py-4 px-4 text-sm font-medium">{formatCurrency(Number(transaction.amount))}</td>
