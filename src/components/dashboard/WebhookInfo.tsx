@@ -23,7 +23,8 @@ export function WebhookInfo() {
     description: "Pagamento do pedido #123",
     customer_name: "João Silva",
     customer_phone: "11999999999",
-    customer_email: "joao@email.com"
+    customer_email: "joao@email.com",
+    boleto_url: "https://exemplo.com/boleto/123.pdf"
   };
 
   const exampleUpdatePayload = {
@@ -73,6 +74,7 @@ export function WebhookInfo() {
         <div className="text-xs text-muted-foreground space-y-1">
           <p><strong>Campos obrigatórios:</strong> type (boleto, pix, cartao), amount</p>
           <p><strong>Campos do cliente:</strong> customer_name, customer_phone, customer_email, customer_document</p>
+          <p><strong>Boleto:</strong> boleto_url (URL para download do PDF do boleto)</p>
           <p><strong>Status aceitos:</strong> gerado, pago, pendente, cancelado, expirado</p>
           <p><strong>Atualização:</strong> Use o mesmo external_id (código de barras) para atualizar o status de um boleto existente</p>
         </div>

@@ -16,6 +16,7 @@ interface WebhookPayload {
   customer_email?: string;
   customer_phone?: string;
   customer_document?: string;
+  boleto_url?: string;
   metadata?: Record<string, unknown>;
   paid_at?: string;
 }
@@ -106,7 +107,7 @@ Deno.serve(async (req) => {
         customer_email: payload.customer_email,
         customer_phone: payload.customer_phone,
         customer_document: payload.customer_document,
-        metadata: payload.metadata || {},
+        metadata: { ...(payload.metadata || {}), boleto_url: payload.boleto_url },
         webhook_source: req.headers.get('user-agent') || 'unknown',
         paid_at: paidAt,
       })
