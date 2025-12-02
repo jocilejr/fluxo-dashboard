@@ -7,10 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Eye, EyeOff, Lock, Mail, ArrowLeft } from "lucide-react";
+import { Loader2, Eye, EyeOff, Lock, Smartphone, ArrowLeft } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import QRCode from "react-qr-code";
 
-type AuthStep = "credentials" | "otp";
+type AuthStep = "credentials" | "totp-setup" | "totp-verify";
 
 const Auth = () => {
   const [email, setEmail] = useState("");
@@ -18,7 +19,9 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState<AuthStep>("credentials");
-  const [otpCode, setOtpCode] = useState("");
+  const [totpCode, setTotpCode] = useState("");
+  const [totpSecret, setTotpSecret] = useState("");
+  const [otpauthUrl, setOtpauthUrl] = useState("");
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -45,7 +48,6 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
-      // First verify credentials
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -66,32 +68,29 @@ const Auth = () => {
         return;
       }
 
-      // Sign out immediately - we need OTP verification first
       await supabase.auth.signOut();
-      
-      // Store user ID for later
       setPendingUserId(data.user.id);
 
-      // Send OTP
-      const response = await supabase.functions.invoke("send-otp", {
-        body: { email, userId: data.user.id },
+      const response = await supabase.functions.invoke("setup-totp", {
+        body: { userId: data.user.id, email },
       });
 
       if (response.error) {
         toast({
           title: "Erro",
-          description: "Erro ao enviar código de verificação",
+          description: "Erro ao configurar autenticação",
           variant: "destructive",
         });
         return;
       }
 
-      toast({
-        title: "Código enviado!",
-        description: `Verifique seu email ${email}`,
-      });
-      
-      setStep("otp");
+      if (response.data.alreadySetup) {
+        setStep("totp-verify");
+      } else {
+        setTotpSecret(response.data.secret);
+        setOtpauthUrl(response.data.otpauthUrl);
+        setStep("totp-setup");
+      }
     } catch (error) {
       toast({
         title: "Erro",
@@ -103,10 +102,14 @@ const Auth = () => {
     }
   };
 
-  const handleOtpSubmit = async (e: React.FormEvent) => {
+  const handleTotpSetupContinue = () => {
+    setStep("totp-verify");
+  };
+
+  const handleTotpVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (otpCode.length !== 6) {
+    if (totpCode.length !== 6) {
       toast({
         title: "Erro",
         description: "Digite o código completo de 6 dígitos",
@@ -118,21 +121,19 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
-      // Verify OTP
-      const response = await supabase.functions.invoke("verify-otp", {
-        body: { email, code: otpCode },
+      const response = await supabase.functions.invoke("verify-totp", {
+        body: { userId: pendingUserId, code: totpCode },
       });
 
       if (response.error || !response.data?.valid) {
         toast({
           title: "Erro",
-          description: response.data?.error || "Código inválido ou expirado",
+          description: response.data?.error || "Código inválido",
           variant: "destructive",
         });
         return;
       }
 
-      // OTP verified - now sign in for real
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -163,43 +164,11 @@ const Auth = () => {
     }
   };
 
-  const handleResendCode = async () => {
-    if (!pendingUserId) return;
-    
-    setIsLoading(true);
-    try {
-      const response = await supabase.functions.invoke("send-otp", {
-        body: { email, userId: pendingUserId },
-      });
-
-      if (response.error) {
-        toast({
-          title: "Erro",
-          description: "Erro ao reenviar código",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      toast({
-        title: "Código reenviado!",
-        description: `Verifique seu email ${email}`,
-      });
-      setOtpCode("");
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Ocorreu um erro inesperado",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleBack = () => {
     setStep("credentials");
-    setOtpCode("");
+    setTotpCode("");
+    setTotpSecret("");
+    setOtpauthUrl("");
     setPendingUserId(null);
   };
 
@@ -219,21 +188,22 @@ const Auth = () => {
             {step === "credentials" ? (
               <Lock className="h-6 w-6 text-primary" />
             ) : (
-              <Mail className="h-6 w-6 text-primary" />
+              <Smartphone className="h-6 w-6 text-primary" />
             )}
           </div>
           <CardTitle className="text-2xl">
-            {step === "credentials" ? "Acesso Restrito" : "Verificação"}
+            {step === "credentials" && "Acesso Restrito"}
+            {step === "totp-setup" && "Configurar Autenticador"}
+            {step === "totp-verify" && "Verificação"}
           </CardTitle>
           <CardDescription>
-            {step === "credentials" 
-              ? "Sistema interno - apenas usuários autorizados"
-              : `Digite o código enviado para ${email}`
-            }
+            {step === "credentials" && "Sistema interno - apenas usuários autorizados"}
+            {step === "totp-setup" && "Escaneie o QR code com o Google Authenticator"}
+            {step === "totp-verify" && "Digite o código do seu autenticador"}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {step === "credentials" ? (
+          {step === "credentials" && (
             <form onSubmit={handleCredentialsSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
@@ -283,13 +253,47 @@ const Auth = () => {
                 )}
               </Button>
             </form>
-          ) : (
-            <form onSubmit={handleOtpSubmit} className="space-y-6">
+          )}
+
+          {step === "totp-setup" && (
+            <div className="space-y-6">
+              <div className="flex justify-center p-4 bg-white rounded-lg">
+                <QRCode value={otpauthUrl} size={200} />
+              </div>
+              
+              <div className="text-center space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  Código manual (se precisar):
+                </p>
+                <code className="block p-2 bg-muted rounded text-xs break-all">
+                  {totpSecret}
+                </code>
+              </div>
+
+              <Button onClick={handleTotpSetupContinue} className="w-full">
+                Já escaneei, continuar
+              </Button>
+
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleBack}
+                className="w-full"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Voltar
+              </Button>
+            </div>
+          )}
+
+          {step === "totp-verify" && (
+            <form onSubmit={handleTotpVerify} className="space-y-6">
               <div className="flex justify-center">
                 <InputOTP
                   maxLength={6}
-                  value={otpCode}
-                  onChange={setOtpCode}
+                  value={totpCode}
+                  onChange={setTotpCode}
                   disabled={isLoading}
                 >
                   <InputOTPGroup>
@@ -303,7 +307,7 @@ const Auth = () => {
                 </InputOTP>
               </div>
               
-              <Button type="submit" className="w-full" disabled={isLoading || otpCode.length !== 6}>
+              <Button type="submit" className="w-full" disabled={isLoading || totpCode.length !== 6}>
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -314,27 +318,17 @@ const Auth = () => {
                 )}
               </Button>
 
-              <div className="flex items-center justify-between">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleBack}
-                  disabled={isLoading}
-                >
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Voltar
-                </Button>
-                <Button
-                  type="button"
-                  variant="link"
-                  size="sm"
-                  onClick={handleResendCode}
-                  disabled={isLoading}
-                >
-                  Reenviar código
-                </Button>
-              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleBack}
+                disabled={isLoading}
+                className="w-full"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Voltar
+              </Button>
             </form>
           )}
         </CardContent>

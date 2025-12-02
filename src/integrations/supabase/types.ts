@@ -14,36 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      otp_codes: {
-        Row: {
-          code: string
-          created_at: string | null
-          email: string
-          expires_at: string
-          id: string
-          used: boolean | null
-          user_id: string
-        }
-        Insert: {
-          code: string
-          created_at?: string | null
-          email: string
-          expires_at: string
-          id?: string
-          used?: boolean | null
-          user_id: string
-        }
-        Update: {
-          code?: string
-          created_at?: string | null
-          email?: string
-          expires_at?: string
-          id?: string
-          used?: boolean | null
-          user_id?: string
-        }
-        Relationships: []
-      }
       transactions: {
         Row: {
           amount: number
@@ -116,12 +86,35 @@ export type Database = {
         }
         Relationships: []
       }
+      user_totp_secrets: {
+        Row: {
+          created_at: string
+          id: string
+          secret: string
+          user_id: string
+          verified: boolean | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          secret: string
+          user_id: string
+          verified?: boolean | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          secret?: string
+          user_id?: string
+          verified?: boolean | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      cleanup_expired_otp_codes: { Args: never; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
