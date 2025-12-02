@@ -12,8 +12,8 @@ verify_jwt = true
 [functions.admin-reset-password]
 verify_jwt = true
 
-[functions.send-otp]
+[functions.setup-totp]
 verify_jwt = false
 
-[functions.verify-otp]
+[functions.verify-totp]
 verify_jwt = false
