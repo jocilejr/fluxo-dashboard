@@ -1,8 +1,26 @@
-import { Bell, Search, Settings } from "lucide-react";
+import { Bell, LogOut, Search, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 
 export function Header() {
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const handleSignOut = async () => {
+    await signOut();
+    toast({
+      title: "Logout realizado",
+      description: "Até logo!",
+    });
+    navigate("/auth");
+  };
+
+  const userInitials = user?.email?.slice(0, 2).toUpperCase() || "US";
+
   return (
     <header className="flex items-center justify-between py-6 animate-fade-in">
       <div>
@@ -31,9 +49,13 @@ export function Header() {
         <Button variant="ghost" size="icon">
           <Settings className="h-5 w-5" />
         </Button>
+
+        <Button variant="ghost" size="icon" onClick={handleSignOut} title="Sair">
+          <LogOut className="h-5 w-5" />
+        </Button>
         
         <div className="h-10 w-10 rounded-full gradient-success flex items-center justify-center font-semibold text-sm">
-          JD
+          {userInitials}
         </div>
       </div>
     </header>
