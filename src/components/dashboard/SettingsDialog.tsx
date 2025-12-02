@@ -4,11 +4,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Settings, Users, Webhook, Plus, Trash2, Loader2 } from "lucide-react";
+import { Settings, Users, Webhook, Plus, Trash2, Loader2, KeyRound } from "lucide-react";
 import { WebhookInfo } from "./WebhookInfo";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface SettingsDialogProps {
   trigger?: React.ReactNode;
@@ -19,6 +19,9 @@ export const SettingsDialog = ({ trigger }: SettingsDialogProps) => {
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserPassword, setNewUserPassword] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [resetUserId, setResetUserId] = useState<string | null>(null);
+  const [resetPassword, setResetPassword] = useState("");
+  const [isResetting, setIsResetting] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -110,6 +113,51 @@ export const SettingsDialog = ({ trigger }: SettingsDialogProps) => {
     }
   };
 
+  const handleResetPassword = async () => {
+    if (!resetUserId || !resetPassword) {
+      toast({
+        title: "Erro",
+        description: "Digite a nova senha",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (resetPassword.length < 6) {
+      toast({
+        title: "Erro",
+        description: "A senha deve ter pelo menos 6 caracteres",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsResetting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-reset-password", {
+        body: { userId: resetUserId, newPassword: resetPassword },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      toast({
+        title: "Sucesso",
+        description: "Senha redefinida com sucesso",
+      });
+      setResetUserId(null);
+      setResetPassword("");
+    } catch (error: any) {
+      toast({
+        title: "Erro ao redefinir senha",
+        description: error.message || "Não foi possível redefinir a senha",
+        variant: "destructive",
+      });
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -180,24 +228,55 @@ export const SettingsDialog = ({ trigger }: SettingsDialogProps) => {
               ) : users && users.length > 0 ? (
                 <div className="space-y-2">
                   {users.map((user) => (
-                    <div
-                      key={user.id}
-                      className="flex items-center justify-between p-3 border rounded-lg"
-                    >
-                      <div>
-                        <p className="font-medium text-sm">{user.user_id}</p>
-                        <p className="text-xs text-muted-foreground capitalize">
-                          {user.role}
-                        </p>
+                    <div key={user.id} className="space-y-2">
+                      <div className="flex items-center justify-between p-3 border rounded-lg">
+                        <div>
+                          <p className="font-medium text-sm">{user.user_id}</p>
+                          <p className="text-xs text-muted-foreground capitalize">
+                            {user.role}
+                          </p>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setResetUserId(resetUserId === user.user_id ? null : user.user_id)}
+                            title="Redefinir senha"
+                          >
+                            <KeyRound className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                          {user.role !== "admin" && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => deleteUser(user.user_id)}
+                              title="Remover usuário"
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                      {user.role !== "admin" && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => deleteUser(user.user_id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+                      {resetUserId === user.user_id && (
+                        <div className="flex gap-2 p-3 border rounded-lg bg-muted/50">
+                          <Input
+                            type="password"
+                            placeholder="Nova senha (mín. 6 caracteres)"
+                            value={resetPassword}
+                            onChange={(e) => setResetPassword(e.target.value)}
+                            className="flex-1"
+                          />
+                          <Button onClick={handleResetPassword} disabled={isResetting} size="sm">
+                            {isResetting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar"}
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => { setResetUserId(null); setResetPassword(""); }}
+                          >
+                            Cancelar
+                          </Button>
+                        </div>
                       )}
                     </div>
                   ))}
