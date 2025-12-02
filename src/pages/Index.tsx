@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 
 const Index = () => {
-  const { transactions, stats, isLoading } = useTransactions();
+  const { transactions, stats, isLoading, refetch } = useTransactions();
 
   const formatCurrency = (value: number) => {
     if (value >= 1000) {
@@ -105,7 +105,7 @@ const Index = () => {
         </div>
 
         {/* Transactions */}
-        <TransactionsTable transactions={transactions} isLoading={isLoading} />
+        <TransactionsTable transactions={transactions} isLoading={isLoading} onDelete={refetch} />
       </div>
     </div>
   );

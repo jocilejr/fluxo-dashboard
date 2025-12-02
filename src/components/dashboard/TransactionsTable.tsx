@@ -1,11 +1,16 @@
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Transaction } from "@/hooks/useTransactions";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Trash2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface TransactionsTableProps {
   transactions: Transaction[];
   isLoading?: boolean;
+  onDelete?: () => void;
 }
 
 const typeLabels = {
@@ -36,7 +41,7 @@ const typeStyles = {
   cartao: "bg-chart-4/20 text-chart-4 border-chart-4/30",
 };
 
-export function TransactionsTable({ transactions, isLoading }: TransactionsTableProps) {
+export function TransactionsTable({ transactions, isLoading, onDelete }: TransactionsTableProps) {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -46,6 +51,23 @@ export function TransactionsTable({ transactions, isLoading }: TransactionsTable
 
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('pt-BR');
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('transactions')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast.success("Transação removida");
+      onDelete?.();
+    } catch (error: any) {
+      toast.error("Erro ao remover transação");
+      console.error(error);
+    }
   };
 
   if (isLoading) {
@@ -89,6 +111,7 @@ export function TransactionsTable({ transactions, isLoading }: TransactionsTable
                 <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Data</th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Valor</th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Status</th>
+                <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -114,6 +137,16 @@ export function TransactionsTable({ transactions, isLoading }: TransactionsTable
                     <Badge variant="outline" className={cn("font-medium", statusStyles[transaction.status])}>
                       {statusLabels[transaction.status]}
                     </Badge>
+                  </td>
+                  <td className="py-4 px-4 text-right">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDelete(transaction.id)}
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </td>
                 </tr>
               ))}
