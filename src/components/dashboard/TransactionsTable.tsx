@@ -1,9 +1,11 @@
+import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Transaction } from "@/hooks/useTransactions";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trash2, Download } from "lucide-react";
+import { Trash2, Download, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -53,6 +55,8 @@ const typeStyles = {
 };
 
 export function TransactionsTable({ transactions, isLoading, onDelete }: TransactionsTableProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -63,6 +67,25 @@ export function TransactionsTable({ transactions, isLoading, onDelete }: Transac
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('pt-BR');
   };
+
+  const filteredTransactions = useMemo(() => {
+    if (!searchQuery.trim()) return transactions;
+    
+    const query = searchQuery.toLowerCase().trim();
+    return transactions.filter((t) => {
+      const customerName = t.customer_name?.toLowerCase() || "";
+      const customerPhone = t.customer_phone?.toLowerCase() || "";
+      const externalId = t.external_id?.toLowerCase() || "";
+      const date = formatDate(t.created_at).toLowerCase();
+      
+      return (
+        customerName.includes(query) ||
+        customerPhone.includes(query) ||
+        externalId.includes(query) ||
+        date.includes(query)
+      );
+    });
+  }, [transactions, searchQuery]);
 
   const handleDelete = async (id: string) => {
     try {
@@ -99,17 +122,36 @@ export function TransactionsTable({ transactions, isLoading, onDelete }: Transac
 
   return (
     <div className="glass-card rounded-xl p-6 animate-slide-up" style={{ animationDelay: "400ms" }}>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold">Transações Recentes</h3>
         <span className="text-sm text-muted-foreground">
-          {transactions.length} transações
+          {filteredTransactions.length} transações
         </span>
       </div>
       
-      {transactions.length === 0 ? (
+      <div className="relative mb-4">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Buscar por nome, telefone, data ou código de barras..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+      
+      {filteredTransactions.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
-          <p className="text-lg font-medium">Nenhuma transação ainda</p>
-          <p className="text-sm mt-2">As transações aparecerão aqui quando você receber webhooks</p>
+          {searchQuery ? (
+            <>
+              <p className="text-lg font-medium">Nenhuma transação encontrada</p>
+              <p className="text-sm mt-2">Tente buscar com outros termos</p>
+            </>
+          ) : (
+            <>
+              <p className="text-lg font-medium">Nenhuma transação ainda</p>
+              <p className="text-sm mt-2">As transações aparecerão aqui quando você receber webhooks</p>
+            </>
+          )}
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -127,7 +169,7 @@ export function TransactionsTable({ transactions, isLoading, onDelete }: Transac
               </tr>
             </thead>
             <tbody>
-              {transactions.slice(0, 10).map((transaction) => (
+              {filteredTransactions.slice(0, 10).map((transaction) => (
                 <tr 
                   key={transaction.id} 
                   className="border-b border-border/30 hover:bg-secondary/30 transition-colors"
