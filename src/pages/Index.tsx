@@ -3,7 +3,6 @@ import { StatCard } from "@/components/dashboard/StatCard";
 import { RevenueChart } from "@/components/dashboard/RevenueChart";
 import { TransactionsTable } from "@/components/dashboard/TransactionsTable";
 import { PaymentMethodsChart } from "@/components/dashboard/PaymentMethodsChart";
-import { WebhookInfo } from "@/components/dashboard/WebhookInfo";
 import { useTransactions } from "@/hooks/useTransactions";
 import { 
   FileText, 
@@ -105,15 +104,8 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Transactions and Webhook Info */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <TransactionsTable transactions={transactions} isLoading={isLoading} />
-          </div>
-          <div>
-            <WebhookInfo />
-          </div>
-        </div>
+        {/* Transactions */}
+        <TransactionsTable transactions={transactions} isLoading={isLoading} />
       </div>
     </div>
   );
