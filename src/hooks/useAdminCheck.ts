@@ -25,6 +25,7 @@ export const useAdminCheck = () => {
         if (error || !data) {
           setIsAdmin(false);
         } else {
+          // Allow both admin and user roles to access the system
           setIsAdmin(data.role === "admin" || data.role === "user");
         }
       } catch {
