@@ -14,6 +14,7 @@ export interface Transaction {
   customer_phone: string | null;
   created_at: string;
   paid_at: string | null;
+  metadata: { boleto_url?: string } | null;
 }
 
 export interface TransactionStats {

@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Transaction } from "@/hooks/useTransactions";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trash2 } from "lucide-react";
+import { Trash2, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -122,6 +122,7 @@ export function TransactionsTable({ transactions, isLoading, onDelete }: Transac
                 <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Data</th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Valor</th>
                 <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Status</th>
+                <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Boleto</th>
                 <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Ações</th>
               </tr>
             </thead>
@@ -148,6 +149,20 @@ export function TransactionsTable({ transactions, isLoading, onDelete }: Transac
                     <Badge variant="outline" className={cn("font-medium", statusStyles[transaction.status])}>
                       {statusLabels[transaction.status]}
                     </Badge>
+                  </td>
+                  <td className="py-4 px-4 text-center">
+                    {transaction.type === 'boleto' && transaction.metadata?.boleto_url ? (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-primary"
+                        onClick={() => window.open(transaction.metadata!.boleto_url, '_blank')}
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <span className="text-muted-foreground/50">-</span>
+                    )}
                   </td>
                   <td className="py-4 px-4 text-right">
                     <AlertDialog>
