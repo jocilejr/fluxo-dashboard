@@ -63,16 +63,16 @@ export function RevenueChart({ transactions, dateFilter }: RevenueChartProps) {
     };
 
     // Auto-select period based on date range
-    if (daysDiff <= 7) {
-      // Up to 7 days: show by day
+    if (daysDiff <= 31) {
+      // Up to 31 days: show by day
       const days = eachDayOfInterval({ start: dateFilter.startDate, end: dateFilter.endDate });
       return aggregateData(
         days,
         (d) => format(d, 'yyyy-MM-dd'),
         (d) => format(d, 'dd/MM', { locale: ptBR })
       );
-    } else if (daysDiff <= 60) {
-      // Up to 60 days: show by week
+    } else if (daysDiff <= 90) {
+      // Up to 90 days: show by week
       const weeks = eachWeekOfInterval({ start: dateFilter.startDate, end: dateFilter.endDate }, { locale: ptBR, weekStartsOn: 0 });
       return aggregateData(
         weeks,
@@ -80,7 +80,7 @@ export function RevenueChart({ transactions, dateFilter }: RevenueChartProps) {
         (d) => format(d, 'dd/MM', { locale: ptBR })
       );
     } else {
-      // More than 60 days: show by month
+      // More than 90 days: show by month
       const months = eachMonthOfInterval({ start: dateFilter.startDate, end: dateFilter.endDate });
       return aggregateData(
         months,
@@ -94,8 +94,8 @@ export function RevenueChart({ transactions, dateFilter }: RevenueChartProps) {
 
   const periodLabel = useMemo(() => {
     const daysDiff = differenceInDays(dateFilter.endDate, dateFilter.startDate);
-    if (daysDiff <= 7) return "por dia";
-    if (daysDiff <= 60) return "por semana";
+    if (daysDiff <= 31) return "por dia";
+    if (daysDiff <= 90) return "por semana";
     return "por mês";
   }, [dateFilter]);
 
