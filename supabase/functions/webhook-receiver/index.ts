@@ -359,6 +359,8 @@ async function sendPushNotifications(
 }
 
 Deno.serve(async (req) => {
+  console.log('[webhook-receiver v2] Request received');
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
