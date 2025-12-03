@@ -26,6 +26,12 @@ function normalizePhone(phone?: string): string | undefined {
   return phone.replace(/^\+/, '');
 }
 
+// Normalize external_id by removing dots, spaces, dashes and other formatting
+function normalizeExternalId(externalId?: string): string | undefined {
+  if (!externalId) return undefined;
+  return externalId.replace(/[\s.\-\/]/g, '');
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -64,25 +70,46 @@ Deno.serve(async (req) => {
       status = 'expirado';
     }
 
-    // Check if transaction exists (update) or create new
-    if (payload.external_id) {
-      const { data: existing } = await supabase
-        .from('transactions')
-        .select('id')
-        .eq('external_id', payload.external_id)
-        .maybeSingle();
+    // Normalize the incoming external_id
+    const normalizedIncomingId = normalizeExternalId(payload.external_id);
+    console.log('Normalized incoming external_id:', normalizedIncomingId);
 
-      if (existing) {
+    // Check if transaction exists (update) or create new
+    if (normalizedIncomingId) {
+      // Get all transactions with external_id to find a match
+      const { data: transactions, error: fetchError } = await supabase
+        .from('transactions')
+        .select('id, external_id')
+        .not('external_id', 'is', null)
+        .neq('external_id', '');
+
+      if (fetchError) {
+        console.error('Error fetching transactions:', fetchError);
+        throw fetchError;
+      }
+
+      // Find matching transaction by normalized external_id
+      const existingTransaction = transactions?.find(t => {
+        const normalizedDbId = normalizeExternalId(t.external_id);
+        return normalizedDbId === normalizedIncomingId;
+      });
+
+      if (existingTransaction) {
+        console.log('Found existing transaction:', existingTransaction.id);
+        
         // Update existing transaction
         const { data, error } = await supabase
           .from('transactions')
           .update({
             status,
             paid_at: paidAt,
+            customer_name: payload.customer_name || undefined,
+            customer_email: payload.customer_email || undefined,
+            customer_phone: normalizePhone(payload.customer_phone) || undefined,
             metadata: payload.metadata,
             updated_at: new Date().toISOString(),
           })
-          .eq('external_id', payload.external_id)
+          .eq('id', existingTransaction.id)
           .select()
           .single();
 
@@ -104,7 +131,7 @@ Deno.serve(async (req) => {
     const { data, error } = await supabase
       .from('transactions')
       .insert({
-        external_id: payload.external_id,
+        external_id: normalizedIncomingId || payload.external_id,
         type: payload.type,
         status,
         amount: payload.amount,
