@@ -9,6 +9,13 @@ import { Trash2, Download, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -56,6 +63,8 @@ const typeStyles = {
 
 export function TransactionsTable({ transactions, isLoading, onDelete }: TransactionsTableProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -69,23 +78,32 @@ export function TransactionsTable({ transactions, isLoading, onDelete }: Transac
   };
 
   const filteredTransactions = useMemo(() => {
-    if (!searchQuery.trim()) return transactions;
-    
-    const query = searchQuery.toLowerCase().trim();
     return transactions.filter((t) => {
-      const customerName = t.customer_name?.toLowerCase() || "";
-      const customerPhone = t.customer_phone?.toLowerCase() || "";
-      const externalId = t.external_id?.toLowerCase() || "";
-      const date = formatDate(t.created_at).toLowerCase();
+      // Type filter
+      if (typeFilter !== "all" && t.type !== typeFilter) return false;
       
-      return (
-        customerName.includes(query) ||
-        customerPhone.includes(query) ||
-        externalId.includes(query) ||
-        date.includes(query)
-      );
+      // Status filter
+      if (statusFilter !== "all" && t.status !== statusFilter) return false;
+      
+      // Search filter
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase().trim();
+        const customerName = t.customer_name?.toLowerCase() || "";
+        const customerPhone = t.customer_phone?.toLowerCase() || "";
+        const externalId = t.external_id?.toLowerCase() || "";
+        const date = formatDate(t.created_at).toLowerCase();
+        
+        return (
+          customerName.includes(query) ||
+          customerPhone.includes(query) ||
+          externalId.includes(query) ||
+          date.includes(query)
+        );
+      }
+      
+      return true;
     });
-  }, [transactions, searchQuery]);
+  }, [transactions, searchQuery, typeFilter, statusFilter]);
 
   const handleDelete = async (id: string) => {
     try {
@@ -129,14 +147,42 @@ export function TransactionsTable({ transactions, isLoading, onDelete }: Transac
         </span>
       </div>
       
-      <div className="relative mb-4">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9 text-sm"
-        />
+      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 text-sm"
+          />
+        </div>
+        <div className="flex gap-2">
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="w-[130px] text-sm">
+              <SelectValue placeholder="Método" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="boleto">Boleto</SelectItem>
+              <SelectItem value="pix">PIX</SelectItem>
+              <SelectItem value="cartao">Cartão</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[130px] text-sm">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="gerado">Gerado</SelectItem>
+              <SelectItem value="pago">Pago</SelectItem>
+              <SelectItem value="pendente">Pendente</SelectItem>
+              <SelectItem value="cancelado">Cancelado</SelectItem>
+              <SelectItem value="expirado">Expirado</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
       
       {filteredTransactions.length === 0 ? (
