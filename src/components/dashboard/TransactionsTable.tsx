@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Transaction } from "@/hooks/useTransactions";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trash2, Download, Search } from "lucide-react";
+import { Trash2, Download, Search, ChevronDown, ChevronUp, Users, Clock, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -20,6 +20,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface TransactionsTableProps {
   transactions: Transaction[];
@@ -58,10 +64,15 @@ const typeStyles = {
 const VIEWED_STORAGE_KEY = "viewed_transactions";
 
 type TabKey = "aprovados" | "boletos-gerados" | "pix-cartao-pendentes";
+type SortField = "created_at" | "amount" | "customer_name";
+type SortDirection = "asc" | "desc";
 
 export function TransactionsTable({ transactions, isLoading, onDelete }: TransactionsTableProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<TabKey>("aprovados");
+  const [sortField, setSortField] = useState<SortField>("created_at");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [visibleCount, setVisibleCount] = useState(15);
   const [viewedIds, setViewedIds] = useState<Record<TabKey, string[]>>(() => {
     try {
       const stored = localStorage.getItem(VIEWED_STORAGE_KEY);
@@ -83,12 +94,41 @@ export function TransactionsTable({ transactions, isLoading, onDelete }: Transac
     return date.toLocaleTimeString('pt-BR') + ' ' + date.toLocaleDateString('pt-BR');
   };
 
+  const formatRelativeTime = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return "Agora";
+    if (diffMins < 60) return `${diffMins}min atrás`;
+    if (diffHours < 24) return `${diffHours}h atrás`;
+    if (diffDays < 7) return `${diffDays}d atrás`;
+    return date.toLocaleDateString('pt-BR');
+  };
+
   // Get transactions for each tab
   const tabTransactions = useMemo(() => ({
     aprovados: transactions.filter(t => t.status === "pago"),
     "boletos-gerados": transactions.filter(t => t.type === "boleto" && t.status === "gerado"),
     "pix-cartao-pendentes": transactions.filter(t => (t.type === "pix" || t.type === "cartao") && t.status === "pendente"),
   }), [transactions]);
+
+  // Calculate stats for current tab
+  const tabStats = useMemo(() => {
+    const currentTransactions = tabTransactions[activeTab];
+    const totalAmount = currentTransactions.reduce((sum, t) => sum + Number(t.amount), 0);
+    const uniqueCustomers = new Set(currentTransactions.filter(t => t.customer_name).map(t => t.customer_name)).size;
+    const todayCount = currentTransactions.filter(t => {
+      const date = new Date(t.created_at);
+      const today = new Date();
+      return date.toDateString() === today.toDateString();
+    }).length;
+
+    return { totalAmount, uniqueCustomers, todayCount, total: currentTransactions.length };
+  }, [tabTransactions, activeTab]);
 
   // Calculate unviewed counts for each tab
   const unviewedCounts = useMemo(() => {
@@ -128,28 +168,72 @@ export function TransactionsTable({ transactions, isLoading, onDelete }: Transac
     }
   }, [activeTab, tabTransactions, markAsViewed]);
 
+  // Reset visible count when tab changes
+  useEffect(() => {
+    setVisibleCount(15);
+  }, [activeTab]);
+
   // Filter transactions by active tab
   const tabFilteredTransactions = tabTransactions[activeTab];
 
-  // Apply search filter
+  // Apply search filter and sorting
   const filteredTransactions = useMemo(() => {
-    if (!searchQuery.trim()) return tabFilteredTransactions;
+    let result = tabFilteredTransactions;
     
-    const query = searchQuery.toLowerCase().trim();
-    return tabFilteredTransactions.filter((t) => {
-      const customerName = t.customer_name?.toLowerCase() || "";
-      const customerPhone = t.customer_phone?.toLowerCase() || "";
-      const externalId = t.external_id?.toLowerCase() || "";
-      const date = formatDate(t.created_at).toLowerCase();
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      result = result.filter((t) => {
+        const customerName = t.customer_name?.toLowerCase() || "";
+        const customerPhone = t.customer_phone?.toLowerCase() || "";
+        const customerEmail = t.customer_email?.toLowerCase() || "";
+        const externalId = t.external_id?.toLowerCase() || "";
+        const date = formatDate(t.created_at).toLowerCase();
+        
+        return (
+          customerName.includes(query) ||
+          customerPhone.includes(query) ||
+          customerEmail.includes(query) ||
+          externalId.includes(query) ||
+          date.includes(query)
+        );
+      });
+    }
+
+    // Sort
+    result = [...result].sort((a, b) => {
+      let aVal: any, bVal: any;
       
-      return (
-        customerName.includes(query) ||
-        customerPhone.includes(query) ||
-        externalId.includes(query) ||
-        date.includes(query)
-      );
+      switch (sortField) {
+        case "amount":
+          aVal = Number(a.amount);
+          bVal = Number(b.amount);
+          break;
+        case "customer_name":
+          aVal = a.customer_name || "";
+          bVal = b.customer_name || "";
+          break;
+        default:
+          aVal = new Date(a.created_at).getTime();
+          bVal = new Date(b.created_at).getTime();
+      }
+
+      if (sortDirection === "asc") {
+        return aVal > bVal ? 1 : -1;
+      }
+      return aVal < bVal ? 1 : -1;
     });
-  }, [tabFilteredTransactions, searchQuery]);
+
+    return result;
+  }, [tabFilteredTransactions, searchQuery, sortField, sortDirection]);
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(prev => prev === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("desc");
+    }
+  };
 
   const handleDelete = async (id: string) => {
     try {
@@ -172,6 +256,13 @@ export function TransactionsTable({ transactions, isLoading, onDelete }: Transac
     setActiveTab(value as TabKey);
   };
 
+  const SortIcon = ({ field }: { field: SortField }) => {
+    if (sortField !== field) return null;
+    return sortDirection === "asc" ? 
+      <ChevronUp className="h-3.5 w-3.5 ml-1 inline" /> : 
+      <ChevronDown className="h-3.5 w-3.5 ml-1 inline" />;
+  };
+
   if (isLoading) {
     return (
       <div className="glass-card rounded-xl p-6 animate-slide-up" style={{ animationDelay: "400ms" }}>
@@ -188,186 +279,309 @@ export function TransactionsTable({ transactions, isLoading, onDelete }: Transac
     );
   }
 
-  const renderTransactionList = () => {
-    if (filteredTransactions.length === 0) {
-      return (
-        <div className="text-center py-8 sm:py-12 text-muted-foreground">
-          {searchQuery ? (
-            <>
-              <p className="text-base sm:text-lg font-medium">Nenhuma transação encontrada</p>
-              <p className="text-xs sm:text-sm mt-2">Tente buscar com outros termos</p>
-            </>
-          ) : (
-            <>
-              <p className="text-base sm:text-lg font-medium">Nenhuma transação ainda</p>
-              <p className="text-xs sm:text-sm mt-2">As transações aparecerão aqui quando chegarem</p>
-            </>
-          )}
-        </div>
-      );
-    }
-
-    return (
-      <>
-        {/* Mobile Card View */}
-        <div className="block sm:hidden space-y-3">
-          {filteredTransactions.slice(0, 10).map((transaction) => (
-            <div 
-              key={transaction.id} 
-              className="border border-border/30 rounded-lg p-3 bg-secondary/10"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <Badge variant="outline" className={cn("font-medium text-xs", typeStyles[transaction.type])}>
-                  {typeLabels[transaction.type]}
-                </Badge>
-                <Badge variant="outline" className={cn("font-medium text-xs", statusStyles[transaction.status])}>
-                  {statusLabels[transaction.status]}
-                </Badge>
-              </div>
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-sm font-medium truncate max-w-[60%]">
-                  {transaction.customer_name || '-'}
-                </span>
-                <span className="text-sm font-bold">{formatCurrency(Number(transaction.amount))}</span>
-              </div>
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>{formatDate(transaction.created_at)}</span>
-                <div className="flex items-center gap-1">
-                  {transaction.type === 'boleto' && transaction.metadata?.boleto_url && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-muted-foreground hover:text-primary"
-                      onClick={() => window.open(transaction.metadata!.boleto_url, '_blank')}
+  const renderMobileView = () => (
+    <div className="block sm:hidden space-y-3">
+      {filteredTransactions.slice(0, 10).map((transaction) => (
+        <div 
+          key={transaction.id} 
+          className="border border-border/30 rounded-lg p-3 bg-secondary/10"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <Badge variant="outline" className={cn("font-medium text-xs", typeStyles[transaction.type])}>
+              {typeLabels[transaction.type]}
+            </Badge>
+            <Badge variant="outline" className={cn("font-medium text-xs", statusStyles[transaction.status])}>
+              {statusLabels[transaction.status]}
+            </Badge>
+          </div>
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-sm font-medium truncate max-w-[60%]">
+              {transaction.customer_name || '-'}
+            </span>
+            <span className="text-sm font-bold">{formatCurrency(Number(transaction.amount))}</span>
+          </div>
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>{formatDate(transaction.created_at)}</span>
+            <div className="flex items-center gap-1">
+              {transaction.type === 'boleto' && transaction.metadata?.boleto_url && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground hover:text-primary"
+                  onClick={() => window.open(transaction.metadata!.boleto_url, '_blank')}
+                >
+                  <Download className="h-3.5 w-3.5" />
+                </Button>
+              )}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="max-w-[90vw] rounded-lg">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Remover transação?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Esta ação não pode ser desfeita.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => handleDelete(transaction.id)}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     >
-                      <Download className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent className="max-w-[90vw] rounded-lg">
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Remover transação?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Esta ação não pode ser desfeita.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => handleDelete(transaction.id)}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                          Remover
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              </div>
+                      Remover
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
-          ))}
+          </div>
         </div>
+      ))}
+    </div>
+  );
 
-        {/* Desktop Table View */}
-        <div className="hidden sm:block overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border/50">
-                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Tipo</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Cliente</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground hidden lg:table-cell">Telefone</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Data</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Valor</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Status</th>
-                <th className="text-center py-3 px-4 text-sm font-medium text-muted-foreground">Boleto</th>
-                <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Ações</th>
+  const renderDesktopView = () => (
+    <div className="hidden sm:block">
+      {/* Quick Stats Bar */}
+      <div className="grid grid-cols-4 gap-3 mb-5 p-4 bg-secondary/20 rounded-lg border border-border/30">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-primary/10">
+            <CheckCircle2 className="h-4 w-4 text-primary" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Total</p>
+            <p className="text-sm font-semibold">{tabStats.total}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-success/10">
+            <AlertCircle className="h-4 w-4 text-success" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Valor Total</p>
+            <p className="text-sm font-semibold">{formatCurrency(tabStats.totalAmount)}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-info/10">
+            <Users className="h-4 w-4 text-info" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Clientes</p>
+            <p className="text-sm font-semibold">{tabStats.uniqueCustomers}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-warning/10">
+            <Clock className="h-4 w-4 text-warning" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Hoje</p>
+            <p className="text-sm font-semibold">{tabStats.todayCount}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="overflow-hidden rounded-lg border border-border/30">
+        <table className="w-full">
+          <thead className="bg-secondary/30">
+            <tr>
+              <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Tipo
+              </th>
+              <th 
+                className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground transition-colors"
+                onClick={() => handleSort("customer_name")}
+              >
+                Cliente <SortIcon field="customer_name" />
+              </th>
+              <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden xl:table-cell">
+                Contato
+              </th>
+              <th 
+                className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground transition-colors"
+                onClick={() => handleSort("created_at")}
+              >
+                Data <SortIcon field="created_at" />
+              </th>
+              <th 
+                className="text-right py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground transition-colors"
+                onClick={() => handleSort("amount")}
+              >
+                Valor <SortIcon field="amount" />
+              </th>
+              <th className="text-center py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Status
+              </th>
+              <th className="text-center py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Ações
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border/20">
+            {filteredTransactions.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="py-12 text-center text-muted-foreground">
+                  {searchQuery ? (
+                    <div>
+                      <Search className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                      <p className="font-medium">Nenhuma transação encontrada</p>
+                      <p className="text-sm">Tente buscar com outros termos</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <RefreshCw className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                      <p className="font-medium">Nenhuma transação ainda</p>
+                      <p className="text-sm">As transações aparecerão aqui quando chegarem</p>
+                    </div>
+                  )}
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {filteredTransactions.slice(0, 10).map((transaction) => (
+            ) : (
+              filteredTransactions.slice(0, visibleCount).map((transaction, index) => (
                 <tr 
                   key={transaction.id} 
-                  className="border-b border-border/30 hover:bg-secondary/30 transition-colors"
+                  className="group hover:bg-secondary/40 transition-all duration-200 animate-fade-in"
+                  style={{ animationDelay: `${index * 30}ms` }}
                 >
-                  <td className="py-4 px-4">
-                    <Badge variant="outline" className={cn("font-medium", typeStyles[transaction.type])}>
+                  <td className="py-3.5 px-4">
+                    <Badge variant="outline" className={cn("font-medium text-xs", typeStyles[transaction.type])}>
                       {typeLabels[transaction.type]}
                     </Badge>
                   </td>
-                  <td className="py-4 px-4 text-sm font-medium">
-                    {transaction.customer_name || '-'}
+                  <td className="py-3.5 px-4">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium truncate max-w-[200px]">
+                        {transaction.customer_name || '-'}
+                      </span>
+                      {transaction.customer_email && (
+                        <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+                          {transaction.customer_email}
+                        </span>
+                      )}
+                    </div>
                   </td>
-                  <td className="py-4 px-4 text-sm text-muted-foreground hidden lg:table-cell">
-                    {transaction.customer_phone || '-'}
+                  <td className="py-3.5 px-4 hidden xl:table-cell">
+                    <span className="text-sm text-muted-foreground">
+                      {transaction.customer_phone || '-'}
+                    </span>
                   </td>
-                  <td className="py-4 px-4 text-sm text-muted-foreground">{formatDate(transaction.created_at)}</td>
-                  <td className="py-4 px-4 text-sm font-medium">{formatCurrency(Number(transaction.amount))}</td>
-                  <td className="py-4 px-4">
-                    <Badge variant="outline" className={cn("font-medium", statusStyles[transaction.status])}>
+                  <td className="py-3.5 px-4">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex flex-col cursor-help">
+                            <span className="text-sm font-medium">{formatRelativeTime(transaction.created_at)}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(transaction.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{formatDate(transaction.created_at)}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </td>
+                  <td className="py-3.5 px-4 text-right">
+                    <span className="text-sm font-bold">{formatCurrency(Number(transaction.amount))}</span>
+                  </td>
+                  <td className="py-3.5 px-4 text-center">
+                    <Badge variant="outline" className={cn("font-medium text-xs", statusStyles[transaction.status])}>
                       {statusLabels[transaction.status]}
                     </Badge>
                   </td>
-                  <td className="py-4 px-4 text-center">
-                    {transaction.type === 'boleto' && transaction.metadata?.boleto_url ? (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-primary"
-                        onClick={() => window.open(transaction.metadata!.boleto_url, '_blank')}
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
-                    ) : (
-                      <span className="text-muted-foreground/50">-</span>
-                    )}
-                  </td>
-                  <td className="py-4 px-4 text-right">
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Remover transação?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Tem certeza que deseja remover esta transação? Esta ação não pode ser desfeita.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => handleDelete(transaction.id)}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          >
-                            Remover
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                  <td className="py-3.5 px-4">
+                    <div className="flex items-center justify-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                      {transaction.type === 'boleto' && transaction.metadata?.boleto_url && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                                onClick={() => window.open(transaction.metadata!.boleto_url, '_blank')}
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Baixar boleto</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                      <AlertDialog>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Remover</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Remover transação?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Tem certeza que deseja remover esta transação? Esta ação não pode ser desfeita.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDelete(transaction.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Remover
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </>
-    );
-  };
+              ))
+            )}
+          </tbody>
+        </table>
+
+        {/* Load More */}
+        {filteredTransactions.length > visibleCount && (
+          <div className="p-3 border-t border-border/30 bg-secondary/10 text-center">
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => setVisibleCount(prev => prev + 15)}
+              className="text-xs"
+            >
+              Carregar mais ({filteredTransactions.length - visibleCount} restantes)
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
   const renderTabTrigger = (value: TabKey, label: string) => {
     const count = unviewedCounts[value];
@@ -375,7 +589,7 @@ export function TransactionsTable({ transactions, isLoading, onDelete }: Transac
       <TabsTrigger value={value} className="relative text-xs sm:text-sm">
         {label}
         {count > 0 && (
-          <span className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 min-w-[18px] h-[18px] sm:min-w-[20px] sm:h-[20px] flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] sm:text-xs font-bold">
+          <span className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 min-w-[18px] h-[18px] sm:min-w-[20px] sm:h-[20px] flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] sm:text-xs font-bold animate-pulse">
             {count > 99 ? "99+" : count}
           </span>
         )}
@@ -387,8 +601,8 @@ export function TransactionsTable({ transactions, isLoading, onDelete }: Transac
     <div className="glass-card rounded-xl p-4 sm:p-6 animate-slide-up" style={{ animationDelay: "400ms" }}>
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-base sm:text-lg font-semibold">Transações Recentes</h3>
-        <span className="text-xs sm:text-sm text-muted-foreground">
-          {filteredTransactions.length} transações
+        <span className="text-xs sm:text-sm text-muted-foreground hidden sm:block">
+          Mostrando {Math.min(visibleCount, filteredTransactions.length)} de {filteredTransactions.length}
         </span>
       </div>
       
@@ -404,7 +618,7 @@ export function TransactionsTable({ transactions, isLoading, onDelete }: Transac
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar..."
+            placeholder="Buscar por nome, telefone, email ou código..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9 text-sm"
@@ -412,7 +626,8 @@ export function TransactionsTable({ transactions, isLoading, onDelete }: Transac
         </div>
       </div>
       
-      {renderTransactionList()}
+      {renderMobileView()}
+      {renderDesktopView()}
     </div>
   );
 }
