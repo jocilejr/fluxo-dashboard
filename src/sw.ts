@@ -45,7 +45,6 @@ self.addEventListener("push", (event) => {
     vibrate: [200, 100, 200],
     tag: "transaction-notification",
     renotify: true,
-    requireInteraction: true,
     data: {
       url: "/",
       timestamp: Date.now(),
