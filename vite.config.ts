@@ -16,6 +16,9 @@ export default defineConfig(({ mode }) => ({
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["logo-ov.png", "favicon.ico"],
+      srcDir: "src",
+      filename: "sw.ts",
+      strategies: "injectManifest",
       manifest: {
         name: "Dash Origem Viva",
         short_name: "Dash Origem Viva",
@@ -41,24 +44,12 @@ export default defineConfig(({ mode }) => ({
           },
         ],
       },
-      workbox: {
+      injectManifest: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
-            handler: "NetworkFirst",
-            options: {
-              cacheName: "supabase-cache",
-              expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: 60 * 60 * 24, // 1 day
-              },
-            },
-          },
-        ],
       },
       devOptions: {
         enabled: true,
+        type: "module",
       },
     }),
   ].filter(Boolean),
