@@ -119,7 +119,7 @@ export function Header() {
           <img 
             src="/logo-origem-viva.png" 
             alt="Origem Viva" 
-            className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg shadow-md object-contain bg-card p-1"
+            className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl shadow-lg object-cover"
           />
           <div>
             <h1 className="text-lg sm:text-xl font-bold tracking-tight text-foreground">Origem Viva</h1>
