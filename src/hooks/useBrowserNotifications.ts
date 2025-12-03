@@ -32,8 +32,8 @@ export function useBrowserNotifications() {
       }
 
       const notification = new Notification(title, {
-        icon: "/favicon.ico",
-        badge: "/favicon.ico",
+        icon: "/notification-icon.png",
+        badge: "/notification-icon.png",
         requireInteraction: true,
         silent: false,
         ...options,
