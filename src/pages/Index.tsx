@@ -142,7 +142,7 @@ const Index = () => {
         </div>
         
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2 sm:gap-4 mb-6 sm:mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
           <StatCard
             title="Boletos Gerados"
             value={stats.boletosGerados.toLocaleString('pt-BR')}
