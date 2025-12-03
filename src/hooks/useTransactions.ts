@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+import { useBrowserNotifications } from "./useBrowserNotifications";
 
 export interface Transaction {
   id: string;
@@ -27,6 +28,9 @@ export interface TransactionStats {
 }
 
 export function useTransactions() {
+  const { notifyTransaction, permission } = useBrowserNotifications();
+  const initialLoadRef = useRef(true);
+
   const { data: transactions, refetch, isLoading } = useQuery({
     queryKey: ["transactions"],
     queryFn: async () => {
@@ -41,7 +45,7 @@ export function useTransactions() {
     },
   });
 
-  // Subscribe to realtime updates
+  // Subscribe to realtime updates with notifications
   useEffect(() => {
     const channel = supabase
       .channel("transactions-changes")
@@ -55,14 +59,32 @@ export function useTransactions() {
         (payload) => {
           console.log("Realtime update:", payload);
           refetch();
+
+          // Send browser notification for new/updated transactions
+          if (!initialLoadRef.current && permission === "granted") {
+            const newData = payload.new as Transaction;
+            if (newData && newData.type && newData.status) {
+              notifyTransaction(
+                newData.type,
+                newData.status,
+                newData.amount,
+                newData.customer_name || undefined
+              );
+            }
+          }
         }
       )
       .subscribe();
 
+    // Mark initial load as complete after first subscription
+    setTimeout(() => {
+      initialLoadRef.current = false;
+    }, 1000);
+
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [refetch]);
+  }, [refetch, notifyTransaction, permission]);
 
   // Calculate stats
   const stats: TransactionStats = {
