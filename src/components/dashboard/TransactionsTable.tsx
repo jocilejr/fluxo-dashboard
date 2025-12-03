@@ -301,7 +301,7 @@ export function TransactionsTable({ transactions, isLoading, onDelete }: Transac
             <span className="text-sm font-bold">{formatCurrency(Number(transaction.amount))}</span>
           </div>
           <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>{formatDate(transaction.created_at)}</span>
+            <span>{formatDate(transaction.status === "pago" && transaction.paid_at ? transaction.paid_at : transaction.created_at)}</span>
             <div className="flex items-center gap-1">
               {transaction.type === 'boleto' && transaction.metadata?.boleto_url && (
                 <Button
@@ -480,14 +480,31 @@ export function TransactionsTable({ transactions, isLoading, onDelete }: Transac
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <div className="flex flex-col cursor-help">
-                            <span className="text-sm font-medium">{formatRelativeTime(transaction.created_at)}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {new Date(transaction.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                            </span>
+                            {/* Para pagos, mostrar data do pagamento; senão, data de criação */}
+                            {transaction.status === "pago" && transaction.paid_at ? (
+                              <>
+                                <span className="text-sm font-medium">{formatRelativeTime(transaction.paid_at)}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {new Date(transaction.paid_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="text-sm font-medium">{formatRelativeTime(transaction.created_at)}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {new Date(transaction.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </>
+                            )}
                           </div>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>{formatDate(transaction.created_at)}</p>
+                          <div className="space-y-1">
+                            <p><span className="text-muted-foreground">Gerado:</span> {formatDate(transaction.created_at)}</p>
+                            {transaction.paid_at && (
+                              <p><span className="text-muted-foreground">Pago:</span> {formatDate(transaction.paid_at)}</p>
+                            )}
+                          </div>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
