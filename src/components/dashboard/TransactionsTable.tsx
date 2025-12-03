@@ -75,7 +75,7 @@ export function TransactionsTable({ transactions, isLoading, onDelete }: Transac
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('pt-BR') + ' ' + date.toLocaleTimeString('pt-BR');
+    return date.toLocaleTimeString('pt-BR') + ' ' + date.toLocaleDateString('pt-BR');
   };
 
   const filteredTransactions = useMemo(() => {
