@@ -10,59 +10,20 @@ import { useTransactions } from "@/hooks/useTransactions";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
 import { supabase } from "@/integrations/supabase/client";
 import { isWithinInterval } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
 import { 
   FileText, 
   QrCode, 
   CreditCard,
-  DollarSign
+  DollarSign,
+  Percent,
+  Wallet
 } from "lucide-react";
 
 const Index = () => {
   const { transactions, isLoading, refetch, hasNewTransaction, dismissNewTransaction } = useTransactions();
   const { user } = useAdminCheck();
   const [dateFilter, setDateFilter] = useState<DateFilterValue>(getDefaultDateFilter);
-
-  // Filter transactions by date
-  const filteredTransactions = useMemo(() => {
-    return transactions.filter((t) => {
-      const date = new Date(t.created_at);
-      return isWithinInterval(date, { start: dateFilter.startDate, end: dateFilter.endDate });
-    });
-  }, [transactions, dateFilter]);
-
-  // Calculate stats from filtered transactions
-  const stats = useMemo(() => {
-    const totalOrders = filteredTransactions.reduce((sum, t) => sum + Number(t.amount), 0);
-    const paidOrders = filteredTransactions
-      .filter((t) => t.status === "pago")
-      .reduce((sum, t) => sum + Number(t.amount), 0);
-
-    return {
-      boletosGerados: filteredTransactions.filter((t) => t.type === "boleto").length,
-      boletosPagos: filteredTransactions.filter((t) => t.type === "boleto" && t.status === "pago").length,
-      pixGerado: filteredTransactions.filter((t) => t.type === "pix").length,
-      pixPago: filteredTransactions.filter((t) => t.type === "pix" && t.status === "pago").length,
-      pedidosCartao: filteredTransactions.filter((t) => t.type === "cartao").length,
-      cartaoPago: filteredTransactions.filter((t) => t.type === "cartao" && t.status === "pago").length,
-      totalOrders,
-      paidOrders,
-    };
-  }, [filteredTransactions]);
-
-  const formatCurrency = (value: number) => {
-    if (value >= 1000) {
-      return `R$ ${(value / 1000).toFixed(1)}K`;
-    }
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value);
-  };
-
-  const calculateConversionRate = (paid: number, total: number) => {
-    if (total === 0) return "0%";
-    return `${((paid / total) * 100).toFixed(1)}% taxa de conversão`;
-  };
 
   // Check if current user has admin role (not just 'user' role)
   const [isRealAdmin, setIsRealAdmin] = useState<boolean | null>(null);
@@ -83,6 +44,93 @@ const Index = () => {
     checkRole();
   }, [user]);
 
+  // Fetch financial settings (tax rate)
+  const { data: financialSettings } = useQuery({
+    queryKey: ["financial-settings"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("financial_settings")
+        .select("*")
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: isRealAdmin === true,
+  });
+
+  // Fetch manual revenues filtered by date
+  const { data: manualRevenues } = useQuery({
+    queryKey: ["manual-revenues", dateFilter.startDate, dateFilter.endDate],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("manual_revenues")
+        .select("*")
+        .gte("received_at", dateFilter.startDate.toISOString())
+        .lte("received_at", dateFilter.endDate.toISOString());
+      if (error) throw error;
+      return data;
+    },
+    enabled: isRealAdmin === true,
+  });
+
+  // Filter transactions by date
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter((t) => {
+      const date = new Date(t.created_at);
+      return isWithinInterval(date, { start: dateFilter.startDate, end: dateFilter.endDate });
+    });
+  }, [transactions, dateFilter]);
+
+  // Calculate stats from filtered transactions
+  const stats = useMemo(() => {
+    const totalOrders = filteredTransactions.reduce((sum, t) => sum + Number(t.amount), 0);
+    const paidOrders = filteredTransactions
+      .filter((t) => t.status === "pago")
+      .reduce((sum, t) => sum + Number(t.amount), 0);
+
+    // Calculate manual revenues total
+    const manualRevenueTotal = manualRevenues?.reduce((sum, r) => sum + Number(r.amount), 0) || 0;
+
+    // Total revenue (paid transactions + manual revenues)
+    const totalRevenue = paidOrders + manualRevenueTotal;
+
+    // Tax calculation
+    const taxRate = financialSettings?.tax_rate || 0;
+    const taxAmount = totalRevenue * (taxRate / 100);
+    const netRevenue = totalRevenue - taxAmount;
+
+    return {
+      boletosGerados: filteredTransactions.filter((t) => t.type === "boleto").length,
+      boletosPagos: filteredTransactions.filter((t) => t.type === "boleto" && t.status === "pago").length,
+      pixGerado: filteredTransactions.filter((t) => t.type === "pix").length,
+      pixPago: filteredTransactions.filter((t) => t.type === "pix" && t.status === "pago").length,
+      pedidosCartao: filteredTransactions.filter((t) => t.type === "cartao").length,
+      cartaoPago: filteredTransactions.filter((t) => t.type === "cartao" && t.status === "pago").length,
+      totalOrders,
+      paidOrders,
+      manualRevenueTotal,
+      totalRevenue,
+      taxRate,
+      taxAmount,
+      netRevenue,
+    };
+  }, [filteredTransactions, manualRevenues, financialSettings]);
+
+  const formatCurrency = (value: number) => {
+    if (value >= 1000) {
+      return `R$ ${(value / 1000).toFixed(1)}K`;
+    }
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
+
+  const calculateConversionRate = (paid: number, total: number) => {
+    if (total === 0) return "0%";
+    return `${((paid / total) * 100).toFixed(1)}% taxa de conversão`;
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-3 sm:px-4 pb-8">
@@ -94,7 +142,7 @@ const Index = () => {
         </div>
         
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4 mb-6 sm:mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2 sm:gap-4 mb-6 sm:mb-8">
           <StatCard
             title="Boletos Gerados"
             value={stats.boletosGerados.toLocaleString('pt-BR')}
@@ -132,15 +180,37 @@ const Index = () => {
             isLoading={isLoading}
           />
           {isRealAdmin && (
-            <StatCard
-              title="Valor Líquido"
-              value={formatCurrency(stats.paidOrders)}
-              subtitle="Pedidos pagos"
-              icon={DollarSign}
-              variant="success"
-              delay={200}
-              isLoading={isLoading}
-            />
+            <>
+              <StatCard
+                title="Faturamento Bruto"
+                value={formatCurrency(stats.totalRevenue)}
+                subtitle={stats.manualRevenueTotal > 0 ? `+${formatCurrency(stats.manualRevenueTotal)} manual` : "Pedidos pagos"}
+                icon={DollarSign}
+                variant="info"
+                delay={200}
+                isLoading={isLoading}
+              />
+              {stats.taxRate > 0 && (
+                <StatCard
+                  title={`Imposto (${stats.taxRate}%)`}
+                  value={`-${formatCurrency(stats.taxAmount)}`}
+                  subtitle="Dedução fiscal"
+                  icon={Percent}
+                  variant="warning"
+                  delay={250}
+                  isLoading={isLoading}
+                />
+              )}
+              <StatCard
+                title="Valor Líquido"
+                value={formatCurrency(stats.netRevenue)}
+                subtitle={stats.taxRate > 0 ? "Após impostos" : "Receita total"}
+                icon={Wallet}
+                variant="success"
+                delay={300}
+                isLoading={isLoading}
+              />
+            </>
           )}
         </div>
 
