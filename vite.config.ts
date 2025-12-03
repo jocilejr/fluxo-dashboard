@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["logo-origem-viva.png", "favicon.ico"],
+      includeAssets: ["logo-ov.png", "favicon.ico"],
       manifest: {
         name: "Dash Origem Viva",
         short_name: "Dash Origem Viva",
@@ -28,13 +28,13 @@ export default defineConfig(({ mode }) => ({
         start_url: "/",
         icons: [
           {
-            src: "/logo-origem-viva.png",
+            src: "/logo-ov.png",
             sizes: "192x192",
             type: "image/png",
             purpose: "any maskable",
           },
           {
-            src: "/logo-origem-viva.png",
+            src: "/logo-ov.png",
             sizes: "512x512",
             type: "image/png",
             purpose: "any maskable",
