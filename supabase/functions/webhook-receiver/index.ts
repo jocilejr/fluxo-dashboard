@@ -244,6 +244,10 @@ async function sendPushNotification(
     body.set(header, 0);
     body.set(ciphertext, header.length);
 
+    console.log('Sending to FCM endpoint:', subscription.endpoint);
+    console.log('Payload being sent:', payload);
+    console.log('Body length:', body.length);
+
     const response = await fetch(subscription.endpoint, {
       method: 'POST',
       headers: {
@@ -256,10 +260,14 @@ async function sendPushNotification(
       body,
     });
 
+    const responseText = await response.text();
+    console.log('FCM Response status:', response.status);
+    console.log('FCM Response body:', responseText);
+    console.log('FCM Response headers:', JSON.stringify(Object.fromEntries(response.headers.entries())));
+
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Push failed: ${response.status} - ${errorText}`);
-      return { success: false, statusCode: response.status, error: errorText };
+      console.error(`Push failed: ${response.status} - ${responseText}`);
+      return { success: false, statusCode: response.status, error: responseText };
     }
 
     return { success: true, statusCode: response.status };
