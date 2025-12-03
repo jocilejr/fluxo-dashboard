@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Trash2, Download, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -55,9 +55,21 @@ const typeStyles = {
   cartao: "bg-chart-4/20 text-chart-4 border-chart-4/30",
 };
 
+const VIEWED_STORAGE_KEY = "viewed_transactions";
+
+type TabKey = "aprovados" | "boletos-gerados" | "pix-cartao-pendentes";
+
 export function TransactionsTable({ transactions, isLoading, onDelete }: TransactionsTableProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState("aprovados");
+  const [activeTab, setActiveTab] = useState<TabKey>("aprovados");
+  const [viewedIds, setViewedIds] = useState<Record<TabKey, string[]>>(() => {
+    try {
+      const stored = localStorage.getItem(VIEWED_STORAGE_KEY);
+      return stored ? JSON.parse(stored) : { aprovados: [], "boletos-gerados": [], "pix-cartao-pendentes": [] };
+    } catch {
+      return { aprovados: [], "boletos-gerados": [], "pix-cartao-pendentes": [] };
+    }
+  });
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -71,19 +83,53 @@ export function TransactionsTable({ transactions, isLoading, onDelete }: Transac
     return date.toLocaleTimeString('pt-BR') + ' ' + date.toLocaleDateString('pt-BR');
   };
 
-  // Filter transactions by tab
-  const tabFilteredTransactions = useMemo(() => {
-    switch (activeTab) {
-      case "aprovados":
-        return transactions.filter(t => t.status === "pago");
-      case "boletos-gerados":
-        return transactions.filter(t => t.type === "boleto" && t.status === "gerado");
-      case "pix-cartao-pendentes":
-        return transactions.filter(t => (t.type === "pix" || t.type === "cartao") && t.status === "pendente");
-      default:
-        return transactions;
+  // Get transactions for each tab
+  const tabTransactions = useMemo(() => ({
+    aprovados: transactions.filter(t => t.status === "pago"),
+    "boletos-gerados": transactions.filter(t => t.type === "boleto" && t.status === "gerado"),
+    "pix-cartao-pendentes": transactions.filter(t => (t.type === "pix" || t.type === "cartao") && t.status === "pendente"),
+  }), [transactions]);
+
+  // Calculate unviewed counts for each tab
+  const unviewedCounts = useMemo(() => {
+    const counts: Record<TabKey, number> = {
+      aprovados: 0,
+      "boletos-gerados": 0,
+      "pix-cartao-pendentes": 0,
+    };
+    
+    (Object.keys(tabTransactions) as TabKey[]).forEach((tab) => {
+      const tabTxIds = tabTransactions[tab].map(t => t.id);
+      const viewedInTab = viewedIds[tab] || [];
+      counts[tab] = tabTxIds.filter(id => !viewedInTab.includes(id)).length;
+    });
+    
+    return counts;
+  }, [tabTransactions, viewedIds]);
+
+  // Mark current tab's transactions as viewed
+  const markAsViewed = useCallback((tab: TabKey) => {
+    const tabTxIds = tabTransactions[tab].map(t => t.id);
+    
+    setViewedIds(prev => {
+      const updated = {
+        ...prev,
+        [tab]: [...new Set([...(prev[tab] || []), ...tabTxIds])],
+      };
+      localStorage.setItem(VIEWED_STORAGE_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  }, [tabTransactions]);
+
+  // Mark as viewed when tab changes or transactions load
+  useEffect(() => {
+    if (tabTransactions[activeTab].length > 0) {
+      markAsViewed(activeTab);
     }
-  }, [transactions, activeTab]);
+  }, [activeTab, tabTransactions, markAsViewed]);
+
+  // Filter transactions by active tab
+  const tabFilteredTransactions = tabTransactions[activeTab];
 
   // Apply search filter
   const filteredTransactions = useMemo(() => {
@@ -120,6 +166,10 @@ export function TransactionsTable({ transactions, isLoading, onDelete }: Transac
       toast.error("Erro ao remover transação");
       console.error(error);
     }
+  };
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value as TabKey);
   };
 
   if (isLoading) {
@@ -319,6 +369,20 @@ export function TransactionsTable({ transactions, isLoading, onDelete }: Transac
     );
   };
 
+  const renderTabTrigger = (value: TabKey, label: string) => {
+    const count = unviewedCounts[value];
+    return (
+      <TabsTrigger value={value} className="relative text-xs sm:text-sm">
+        {label}
+        {count > 0 && (
+          <span className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 min-w-[18px] h-[18px] sm:min-w-[20px] sm:h-[20px] flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] sm:text-xs font-bold">
+            {count > 99 ? "99+" : count}
+          </span>
+        )}
+      </TabsTrigger>
+    );
+  };
+
   return (
     <div className="glass-card rounded-xl p-4 sm:p-6 animate-slide-up" style={{ animationDelay: "400ms" }}>
       <div className="flex items-center justify-between mb-4">
@@ -328,11 +392,11 @@ export function TransactionsTable({ transactions, isLoading, onDelete }: Transac
         </span>
       </div>
       
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-4">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="aprovados">Aprovados</TabsTrigger>
-          <TabsTrigger value="boletos-gerados">Boletos Gerados</TabsTrigger>
-          <TabsTrigger value="pix-cartao-pendentes">PIX/Cartão Pendentes</TabsTrigger>
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="mb-4">
+        <TabsList className="grid w-full grid-cols-3 gap-1">
+          {renderTabTrigger("aprovados", "Aprovados")}
+          {renderTabTrigger("boletos-gerados", "Boletos Gerados")}
+          {renderTabTrigger("pix-cartao-pendentes", "PIX/Cartão Pend.")}
         </TabsList>
       </Tabs>
 
