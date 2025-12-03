@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      financial_settings: {
+        Row: {
+          created_at: string
+          id: string
+          tax_rate: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          tax_rate?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          tax_rate?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      manual_revenues: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string
+          id: string
+          received_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description: string
+          id?: string
+          received_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string
+          id?: string
+          received_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
