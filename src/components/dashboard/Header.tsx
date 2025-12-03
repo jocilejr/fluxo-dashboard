@@ -41,7 +41,7 @@ export function Header() {
     if (permission === "granted") {
       toast({
         title: "Notificações ativas",
-        description: "Você receberá alertas de novas transações.",
+        description: "Você receberá alertas de novas vendas.",
       });
       return;
     }
@@ -59,7 +59,7 @@ export function Header() {
     if (granted) {
       toast({
         title: "Notificações ativadas",
-        description: "Você receberá alertas de novas transações.",
+        description: "Você receberá alertas de novas vendas.",
       });
     } else {
       toast({
@@ -74,7 +74,7 @@ export function Header() {
     if (isInstalled) {
       toast({
         title: "App já instalado",
-        description: "O Fluxo Dashboard já está instalado no seu dispositivo.",
+        description: "O Origem Viva já está instalado no seu dispositivo.",
       });
       return;
     }
@@ -113,11 +113,18 @@ export function Header() {
   return (
     <>
       <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-4 sm:py-6 gap-4 animate-fade-in">
-        <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight truncate">Dashboard Financeiro</h1>
-          <p className="text-muted-foreground text-xs sm:text-sm mt-1 hidden sm:block">
-            Acompanhe todas as transações da sua empresa
-          </p>
+        <div className="min-w-0 flex items-center gap-3">
+          <img 
+            src="/logo-origem-viva.png" 
+            alt="Origem Viva" 
+            className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl shadow-lg"
+          />
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight truncate">Origem Viva</h1>
+            <p className="text-muted-foreground text-xs sm:text-sm hidden sm:block">
+              Dashboard de Vendas
+            </p>
+          </div>
         </div>
         
         <div className="flex items-center gap-2 sm:gap-4 justify-end">
@@ -184,7 +191,7 @@ export function Header() {
           <DialogHeader>
             <DialogTitle>Instalar no iPhone</DialogTitle>
             <DialogDescription className="space-y-4 pt-4">
-              <p>Para instalar o Fluxo Dashboard no seu iPhone:</p>
+              <p>Para instalar o Origem Viva no seu iPhone:</p>
               <ol className="list-decimal list-inside space-y-2 text-left">
                 <li className="flex items-start gap-2">
                   <span>1.</span>

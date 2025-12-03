@@ -1,11 +1,11 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 
-const ORIGINAL_TITLE = "Fluxo Dashboard";
+const ORIGINAL_TITLE = "Origem Viva";
 
 export function useTabNotification() {
   const [pendingCount, setPendingCount] = useState(0);
   const isTabVisibleRef = useRef(!document.hidden);
-  const originalFaviconRef = useRef<string>("/notification-icon.png");
+  const originalFaviconRef = useRef<string>("/logo-origem-viva.png");
 
   // Track tab visibility
   useEffect(() => {
@@ -28,7 +28,7 @@ export function useTabNotification() {
   // Update title when pending count changes
   useEffect(() => {
     if (pendingCount > 0 && document.hidden) {
-      document.title = `(${pendingCount}) Novo Pedido! - ${ORIGINAL_TITLE}`;
+      document.title = `(${pendingCount}) Nova Venda! - ${ORIGINAL_TITLE}`;
     }
   }, [pendingCount]);
 
@@ -40,7 +40,7 @@ export function useTabNotification() {
     const interval = setInterval(() => {
       if (document.hidden) {
         document.title = showAlert 
-          ? `🔔 (${pendingCount}) Novo Pedido!` 
+          ? `🔔 (${pendingCount}) Nova Venda!` 
           : ORIGINAL_TITLE;
         showAlert = !showAlert;
       } else {
