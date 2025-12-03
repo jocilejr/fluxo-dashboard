@@ -27,22 +27,19 @@ export function usePushNotifications() {
     checkSubscription();
   }, []);
 
-  // Register the push service worker
-  const registerServiceWorker = useCallback(async () => {
+  // Get the PWA service worker registration
+  const getServiceWorker = useCallback(async () => {
     if (!("serviceWorker" in navigator)) {
       throw new Error("Service Worker not supported");
     }
 
     try {
-      // Register the custom push service worker
-      const reg = await navigator.serviceWorker.register("/sw-push.js", {
-        scope: "/",
-      });
-      await navigator.serviceWorker.ready;
+      // Use the PWA service worker that's already registered
+      const reg = await navigator.serviceWorker.ready;
       setRegistration(reg);
       return reg;
     } catch (error) {
-      console.error("Service Worker registration failed:", error);
+      console.error("Service Worker not ready:", error);
       throw error;
     }
   }, []);
@@ -82,10 +79,10 @@ export function usePushNotifications() {
         throw new Error("Notification permission denied");
       }
 
-      // Ensure service worker is registered
+      // Get the PWA service worker
       let reg = registration;
       if (!reg) {
-        reg = await registerServiceWorker();
+        reg = await getServiceWorker();
       }
 
       // Get VAPID key
@@ -119,7 +116,7 @@ export function usePushNotifications() {
     } finally {
       setIsLoading(false);
     }
-  }, [registration, registerServiceWorker, getVapidKey, urlBase64ToUint8Array]);
+  }, [registration, getServiceWorker, getVapidKey, urlBase64ToUint8Array]);
 
   // Unsubscribe from push notifications
   const unsubscribe = useCallback(async () => {
