@@ -1,9 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useBrowserNotifications } from "./useBrowserNotifications";
 import { useTabNotification } from "./useTabNotification";
-import { toast } from "sonner";
 
 export interface Transaction {
   id: string;
@@ -30,9 +29,10 @@ export interface TransactionStats {
 }
 
 export function useTransactions() {
-  const { notifyTransaction, permission } = useBrowserNotifications();
+  const { notifyTransaction } = useBrowserNotifications();
   const { notifyNewTransaction } = useTabNotification();
   const initialLoadRef = useRef(true);
+  const [hasNewTransaction, setHasNewTransaction] = useState(false);
 
   const { data: transactions, refetch, isLoading } = useQuery({
     queryKey: ["transactions"],
@@ -89,17 +89,13 @@ export function useTransactions() {
               ? `${newData.customer_name} - ${formattedAmount}`
               : `Valor: ${formattedAmount}`;
 
-            console.log("Showing toast:", title, body);
-            
-            // Always show toast notification (works when tab is focused)
-            toast(title, {
-              description: body,
-            });
+            // Show alert in transactions section
+            setHasNewTransaction(true);
 
             // Notify tab title when in background
             notifyNewTransaction();
 
-            // Also try browser notification (works when tab is in background)
+            // Browser notification for background (mobile PWA)
             if (typeof Notification !== "undefined" && Notification.permission === "granted") {
               notifyTransaction(
                 newData.type,
@@ -135,10 +131,14 @@ export function useTransactions() {
       .reduce((sum, t) => sum + Number(t.amount), 0) || 0,
   };
 
+  const dismissNewTransaction = () => setHasNewTransaction(false);
+
   return {
     transactions: transactions || [],
     stats,
     isLoading,
     refetch,
+    hasNewTransaction,
+    dismissNewTransaction,
   };
 }

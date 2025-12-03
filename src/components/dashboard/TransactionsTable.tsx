@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Transaction } from "@/hooks/useTransactions";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trash2, Download, Search } from "lucide-react";
+import { Trash2, Download, Search, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -31,6 +31,8 @@ interface TransactionsTableProps {
   transactions: Transaction[];
   isLoading?: boolean;
   onDelete?: () => void;
+  hasNewTransaction?: boolean;
+  onDismissNewTransaction?: () => void;
 }
 
 const typeLabels = {
@@ -61,7 +63,7 @@ const typeStyles = {
   cartao: "bg-chart-4/20 text-chart-4 border-chart-4/30",
 };
 
-export function TransactionsTable({ transactions, isLoading, onDelete }: TransactionsTableProps) {
+export function TransactionsTable({ transactions, isLoading, onDelete, hasNewTransaction, onDismissNewTransaction }: TransactionsTableProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -142,7 +144,22 @@ export function TransactionsTable({ transactions, isLoading, onDelete }: Transac
   return (
     <div className="glass-card rounded-xl p-4 sm:p-6 animate-slide-up" style={{ animationDelay: "400ms" }}>
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-base sm:text-lg font-semibold">Transações Recentes</h3>
+        <div className="flex items-center gap-3">
+          <h3 className="text-base sm:text-lg font-semibold">Transações Recentes</h3>
+          {hasNewTransaction && (
+            <button
+              onClick={onDismissNewTransaction}
+              className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium bg-success/20 text-success border border-success/30 rounded-full animate-pulse hover:bg-success/30 transition-colors"
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
+              </span>
+              Nova transação
+              <X className="h-3 w-3 ml-0.5" />
+            </button>
+          )}
+        </div>
         <span className="text-xs sm:text-sm text-muted-foreground">
           {filteredTransactions.length} transações
         </span>
