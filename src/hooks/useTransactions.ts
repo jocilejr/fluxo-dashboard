@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useRef, useState } from "react";
-import { useBrowserNotifications } from "./useBrowserNotifications";
 import { useTabNotification } from "./useTabNotification";
 
 export interface Transaction {
@@ -29,19 +28,16 @@ export interface TransactionStats {
 }
 
 export function useTransactions() {
-  const { notifyTransaction } = useBrowserNotifications();
   const { notifyNewTransaction } = useTabNotification();
   const initialLoadRef = useRef(true);
   const [hasNewTransaction, setHasNewTransaction] = useState(false);
   
-  // Store callbacks in refs to avoid re-subscriptions
-  const notifyTransactionRef = useRef(notifyTransaction);
+  // Store callback in ref to avoid re-subscriptions
   const notifyNewTransactionRef = useRef(notifyNewTransaction);
   
   useEffect(() => {
-    notifyTransactionRef.current = notifyTransaction;
     notifyNewTransactionRef.current = notifyNewTransaction;
-  }, [notifyTransaction, notifyNewTransaction]);
+  }, [notifyNewTransaction]);
 
   const { data: transactions, refetch, isLoading } = useQuery({
     queryKey: ["transactions"],
@@ -83,16 +79,9 @@ export function useTransactions() {
 
             // Notify tab title when in background
             notifyNewTransactionRef.current();
-
-            // Browser notification for background (mobile PWA)
-            if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-              notifyTransactionRef.current(
-                newData.type,
-                newData.status,
-                newData.amount,
-                newData.customer_name || undefined
-              );
-            }
+            
+            // Push notifications are handled by the service worker
+            // No need for browser notifications here as they come from the server
           }
         }
       )
