@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useRef } from "react";
 import { useBrowserNotifications } from "./useBrowserNotifications";
+import { toast } from "sonner";
 
 export interface Transaction {
   id: string;
@@ -58,36 +59,49 @@ export function useTransactions() {
         },
         (payload) => {
           console.log("Realtime update:", payload);
-          console.log("Notification debug - initialLoadRef:", initialLoadRef.current);
-          console.log("Notification debug - permission:", typeof Notification !== "undefined" ? Notification.permission : "not supported");
           refetch();
 
-          // Send browser notification for new/updated transactions
-          if (typeof Notification !== "undefined") {
-            console.log("Notification check passed - Notification API exists");
-            if (!initialLoadRef.current) {
-              console.log("Notification check passed - not initial load");
-              if (Notification.permission === "granted") {
-                console.log("Notification check passed - permission granted");
-                const newData = payload.new as Transaction;
-                if (newData && newData.type && newData.status) {
-                  console.log("Sending notification for:", newData.type, newData.status, newData.amount);
-                  const result = notifyTransaction(
-                    newData.type,
-                    newData.status,
-                    newData.amount,
-                    newData.customer_name || undefined
-                  );
-                  console.log("Notification result:", result);
-                }
-              } else {
-                console.log("Notification blocked - permission is:", Notification.permission);
+          // Send notification for new/updated transactions
+          if (!initialLoadRef.current) {
+            const newData = payload.new as Transaction;
+            if (newData && newData.type && newData.status) {
+              const typeNames: Record<string, string> = {
+                boleto: "Boleto",
+                pix: "PIX",
+                cartao: "Cartão",
+              };
+              const statusNames: Record<string, string> = {
+                gerado: "gerado",
+                pago: "pago",
+                pendente: "pendente",
+                cancelado: "cancelado",
+                expirado: "expirado",
+              };
+              const formattedAmount = new Intl.NumberFormat("pt-BR", {
+                style: "currency",
+                currency: "BRL",
+              }).format(newData.amount);
+              
+              const title = `${typeNames[newData.type] || newData.type} ${statusNames[newData.status] || newData.status}`;
+              const body = newData.customer_name
+                ? `${newData.customer_name} - ${formattedAmount}`
+                : `Valor: ${formattedAmount}`;
+
+              // Always show toast notification (works when tab is focused)
+              toast(title, {
+                description: body,
+              });
+
+              // Also try browser notification (works when tab is in background)
+              if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+                notifyTransaction(
+                  newData.type,
+                  newData.status,
+                  newData.amount,
+                  newData.customer_name || undefined
+                );
               }
-            } else {
-              console.log("Notification blocked - still initial load");
             }
-          } else {
-            console.log("Notification blocked - API not supported");
           }
         }
       )
