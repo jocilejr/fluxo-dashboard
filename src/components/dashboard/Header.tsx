@@ -2,7 +2,6 @@ import { Bell, BellOff, LogOut, Download, Check, Share, MoreVertical } from "luc
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
 import { SettingsDialog } from "./SettingsDialog";
 import { useBrowserNotifications } from "@/hooks/useBrowserNotifications";
 import { usePWA } from "@/hooks/usePWA";
@@ -30,7 +29,6 @@ import { useState } from "react";
 export function Header() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
   const { permission, requestPermission, isSupported } = useBrowserNotifications();
   const { isInstallable, isInstalled, isIOS, installApp } = usePWA();
   const [showInstallDialog, setShowInstallDialog] = useState(false);
@@ -38,54 +36,18 @@ export function Header() {
 
   const handleSignOut = async () => {
     await signOut();
-    toast({
-      title: "Logout realizado",
-      description: "Até logo!",
-    });
     navigate("/auth");
   };
 
   const handleNotificationToggle = async () => {
-    if (permission === "granted") {
-      toast({
-        title: "Notificações ativas",
-        description: "Você receberá alertas de novas vendas.",
-      });
+    if (permission === "granted" || permission === "denied") {
       return;
     }
-
-    if (permission === "denied") {
-      toast({
-        title: "Notificações bloqueadas",
-        description: "Permita notificações nas configurações do navegador.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const granted = await requestPermission();
-    if (granted) {
-      toast({
-        title: "Notificações ativadas",
-        description: "Você receberá alertas de novas vendas.",
-      });
-    } else {
-      toast({
-        title: "Permissão negada",
-        description: "Notificações não foram habilitadas.",
-        variant: "destructive",
-      });
-    }
+    await requestPermission();
   };
 
   const handleInstallApp = async () => {
-    if (isInstalled) {
-      toast({
-        title: "App já instalado",
-        description: "O Origem Viva já está instalado no seu dispositivo.",
-      });
-      return;
-    }
+    if (isInstalled) return;
 
     const result = await installApp();
     
@@ -99,13 +61,6 @@ export function Header() {
       setInstallDialogType("android");
       setShowInstallDialog(true);
       return;
-    }
-    
-    if (result === true) {
-      toast({
-        title: "App instalado!",
-        description: "Agora você receberá notificações push no seu dispositivo.",
-      });
     }
   };
 
