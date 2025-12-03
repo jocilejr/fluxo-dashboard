@@ -4,12 +4,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Settings, Users, Webhook, Plus, Trash2, Loader2, KeyRound } from "lucide-react";
+import { Settings, Users, Webhook, Plus, Trash2, Loader2, KeyRound, DollarSign, Percent } from "lucide-react";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { WebhookInfo } from "./WebhookInfo";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { format } from "date-fns";
 
 interface SettingsDialogProps {
   trigger?: React.ReactNode;
@@ -24,6 +25,9 @@ export const SettingsDialog = ({ trigger, asMobileItem }: SettingsDialogProps) =
   const [resetUserId, setResetUserId] = useState<string | null>(null);
   const [resetPassword, setResetPassword] = useState("");
   const [isResetting, setIsResetting] = useState(false);
+  const [taxRate, setTaxRate] = useState("");
+  const [manualDescription, setManualDescription] = useState("");
+  const [manualAmount, setManualAmount] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -40,6 +44,95 @@ export const SettingsDialog = ({ trigger, asMobileItem }: SettingsDialogProps) =
       return data;
     },
     enabled: open,
+  });
+
+  // Fetch financial settings
+  const { data: financialSettings } = useQuery({
+    queryKey: ["financial-settings"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("financial_settings")
+        .select("*")
+        .maybeSingle();
+      
+      if (error) throw error;
+      if (data) setTaxRate(data.tax_rate.toString());
+      return data;
+    },
+    enabled: open,
+  });
+
+  // Fetch manual revenues
+  const { data: manualRevenues, isLoading: loadingRevenues } = useQuery({
+    queryKey: ["manual-revenues"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("manual_revenues")
+        .select("*")
+        .order("received_at", { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: open,
+  });
+
+  // Update tax rate mutation
+  const updateTaxRate = useMutation({
+    mutationFn: async (rate: number) => {
+      const { error } = await supabase
+        .from("financial_settings")
+        .update({ tax_rate: rate })
+        .eq("id", financialSettings?.id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Sucesso", description: "Alíquota atualizada" });
+      queryClient.invalidateQueries({ queryKey: ["financial-settings"] });
+    },
+    onError: () => {
+      toast({ title: "Erro", description: "Não foi possível atualizar", variant: "destructive" });
+    },
+  });
+
+  // Add manual revenue mutation
+  const addManualRevenue = useMutation({
+    mutationFn: async ({ description, amount }: { description: string; amount: number }) => {
+      const { error } = await supabase
+        .from("manual_revenues")
+        .insert({ description, amount });
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Sucesso", description: "Faturamento adicionado" });
+      setManualDescription("");
+      setManualAmount("");
+      queryClient.invalidateQueries({ queryKey: ["manual-revenues"] });
+    },
+    onError: () => {
+      toast({ title: "Erro", description: "Não foi possível adicionar", variant: "destructive" });
+    },
+  });
+
+  // Delete manual revenue mutation
+  const deleteManualRevenue = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("manual_revenues")
+        .delete()
+        .eq("id", id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Sucesso", description: "Faturamento removido" });
+      queryClient.invalidateQueries({ queryKey: ["manual-revenues"] });
+    },
+    onError: () => {
+      toast({ title: "Erro", description: "Não foi possível remover", variant: "destructive" });
+    },
   });
 
   const createUser = async () => {
@@ -182,10 +275,14 @@ export const SettingsDialog = ({ trigger, asMobileItem }: SettingsDialogProps) =
         </DialogHeader>
         
         <Tabs defaultValue="users" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               Usuários
+            </TabsTrigger>
+            <TabsTrigger value="financeiro" className="flex items-center gap-2">
+              <DollarSign className="h-4 w-4" />
+              Financeiro
             </TabsTrigger>
             <TabsTrigger value="webhook" className="flex items-center gap-2">
               <Webhook className="h-4 w-4" />
@@ -298,6 +395,140 @@ export const SettingsDialog = ({ trigger, asMobileItem }: SettingsDialogProps) =
             </div>
           </TabsContent>
           
+          <TabsContent value="financeiro" className="space-y-4 mt-4">
+            {/* Tax Rate Section */}
+            <div className="space-y-4 p-4 border rounded-lg">
+              <h3 className="font-semibold flex items-center gap-2">
+                <Percent className="h-4 w-4" />
+                Alíquota de Imposto
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Defina a porcentagem a ser descontada do faturamento total
+              </p>
+              <div className="flex gap-2 items-end">
+                <div className="space-y-2 flex-1">
+                  <Label htmlFor="taxRate">Porcentagem (%)</Label>
+                  <Input
+                    id="taxRate"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    placeholder="Ex: 15.5"
+                    value={taxRate}
+                    onChange={(e) => setTaxRate(e.target.value)}
+                  />
+                </div>
+                <Button 
+                  onClick={() => {
+                    const rate = parseFloat(taxRate);
+                    if (isNaN(rate) || rate < 0 || rate > 100) {
+                      toast({ title: "Erro", description: "Digite um valor válido entre 0 e 100", variant: "destructive" });
+                      return;
+                    }
+                    updateTaxRate.mutate(rate);
+                  }}
+                  disabled={updateTaxRate.isPending}
+                >
+                  {updateTaxRate.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar"}
+                </Button>
+              </div>
+            </div>
+
+            {/* Manual Revenue Section */}
+            <div className="space-y-4 p-4 border rounded-lg">
+              <h3 className="font-semibold flex items-center gap-2">
+                <DollarSign className="h-4 w-4" />
+                Faturamento Manual
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Adicione faturamentos recebidos diretamente na conta bancária
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="manualDesc">Descrição</Label>
+                  <Input
+                    id="manualDesc"
+                    placeholder="Ex: Depósito cliente X"
+                    value={manualDescription}
+                    onChange={(e) => setManualDescription(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="manualAmount">Valor (R$)</Label>
+                  <Input
+                    id="manualAmount"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Ex: 1500.00"
+                    value={manualAmount}
+                    onChange={(e) => setManualAmount(e.target.value)}
+                  />
+                </div>
+              </div>
+              <Button 
+                onClick={() => {
+                  if (!manualDescription.trim() || !manualAmount) {
+                    toast({ title: "Erro", description: "Preencha descrição e valor", variant: "destructive" });
+                    return;
+                  }
+                  const amount = parseFloat(manualAmount);
+                  if (isNaN(amount) || amount <= 0) {
+                    toast({ title: "Erro", description: "Digite um valor válido", variant: "destructive" });
+                    return;
+                  }
+                  addManualRevenue.mutate({ description: manualDescription.trim(), amount });
+                }}
+                disabled={addManualRevenue.isPending}
+                className="w-full md:w-auto"
+              >
+                {addManualRevenue.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Plus className="h-4 w-4 mr-2" />
+                )}
+                Adicionar Faturamento
+              </Button>
+            </div>
+
+            {/* Manual Revenues List */}
+            <div className="space-y-2">
+              <h3 className="font-semibold">Faturamentos Manuais Cadastrados</h3>
+              {loadingRevenues ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                </div>
+              ) : manualRevenues && manualRevenues.length > 0 ? (
+                <div className="space-y-2">
+                  {manualRevenues.map((revenue) => (
+                    <div key={revenue.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div>
+                        <p className="font-medium text-sm">{revenue.description}</p>
+                        <p className="text-xs text-muted-foreground">
+                          R$ {revenue.amount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} • {format(new Date(revenue.received_at), "dd/MM/yyyy")}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => deleteManualRevenue.mutate(revenue.id)}
+                        disabled={deleteManualRevenue.isPending}
+                        title="Remover"
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground text-sm py-4 text-center">
+                  Nenhum faturamento manual cadastrado
+                </p>
+              )}
+            </div>
+          </TabsContent>
+
           <TabsContent value="webhook" className="mt-4">
             <WebhookInfo />
           </TabsContent>
