@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 
 const Index = () => {
-  const { transactions, isLoading, refetch } = useTransactions();
+  const { transactions, isLoading, refetch, hasNewTransaction, dismissNewTransaction } = useTransactions();
   const { user } = useAdminCheck();
   const [dateFilter, setDateFilter] = useState<DateFilterValue>(getDefaultDateFilter);
 
@@ -168,7 +168,13 @@ const Index = () => {
         )}
 
         {/* Transactions */}
-        <TransactionsTable transactions={filteredTransactions} isLoading={isLoading} onDelete={refetch} />
+        <TransactionsTable 
+          transactions={filteredTransactions} 
+          isLoading={isLoading} 
+          onDelete={refetch}
+          hasNewTransaction={hasNewTransaction}
+          onDismissNewTransaction={dismissNewTransaction}
+        />
       </div>
     </div>
   );
