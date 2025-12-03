@@ -499,12 +499,16 @@ export function TransactionsTable({ transactions, isLoading, onDelete }: Transac
                           </div>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <div className="space-y-1">
-                            <p><span className="text-muted-foreground">Gerado:</span> {formatDate(transaction.created_at)}</p>
-                            {transaction.type === "boleto" && transaction.paid_at && (
-                              <p><span className="text-muted-foreground">Pago:</span> {formatDate(transaction.paid_at)}</p>
-                            )}
-                          </div>
+                          {transaction.type === "boleto" ? (
+                            <div className="space-y-1">
+                              <p><span className="text-muted-foreground">Gerado:</span> {formatDate(transaction.created_at)}</p>
+                              {transaction.paid_at && (
+                                <p><span className="text-muted-foreground">Pago:</span> {formatDate(transaction.paid_at)}</p>
+                              )}
+                            </div>
+                          ) : (
+                            <p>{formatDate(transaction.created_at)}</p>
+                          )}
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
