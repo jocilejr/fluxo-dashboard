@@ -21,19 +21,136 @@ interface WebhookPayload {
   paid_at?: string;
 }
 
+interface PushSubscription {
+  id: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  user_id: string;
+}
+
 function normalizePhone(phone?: string): string | undefined {
   if (!phone) return undefined;
   return phone.replace(/^\+/, '');
 }
 
-// Normalize external_id by removing dots, spaces, dashes and other formatting
 function normalizeExternalId(externalId?: string): string | undefined {
   if (!externalId) return undefined;
   return externalId.replace(/[\s.\-\/]/g, '');
 }
 
+// Send push notifications using web-push library
+async function sendPushNotifications(
+  supabaseUrl: string,
+  supabaseServiceKey: string,
+  transactionType: string,
+  amount: number,
+  status: string,
+  customerName?: string
+) {
+  try {
+    const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY');
+    const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY');
+
+    if (!vapidPublicKey || !vapidPrivateKey) {
+      console.log('VAPID keys not configured, skipping push notifications');
+      return;
+    }
+
+    // Create a new client for this operation
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Get all push subscriptions
+    const { data: subscriptions, error } = await supabase
+      .from('push_subscriptions')
+      .select('*');
+
+    if (error) {
+      console.error('Error fetching push subscriptions:', error);
+      return;
+    }
+
+    const subs = subscriptions as PushSubscription[] | null;
+    if (!subs || subs.length === 0) {
+      console.log('No push subscriptions found');
+      return;
+    }
+
+    console.log(`Sending push notifications to ${subs.length} subscribers`);
+
+    // Format the notification
+    const typeLabels: Record<string, string> = {
+      boleto: 'Boleto',
+      pix: 'PIX',
+      cartao: 'Cartão',
+    };
+
+    const statusLabels: Record<string, string> = {
+      gerado: 'gerado',
+      pago: 'pago',
+      pendente: 'pendente',
+      cancelado: 'cancelado',
+      expirado: 'expirado',
+    };
+
+    const formattedAmount = new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(amount);
+
+    const title = `${typeLabels[transactionType] || transactionType} ${statusLabels[status] || status}`;
+    const body = customerName 
+      ? `${customerName} - ${formattedAmount}`
+      : `Nova transação: ${formattedAmount}`;
+
+    const payload = JSON.stringify({
+      title,
+      body,
+      icon: '/logo-ov.png',
+    });
+
+    // Import web-push dynamically
+    const webpush = await import('https://esm.sh/web-push@3.6.7');
+    
+    webpush.setVapidDetails(
+      'mailto:contato@origemviva.com',
+      vapidPublicKey,
+      vapidPrivateKey
+    );
+
+    // Send to each subscription
+    for (const sub of subs) {
+      try {
+        const pushSubscription = {
+          endpoint: sub.endpoint,
+          keys: {
+            p256dh: sub.p256dh,
+            auth: sub.auth,
+          },
+        };
+
+        await webpush.sendNotification(pushSubscription, payload);
+        console.log(`Push sent successfully to ${sub.endpoint.substring(0, 50)}...`);
+      } catch (pushError: unknown) {
+        const err = pushError as { statusCode?: number; message?: string };
+        console.error(`Error sending push to ${sub.endpoint}:`, err.message || pushError);
+        
+        // Remove invalid subscriptions (410 Gone means unsubscribed)
+        if (err.statusCode === 410 || err.statusCode === 404) {
+          await supabase
+            .from('push_subscriptions')
+            .delete()
+            .eq('id', sub.id);
+          console.log(`Removed invalid subscription: ${sub.id}`);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error in sendPushNotifications:', error);
+  }
+}
+
 Deno.serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -44,11 +161,9 @@ Deno.serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Parse webhook payload
     const payload: WebhookPayload = await req.json();
     console.log('Webhook received:', JSON.stringify(payload, null, 2));
 
-    // Validate required fields
     if (!payload.type || !payload.amount) {
       console.error('Missing required fields: type or amount');
       return new Response(
@@ -57,7 +172,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Determine status based on event
     let status = payload.status || 'gerado';
     let paidAt = payload.paid_at ? new Date(payload.paid_at).toISOString() : null;
 
@@ -70,13 +184,10 @@ Deno.serve(async (req) => {
       status = 'expirado';
     }
 
-    // Normalize the incoming external_id
     const normalizedIncomingId = normalizeExternalId(payload.external_id);
     console.log('Normalized incoming external_id:', normalizedIncomingId);
 
-    // Check if transaction exists (update) or create new
     if (normalizedIncomingId) {
-      // Get all transactions with external_id to find a match
       const { data: transactions, error: fetchError } = await supabase
         .from('transactions')
         .select('id, external_id')
@@ -88,7 +199,6 @@ Deno.serve(async (req) => {
         throw fetchError;
       }
 
-      // Find matching transaction by normalized external_id
       const existingTransaction = transactions?.find(t => {
         const normalizedDbId = normalizeExternalId(t.external_id);
         return normalizedDbId === normalizedIncomingId;
@@ -97,7 +207,6 @@ Deno.serve(async (req) => {
       if (existingTransaction) {
         console.log('Found existing transaction:', existingTransaction.id);
         
-        // Update existing transaction
         const { data, error } = await supabase
           .from('transactions')
           .update({
@@ -120,6 +229,9 @@ Deno.serve(async (req) => {
 
         console.log('Transaction updated:', data.id);
 
+        // Send push notification (don't await to not block response)
+        sendPushNotifications(supabaseUrl, supabaseServiceKey, payload.type, payload.amount, status, payload.customer_name);
+
         return new Response(
           JSON.stringify({ success: true, action: 'updated', transaction_id: data.id }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -127,7 +239,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Insert new transaction
     const { data, error } = await supabase
       .from('transactions')
       .insert({
@@ -153,6 +264,9 @@ Deno.serve(async (req) => {
     }
 
     console.log('Transaction created:', data.id);
+
+    // Send push notification (don't await to not block response)
+    sendPushNotifications(supabaseUrl, supabaseServiceKey, payload.type, payload.amount, status, payload.customer_name);
 
     return new Response(
       JSON.stringify({ success: true, action: 'created', transaction_id: data.id }),
