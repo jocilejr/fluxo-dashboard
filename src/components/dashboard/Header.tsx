@@ -1,9 +1,8 @@
-import { Bell, BellOff, LogOut, Download, Check, Share, MoreVertical } from "lucide-react";
+import { LogOut, Download, Check, Share, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { SettingsDialog } from "./SettingsDialog";
-import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { usePWA } from "@/hooks/usePWA";
 import {
   Tooltip,
@@ -29,24 +28,13 @@ import { useState } from "react";
 export function Header() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const { isSubscribed, isLoading, isSupported, subscribe, unsubscribe } = usePushNotifications();
-  const { isInstallable, isInstalled, isIOS, installApp } = usePWA();
+  const { isInstallable, isInstalled, installApp } = usePWA();
   const [showInstallDialog, setShowInstallDialog] = useState(false);
   const [installDialogType, setInstallDialogType] = useState<"ios" | "android">("ios");
 
   const handleSignOut = async () => {
     await signOut();
     navigate("/auth");
-  };
-
-  const handleNotificationToggle = async () => {
-    if (isLoading) return;
-    
-    if (isSubscribed) {
-      await unsubscribe();
-    } else {
-      await subscribe();
-    }
   };
 
   const handleInstallApp = async () => {
@@ -110,27 +98,6 @@ export function Header() {
               </TooltipContent>
             </Tooltip>
           )}
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-9 w-9"
-                onClick={handleNotificationToggle}
-                disabled={!isSupported || isLoading}
-              >
-                {isSubscribed ? (
-                  <Bell className="h-4 w-4 text-primary" />
-                ) : (
-                  <BellOff className="h-4 w-4 text-muted-foreground" />
-                )}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{isSubscribed ? "Notificações ativas (Push)" : "Ativar notificações push"}</p>
-            </TooltipContent>
-          </Tooltip>
           
           <SettingsDialog />
 
@@ -155,20 +122,6 @@ export function Header() {
               <Download className="h-4 w-4 text-primary" />
             </Button>
           )}
-          
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-9 w-9"
-            onClick={handleNotificationToggle}
-            disabled={!isSupported || isLoading}
-          >
-            {isSubscribed ? (
-              <Bell className="h-4 w-4 text-primary" />
-            ) : (
-              <BellOff className="h-4 w-4 text-muted-foreground" />
-            )}
-          </Button>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -243,9 +196,6 @@ export function Header() {
                     </ol>
                   </>
                 )}
-                <p className="text-sm text-muted-foreground mt-4">
-                  Após instalar, ative as notificações push para receber alertas mesmo com o app fechado.
-                </p>
               </div>
             </DialogDescription>
           </DialogHeader>
