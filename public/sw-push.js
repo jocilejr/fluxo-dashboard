@@ -1,4 +1,7 @@
 // Custom service worker for push notifications
+// Version: 2.0 - Clear cache fix
+
+const CACHE_VERSION = 'v2';
 
 self.addEventListener('push', function(event) {
   console.log('[SW] Push received:', event);
@@ -68,11 +71,35 @@ self.addEventListener('notificationclick', function(event) {
 });
 
 self.addEventListener('install', function(event) {
-  console.log('[SW] Push service worker installed');
+  console.log('[SW] Push service worker installing, version:', CACHE_VERSION);
+  // Force the waiting service worker to become active
   self.skipWaiting();
 });
 
 self.addEventListener('activate', function(event) {
-  console.log('[SW] Push service worker activated');
-  event.waitUntil(clients.claim());
+  console.log('[SW] Push service worker activating, version:', CACHE_VERSION);
+  
+  event.waitUntil(
+    Promise.all([
+      // Clear all old caches
+      caches.keys().then(function(cacheNames) {
+        return Promise.all(
+          cacheNames.map(function(cacheName) {
+            console.log('[SW] Deleting cache:', cacheName);
+            return caches.delete(cacheName);
+          })
+        );
+      }),
+      // Take control of all clients immediately
+      clients.claim()
+    ]).then(function() {
+      console.log('[SW] All caches cleared, now controlling all clients');
+    })
+  );
+});
+
+// Handle fetch - pass through without caching for this simple push SW
+self.addEventListener('fetch', function(event) {
+  // Let the browser handle fetches normally
+  return;
 });
