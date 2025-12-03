@@ -37,8 +37,8 @@ export function useBrowserNotifications() {
           const registration = await navigator.serviceWorker.ready;
           // Use any to allow vibrate property which is supported but not in TS types
           const notificationOptions: any = {
-            icon: "/logo-origem-viva.png",
-            badge: "/logo-origem-viva.png",
+            icon: "/logo-origem-viva.png?v=2",
+            badge: "/logo-origem-viva.png?v=2",
             vibrate: [200, 100, 200],
             requireInteraction: true,
             silent: false,
@@ -55,8 +55,8 @@ export function useBrowserNotifications() {
       // Fallback to regular Notification API
       try {
         const notification = new Notification(title, {
-          icon: "/logo-origem-viva.png",
-          badge: "/logo-origem-viva.png",
+          icon: "/logo-origem-viva.png?v=2",
+          badge: "/logo-origem-viva.png?v=2",
           requireInteraction: true,
           silent: false,
           ...options,
