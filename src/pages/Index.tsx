@@ -14,8 +14,7 @@ import {
   FileText, 
   QrCode, 
   CreditCard,
-  DollarSign,
-  Receipt
+  DollarSign
 } from "lucide-react";
 
 const Index = () => {
@@ -133,26 +132,15 @@ const Index = () => {
             isLoading={isLoading}
           />
           {isRealAdmin && (
-            <>
-              <StatCard
-                title="Valor Total"
-                value={formatCurrency(stats.totalOrders)}
-                subtitle="Todos os pedidos"
-                icon={Receipt}
-                variant="default"
-                delay={200}
-                isLoading={isLoading}
-              />
-              <StatCard
-                title="Valor Líquido"
-                value={formatCurrency(stats.paidOrders)}
-                subtitle="Pedidos pagos"
-                icon={DollarSign}
-                variant="success"
-                delay={250}
-                isLoading={isLoading}
-              />
-            </>
+            <StatCard
+              title="Valor Líquido"
+              value={formatCurrency(stats.paidOrders)}
+              subtitle="Pedidos pagos"
+              icon={DollarSign}
+              variant="success"
+              delay={200}
+              isLoading={isLoading}
+            />
           )}
         </div>
 
