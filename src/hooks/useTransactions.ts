@@ -61,9 +61,10 @@ export function useTransactions() {
           refetch();
 
           // Send browser notification for new/updated transactions
-          if (!initialLoadRef.current && permission === "granted") {
+          if (!initialLoadRef.current && Notification.permission === "granted") {
             const newData = payload.new as Transaction;
             if (newData && newData.type && newData.status) {
+              console.log("Sending notification for:", newData.type, newData.status);
               notifyTransaction(
                 newData.type,
                 newData.status,
@@ -84,7 +85,7 @@ export function useTransactions() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [refetch, notifyTransaction, permission]);
+  }, [refetch, notifyTransaction]);
 
   // Calculate stats
   const stats: TransactionStats = {
