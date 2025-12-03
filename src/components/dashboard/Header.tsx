@@ -1,10 +1,11 @@
-import { Bell, BellOff, LogOut } from "lucide-react";
+import { Bell, BellOff, LogOut, Download, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { SettingsDialog } from "./SettingsDialog";
 import { useBrowserNotifications } from "@/hooks/useBrowserNotifications";
+import { usePWA } from "@/hooks/usePWA";
 import {
   Tooltip,
   TooltipContent,
@@ -16,6 +17,7 @@ export function Header() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { permission, requestPermission, isSupported } = useBrowserNotifications();
+  const { isInstallable, isInstalled, installApp } = usePWA();
 
   const handleSignOut = async () => {
     await signOut();
@@ -59,6 +61,24 @@ export function Header() {
     }
   };
 
+  const handleInstallApp = async () => {
+    if (isInstalled) {
+      toast({
+        title: "App já instalado",
+        description: "O Fluxo Dashboard já está instalado no seu dispositivo.",
+      });
+      return;
+    }
+
+    const success = await installApp();
+    if (success) {
+      toast({
+        title: "App instalado!",
+        description: "Agora você receberá notificações push no seu dispositivo.",
+      });
+    }
+  };
+
   const userInitials = user?.email?.slice(0, 2).toUpperCase() || "US";
 
   const getNotificationStatus = () => {
@@ -66,6 +86,12 @@ export function Header() {
     if (permission === "granted") return "Notificações ativas";
     if (permission === "denied") return "Notificações bloqueadas";
     return "Ativar notificações";
+  };
+
+  const getInstallStatus = () => {
+    if (isInstalled) return "App instalado";
+    if (isInstallable) return "Instalar app";
+    return "Abra no navegador para instalar";
   };
 
   return (
@@ -78,6 +104,29 @@ export function Header() {
       </div>
       
       <div className="flex items-center gap-2 sm:gap-4 justify-end">
+        {(isInstallable || isInstalled) && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="relative h-9 w-9 sm:h-10 sm:w-10"
+                onClick={handleInstallApp}
+                disabled={!isInstallable && !isInstalled}
+              >
+                {isInstalled ? (
+                  <Check className="h-4 w-4 sm:h-5 sm:w-5 text-green-500" />
+                ) : (
+                  <Download className="h-4 w-4 sm:h-5 sm:w-5 text-primary animate-pulse" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{getInstallStatus()}</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
+
         <Tooltip>
           <TooltipTrigger asChild>
             <Button 
