@@ -35,6 +35,36 @@ export type Database = {
         }
         Relationships: []
       }
+      groups: {
+        Row: {
+          created_at: string
+          current_members: number
+          id: string
+          name: string
+          total_entries: number
+          total_exits: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_members?: number
+          id?: string
+          name: string
+          total_entries?: number
+          total_exits?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_members?: number
+          id?: string
+          name?: string
+          total_entries?: number
+          total_exits?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       manual_revenues: {
         Row: {
           amount: number

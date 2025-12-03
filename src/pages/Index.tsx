@@ -19,6 +19,7 @@ import {
   Percent,
   Wallet
 } from "lucide-react";
+import { GroupStatsCards } from "@/components/dashboard/GroupStatsCards";
 
 const Index = () => {
   const { transactions, isLoading, refetch, hasNewTransaction, dismissNewTransaction } = useTransactions();
@@ -212,6 +213,11 @@ const Index = () => {
               />
             </>
           )}
+        </div>
+
+        {/* Group Stats Cards */}
+        <div className="mb-6">
+          <GroupStatsCards />
         </div>
 
         {/* Charts Row - Only visible for admins */}
