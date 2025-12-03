@@ -85,15 +85,28 @@ export function usePushNotifications() {
         reg = await getServiceWorker();
       }
 
+      // Check for existing subscription and unsubscribe it first (fixes stale subscription issue)
+      const existingSubscription = await reg.pushManager.getSubscription();
+      if (existingSubscription) {
+        console.log("Found existing subscription, unsubscribing first...");
+        try {
+          await existingSubscription.unsubscribe();
+        } catch (e) {
+          console.log("Could not unsubscribe old subscription:", e);
+        }
+      }
+
       // Get VAPID key
       const vapidKey = await getVapidKey();
       const applicationServerKey = urlBase64ToUint8Array(vapidKey);
 
-      // Subscribe to push
+      // Subscribe to push with fresh subscription
       const subscription = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey,
       });
+
+      console.log("New subscription created:", subscription.endpoint);
 
       // Send subscription to server
       const { error } = await supabase.functions.invoke("push-subscribe", {
