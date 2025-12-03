@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState } from "react";
+import { useCallback, useState } from "react";
 
 export function useBrowserNotifications() {
   const [permission, setPermission] = useState<NotificationPermission>(
@@ -26,29 +26,53 @@ export function useBrowserNotifications() {
   }, []);
 
   const sendNotification = useCallback(
-    (title: string, options?: NotificationOptions) => {
+    async (title: string, options?: NotificationOptions) => {
       if (typeof Notification === "undefined" || Notification.permission !== "granted") {
         return null;
       }
 
-      const notification = new Notification(title, {
-        icon: "/notification-icon.png",
-        badge: "/notification-icon.png",
-        requireInteraction: true,
-        silent: false,
-        ...options,
-      });
+      // Try to use Service Worker notification (works in background on mobile PWA)
+      if ("serviceWorker" in navigator) {
+        try {
+          const registration = await navigator.serviceWorker.ready;
+          // Use any to allow vibrate property which is supported but not in TS types
+          const notificationOptions: any = {
+            icon: "/notification-icon.png",
+            badge: "/notification-icon.png",
+            vibrate: [200, 100, 200],
+            requireInteraction: true,
+            silent: false,
+            ...options,
+          };
+          await registration.showNotification(title, notificationOptions);
+          console.log("Service Worker notification sent:", title);
+          return true;
+        } catch (error) {
+          console.error("Service Worker notification failed:", error);
+        }
+      }
 
-      // Auto close after 10 seconds
-      setTimeout(() => notification.close(), 10000);
-
-      return notification;
+      // Fallback to regular Notification API
+      try {
+        const notification = new Notification(title, {
+          icon: "/notification-icon.png",
+          badge: "/notification-icon.png",
+          requireInteraction: true,
+          silent: false,
+          ...options,
+        });
+        setTimeout(() => notification.close(), 10000);
+        return notification;
+      } catch (error) {
+        console.error("Regular notification failed:", error);
+        return null;
+      }
     },
     []
   );
 
   const notifyTransaction = useCallback(
-    (type: "boleto" | "pix" | "cartao", status: string, amount: number, customerName?: string) => {
+    async (type: "boleto" | "pix" | "cartao", status: string, amount: number, customerName?: string) => {
       const typeNames: Record<string, string> = {
         boleto: "Boleto",
         pix: "PIX",
