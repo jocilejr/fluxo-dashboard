@@ -1,12 +1,44 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, Trash2, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 
 export function GroupWebhookInfo() {
   const [copied, setCopied] = useState(false);
+  const queryClient = useQueryClient();
 
   const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/webhook-groups`;
+
+  // Fetch groups
+  const { data: groups, isLoading } = useQuery({
+    queryKey: ["groups-settings"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("groups")
+        .select("*")
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Delete group mutation
+  const deleteGroup = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("groups").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: "Sucesso", description: "Grupo removido" });
+      queryClient.invalidateQueries({ queryKey: ["groups-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["groups"] });
+    },
+    onError: () => {
+      toast({ title: "Erro", description: "Não foi possível remover o grupo", variant: "destructive" });
+    },
+  });
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(webhookUrl);
@@ -37,7 +69,43 @@ export function GroupWebhookInfo() {
 
   return (
     <div className="space-y-4">
-      <div>
+      {/* Groups List */}
+      <div className="space-y-2">
+        <h4 className="text-sm font-medium">Grupos Cadastrados</h4>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="h-5 w-5 animate-spin" />
+          </div>
+        ) : groups && groups.length > 0 ? (
+          <div className="space-y-2">
+            {groups.map((group) => (
+              <div key={group.id} className="flex items-center justify-between p-3 border rounded-lg">
+                <div>
+                  <p className="font-medium text-sm">{group.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {group.current_members} membros • {group.total_entries} entradas • {group.total_exits} saídas
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => deleteGroup.mutate(group.id)}
+                  disabled={deleteGroup.isPending}
+                  title="Remover grupo"
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-muted-foreground text-sm py-4 text-center">
+            Nenhum grupo cadastrado. Grupos são criados automaticamente ao receber webhooks.
+          </p>
+        )}
+      </div>
+
+      <div className="border-t pt-4">
         <h4 className="text-sm font-medium mb-2">URL do Webhook de Grupos</h4>
         <div className="flex items-center gap-2">
           <code className="flex-1 bg-muted px-3 py-2 rounded text-xs break-all">
