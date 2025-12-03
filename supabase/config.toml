@@ -18,8 +18,5 @@ verify_jwt = false
 [functions.verify-totp]
 verify_jwt = false
 
-[functions.push-subscribe]
-verify_jwt = true
-
 [functions.webhook-groups]
 verify_jwt = false
