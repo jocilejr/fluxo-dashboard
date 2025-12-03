@@ -121,8 +121,8 @@ export function DateFilter({ value, onChange }: DateFilterProps) {
 export function getDefaultDateFilter(): DateFilterValue {
   const now = new Date();
   return {
-    type: "30days",
-    startDate: startOfDay(subDays(now, 29)),
+    type: "today",
+    startDate: startOfDay(now),
     endDate: endOfDay(now),
   };
 }
