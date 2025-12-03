@@ -35,8 +35,8 @@ export function useBrowserNotifications() {
         try {
           const registration = await navigator.serviceWorker.ready;
           await registration.showNotification(title, {
-            icon: "/logo-origem-viva.png",
-            badge: "/logo-origem-viva.png",
+            icon: "/logo-ov.png",
+            badge: "/logo-ov.png",
             tag: `notification-${Date.now()}`,
             ...options,
           });
@@ -49,7 +49,7 @@ export function useBrowserNotifications() {
       // Desktop notification
       try {
         const notification = new Notification(title, {
-          icon: "/logo-origem-viva.png",
+          icon: "/logo-ov.png",
           tag: `notification-${Date.now()}`,
           ...options,
         });

@@ -5,7 +5,7 @@ const ORIGINAL_TITLE = "Origem Viva";
 export function useTabNotification() {
   const [pendingCount, setPendingCount] = useState(0);
   const isTabVisibleRef = useRef(!document.hidden);
-  const originalFaviconRef = useRef<string>("/logo-origem-viva.png");
+  const originalFaviconRef = useRef<string>("/logo-ov.png");
 
   // Track tab visibility
   useEffect(() => {
