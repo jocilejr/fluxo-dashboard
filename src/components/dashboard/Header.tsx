@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { SettingsDialog } from "./SettingsDialog";
-import { useBrowserNotifications } from "@/hooks/useBrowserNotifications";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { usePWA } from "@/hooks/usePWA";
 import {
   Tooltip,
@@ -25,11 +25,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useState } from "react";
+import { toast } from "sonner";
 
 export function Header() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const { permission, requestPermission, isSupported } = useBrowserNotifications();
+  const { isSubscribed, isLoading, isSupported, subscribe, unsubscribe } = usePushNotifications();
   const { isInstallable, isInstalled, isIOS, installApp } = usePWA();
   const [showInstallDialog, setShowInstallDialog] = useState(false);
   const [installDialogType, setInstallDialogType] = useState<"ios" | "android">("ios");
@@ -40,10 +41,21 @@ export function Header() {
   };
 
   const handleNotificationToggle = async () => {
-    if (permission === "granted" || permission === "denied") {
-      return;
+    if (isLoading) return;
+    
+    if (isSubscribed) {
+      const success = await unsubscribe();
+      if (success) {
+        toast.success("Notificações desativadas");
+      }
+    } else {
+      const success = await subscribe();
+      if (success) {
+        toast.success("Notificações ativadas! Você receberá alertas mesmo com o app fechado.");
+      } else {
+        toast.error("Não foi possível ativar as notificações. Verifique as permissões do navegador.");
+      }
     }
-    await requestPermission();
   };
 
   const handleInstallApp = async () => {
@@ -115,9 +127,9 @@ export function Header() {
                 size="icon" 
                 className="h-9 w-9"
                 onClick={handleNotificationToggle}
-                disabled={!isSupported}
+                disabled={!isSupported || isLoading}
               >
-                {permission === "granted" ? (
+                {isSubscribed ? (
                   <Bell className="h-4 w-4 text-primary" />
                 ) : (
                   <BellOff className="h-4 w-4 text-muted-foreground" />
@@ -125,7 +137,7 @@ export function Header() {
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>{permission === "granted" ? "Notificações ativas" : "Ativar notificações"}</p>
+              <p>{isSubscribed ? "Notificações ativas (Push)" : "Ativar notificações push"}</p>
             </TooltipContent>
           </Tooltip>
           
@@ -158,9 +170,9 @@ export function Header() {
             size="icon" 
             className="h-9 w-9"
             onClick={handleNotificationToggle}
-            disabled={!isSupported}
+            disabled={!isSupported || isLoading}
           >
-            {permission === "granted" ? (
+            {isSubscribed ? (
               <Bell className="h-4 w-4 text-primary" />
             ) : (
               <BellOff className="h-4 w-4 text-muted-foreground" />
@@ -241,7 +253,7 @@ export function Header() {
                   </>
                 )}
                 <p className="text-sm text-muted-foreground mt-4">
-                  Após instalar, abra o app pela tela inicial para receber notificações.
+                  Após instalar, ative as notificações push para receber alertas mesmo com o app fechado.
                 </p>
               </div>
             </DialogDescription>
