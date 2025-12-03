@@ -58,20 +58,36 @@ export function useTransactions() {
         },
         (payload) => {
           console.log("Realtime update:", payload);
+          console.log("Notification debug - initialLoadRef:", initialLoadRef.current);
+          console.log("Notification debug - permission:", typeof Notification !== "undefined" ? Notification.permission : "not supported");
           refetch();
 
           // Send browser notification for new/updated transactions
-          if (!initialLoadRef.current && Notification.permission === "granted") {
-            const newData = payload.new as Transaction;
-            if (newData && newData.type && newData.status) {
-              console.log("Sending notification for:", newData.type, newData.status);
-              notifyTransaction(
-                newData.type,
-                newData.status,
-                newData.amount,
-                newData.customer_name || undefined
-              );
+          if (typeof Notification !== "undefined") {
+            console.log("Notification check passed - Notification API exists");
+            if (!initialLoadRef.current) {
+              console.log("Notification check passed - not initial load");
+              if (Notification.permission === "granted") {
+                console.log("Notification check passed - permission granted");
+                const newData = payload.new as Transaction;
+                if (newData && newData.type && newData.status) {
+                  console.log("Sending notification for:", newData.type, newData.status, newData.amount);
+                  const result = notifyTransaction(
+                    newData.type,
+                    newData.status,
+                    newData.amount,
+                    newData.customer_name || undefined
+                  );
+                  console.log("Notification result:", result);
+                }
+              } else {
+                console.log("Notification blocked - permission is:", Notification.permission);
+              }
+            } else {
+              console.log("Notification blocked - still initial load");
             }
+          } else {
+            console.log("Notification blocked - API not supported");
           }
         }
       )
