@@ -1,6 +1,5 @@
-import { Bell, BellOff, LogOut, Search } from "lucide-react";
+import { Bell, BellOff, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -70,36 +69,28 @@ export function Header() {
   };
 
   return (
-    <header className="flex items-center justify-between py-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard Financeiro</h1>
-        <p className="text-muted-foreground text-sm mt-1">
+    <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-4 sm:py-6 gap-4 animate-fade-in">
+      <div className="min-w-0">
+        <h1 className="text-xl sm:text-2xl font-bold tracking-tight truncate">Dashboard Financeiro</h1>
+        <p className="text-muted-foreground text-xs sm:text-sm mt-1 hidden sm:block">
           Acompanhe todas as transações da sua empresa
         </p>
       </div>
       
-      <div className="flex items-center gap-4">
-        <div className="relative hidden md:block">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input 
-            placeholder="Buscar transações..." 
-            className="pl-10 w-64 bg-secondary/50 border-border/50 focus:border-primary/50"
-          />
-        </div>
-        
+      <div className="flex items-center gap-2 sm:gap-4 justify-end">
         <Tooltip>
           <TooltipTrigger asChild>
             <Button 
               variant="ghost" 
               size="icon" 
-              className="relative"
+              className="relative h-9 w-9 sm:h-10 sm:w-10"
               onClick={handleNotificationToggle}
               disabled={!isSupported}
             >
               {permission === "granted" ? (
-                <Bell className="h-5 w-5 text-primary" />
+                <Bell className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               ) : (
-                <BellOff className="h-5 w-5 text-muted-foreground" />
+                <BellOff className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
               )}
               {permission === "granted" && (
                 <span className="absolute -top-1 -right-1 h-2 w-2 bg-primary rounded-full" />
@@ -113,11 +104,11 @@ export function Header() {
         
         <SettingsDialog />
 
-        <Button variant="ghost" size="icon" onClick={handleSignOut} title="Sair">
-          <LogOut className="h-5 w-5" />
+        <Button variant="ghost" size="icon" onClick={handleSignOut} title="Sair" className="h-9 w-9 sm:h-10 sm:w-10">
+          <LogOut className="h-4 w-4 sm:h-5 sm:w-5" />
         </Button>
         
-        <div className="h-10 w-10 rounded-full gradient-success flex items-center justify-center font-semibold text-sm">
+        <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full gradient-success flex items-center justify-center font-semibold text-xs sm:text-sm">
           {userInitials}
         </div>
       </div>

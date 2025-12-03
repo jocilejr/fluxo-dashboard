@@ -58,34 +58,34 @@ export function StatCard({
   return (
     <div 
       className={cn(
-        "glass-card rounded-xl p-6 animate-slide-up",
+        "glass-card rounded-xl p-4 sm:p-6 animate-slide-up",
         variantStyles[variant]
       )}
       style={{ animationDelay: `${delay}ms` }}
     >
-      <div className="flex items-start justify-between">
-        <div className="space-y-2">
-          <p className="text-sm font-medium text-muted-foreground">{title}</p>
-          <p className="text-3xl font-bold tracking-tight">{value}</p>
+      <div className="flex items-start justify-between gap-2">
+        <div className="space-y-1 sm:space-y-2 min-w-0">
+          <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">{title}</p>
+          <p className="text-xl sm:text-3xl font-bold tracking-tight">{value}</p>
           {subtitle && (
-            <p className="text-xs text-muted-foreground">{subtitle}</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{subtitle}</p>
           )}
           {trend && (
             <div className={cn(
-              "flex items-center gap-1 text-sm font-medium",
+              "flex items-center gap-1 text-xs sm:text-sm font-medium",
               trend.isPositive ? "text-success" : "text-destructive"
             )}>
               <span>{trend.isPositive ? "↑" : "↓"}</span>
               <span>{Math.abs(trend.value)}%</span>
-              <span className="text-muted-foreground font-normal">vs último mês</span>
+              <span className="text-muted-foreground font-normal hidden sm:inline">vs último mês</span>
             </div>
           )}
         </div>
         <div className={cn(
-          "p-3 rounded-lg",
+          "p-2 sm:p-3 rounded-lg shrink-0",
           iconVariantStyles[variant]
         )}>
-          <Icon className="h-6 w-6 text-foreground" />
+          <Icon className="h-4 w-4 sm:h-6 sm:w-6 text-foreground" />
         </div>
       </div>
     </div>
