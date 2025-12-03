@@ -15,10 +15,10 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["notification-icon.png", "favicon.ico"],
+      includeAssets: ["logo-origem-viva.png", "favicon.ico"],
       manifest: {
-        name: "Fluxo Dashboard",
-        short_name: "Fluxo",
+        name: "Dash Origem Viva",
+        short_name: "Dash Origem Viva",
         description: "Dashboard de gestão de pagamentos - Boletos, PIX e Cartões",
         theme_color: "#0f172a",
         background_color: "#0f172a",
@@ -28,13 +28,13 @@ export default defineConfig(({ mode }) => ({
         start_url: "/",
         icons: [
           {
-            src: "/notification-icon.png",
+            src: "/logo-origem-viva.png",
             sizes: "192x192",
             type: "image/png",
             purpose: "any maskable",
           },
           {
-            src: "/notification-icon.png",
+            src: "/logo-origem-viva.png",
             sizes: "512x512",
             type: "image/png",
             purpose: "any maskable",
