@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useRef } from "react";
 import { useBrowserNotifications } from "./useBrowserNotifications";
+import { useTabNotification } from "./useTabNotification";
 import { toast } from "sonner";
 
 export interface Transaction {
@@ -30,6 +31,7 @@ export interface TransactionStats {
 
 export function useTransactions() {
   const { notifyTransaction, permission } = useBrowserNotifications();
+  const { notifyNewTransaction } = useTabNotification();
   const initialLoadRef = useRef(true);
 
   const { data: transactions, refetch, isLoading } = useQuery({
@@ -94,6 +96,9 @@ export function useTransactions() {
               description: body,
             });
 
+            // Notify tab title when in background
+            notifyNewTransaction();
+
             // Also try browser notification (works when tab is in background)
             if (typeof Notification !== "undefined" && Notification.permission === "granted") {
               notifyTransaction(
@@ -117,7 +122,7 @@ export function useTransactions() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [refetch, notifyTransaction]);
+  }, [refetch, notifyTransaction, notifyNewTransaction]);
 
   // Calculate stats
   const stats: TransactionStats = {
