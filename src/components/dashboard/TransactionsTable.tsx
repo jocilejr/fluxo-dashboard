@@ -159,22 +159,22 @@ export function TransactionsTable({ transactions, isLoading, onDelete }: Transac
         </div>
         <div className="flex gap-2">
           <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="w-[130px] text-sm">
+            <SelectTrigger className="w-[140px] text-sm">
               <SelectValue placeholder="Método" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="all">Método: Todos</SelectItem>
               <SelectItem value="boleto">Boleto</SelectItem>
               <SelectItem value="pix">PIX</SelectItem>
               <SelectItem value="cartao">Cartão</SelectItem>
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[130px] text-sm">
+            <SelectTrigger className="w-[140px] text-sm">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="all">Status: Todos</SelectItem>
               <SelectItem value="gerado">Gerado</SelectItem>
               <SelectItem value="pago">Pago</SelectItem>
               <SelectItem value="pendente">Pendente</SelectItem>
