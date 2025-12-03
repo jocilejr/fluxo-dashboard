@@ -2,7 +2,7 @@
   "name": "Dash Origem Viva",
   "short_name": "Dash Origem Viva",
   "description": "Dashboard de gestão de pagamentos - Boletos, PIX e Cartões",
-  "start_url": "/",
+  "start_url": "/?v=3",
   "scope": "/",
   "display": "standalone",
   "theme_color": "#0f172a",
@@ -10,13 +10,13 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/logo-origem-viva.png?v=2",
+      "src": "/logo-origem-viva.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/logo-origem-viva.png?v=2",
+      "src": "/logo-origem-viva.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

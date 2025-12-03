@@ -1,4 +1,4 @@
-const CACHE_NAME = 'origem-viva-dashboard-v2';
+const CACHE_NAME = 'origem-viva-dashboard-v3';
 const urlsToCache = [
   '/',
   '/logo-origem-viva.png?v=2'
