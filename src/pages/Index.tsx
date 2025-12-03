@@ -85,16 +85,16 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 pb-8">
+      <div className="container mx-auto px-3 sm:px-4 pb-8">
         <Header />
         
         {/* Date Filter */}
-        <div className="mb-6">
+        <div className="mb-4 sm:mb-6">
           <DateFilter value={dateFilter} onChange={setDateFilter} />
         </div>
         
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4 mb-6 sm:mb-8">
           <StatCard
             title="Boletos Gerados"
             value={stats.boletosGerados.toLocaleString('pt-BR')}

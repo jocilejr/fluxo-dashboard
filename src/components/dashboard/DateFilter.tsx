@@ -71,14 +71,14 @@ export function DateFilter({ value, onChange }: DateFilterProps) {
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex items-center gap-2 overflow-x-auto pb-2 -mb-2 scrollbar-hide">
       {presets.map((preset) => (
         <Button
           key={preset.type}
           variant={value.type === preset.type ? "default" : "outline"}
           size="sm"
           onClick={() => handlePresetClick(preset.type)}
-          className="h-8"
+          className="h-8 shrink-0 text-xs sm:text-sm"
         >
           {preset.label}
         </Button>
@@ -89,7 +89,7 @@ export function DateFilter({ value, onChange }: DateFilterProps) {
           <Button
             variant={value.type === "custom" ? "default" : "outline"}
             size="sm"
-            className={cn("h-8 gap-2", value.type === "custom" && "min-w-[200px]")}
+            className={cn("h-8 gap-2 shrink-0 text-xs sm:text-sm", value.type === "custom" && "min-w-[160px] sm:min-w-[200px]")}
           >
             <CalendarIcon className="h-4 w-4" />
             {value.type === "custom" ? (
@@ -97,7 +97,7 @@ export function DateFilter({ value, onChange }: DateFilterProps) {
                 {format(value.startDate, "dd/MM", { locale: ptBR })} - {format(value.endDate, "dd/MM", { locale: ptBR })}
               </span>
             ) : (
-              <span>Personalizado</span>
+              <span className="hidden sm:inline">Personalizado</span>
             )}
           </Button>
         </PopoverTrigger>
@@ -108,7 +108,7 @@ export function DateFilter({ value, onChange }: DateFilterProps) {
             defaultMonth={customRange?.from}
             selected={customRange}
             onSelect={handleCustomRangeSelect}
-            numberOfMonths={2}
+            numberOfMonths={1}
             locale={ptBR}
             className="pointer-events-auto"
           />
