@@ -9,9 +9,14 @@ export function usePWA() {
   const [isInstallable, setIsInstallable] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
+    // Check if mobile device
+    const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    setIsMobile(isMobileDevice);
+
     // Check if running on iOS
     const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
     setIsIOS(isIOSDevice);
@@ -25,8 +30,8 @@ export function usePWA() {
       return;
     }
 
-    // For iOS, show install button with manual instructions
-    if (isIOSDevice && !isStandalone) {
+    // Always show install option on mobile devices
+    if (isMobileDevice && !isStandalone) {
       setIsInstallable(true);
     }
 
@@ -57,6 +62,11 @@ export function usePWA() {
       return "ios";
     }
 
+    // For Android without prompt, show instructions
+    if (isMobile && !deferredPrompt && !isIOS) {
+      return "android";
+    }
+
     if (!deferredPrompt) return false;
 
     try {
@@ -80,6 +90,7 @@ export function usePWA() {
     isInstallable,
     isInstalled,
     isIOS,
+    isMobile,
     installApp,
   };
 }

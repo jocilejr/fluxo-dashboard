@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Settings, Users, Webhook, Plus, Trash2, Loader2, KeyRound } from "lucide-react";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { WebhookInfo } from "./WebhookInfo";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,9 +13,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface SettingsDialogProps {
   trigger?: React.ReactNode;
+  asMobileItem?: boolean;
 }
 
-export const SettingsDialog = ({ trigger }: SettingsDialogProps) => {
+export const SettingsDialog = ({ trigger, asMobileItem }: SettingsDialogProps) => {
   const [open, setOpen] = useState(false);
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserPassword, setNewUserPassword] = useState("");
@@ -158,14 +160,21 @@ export const SettingsDialog = ({ trigger }: SettingsDialogProps) => {
     }
   };
 
+  const dialogTrigger = asMobileItem ? (
+    <DropdownMenuItem onSelect={(e) => e.preventDefault()} onClick={() => setOpen(true)}>
+      <Settings className="h-4 w-4 mr-2" />
+      Configurações
+    </DropdownMenuItem>
+  ) : trigger || (
+    <Button variant="ghost" size="icon" className="h-9 w-9">
+      <Settings className="h-4 w-4" />
+    </Button>
+  );
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {trigger || (
-          <Button variant="ghost" size="icon">
-            <Settings className="h-5 w-5" />
-          </Button>
-        )}
+        {dialogTrigger}
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
