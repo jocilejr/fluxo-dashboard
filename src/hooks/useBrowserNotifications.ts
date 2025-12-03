@@ -31,11 +31,18 @@ export function useBrowserNotifications() {
         return null;
       }
 
-      return new Notification(title, {
+      const notification = new Notification(title, {
         icon: "/favicon.ico",
         badge: "/favicon.ico",
+        requireInteraction: true,
+        silent: false,
         ...options,
       });
+
+      // Auto close after 10 seconds
+      setTimeout(() => notification.close(), 10000);
+
+      return notification;
     },
     []
   );
