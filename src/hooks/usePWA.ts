@@ -8,13 +8,26 @@ interface BeforeInstallPromptEvent extends Event {
 export function usePWA() {
   const [isInstallable, setIsInstallable] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
-    // Check if app is already installed
-    if (window.matchMedia("(display-mode: standalone)").matches) {
+    // Check if running on iOS
+    const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    setIsIOS(isIOSDevice);
+
+    // Check if app is already installed (standalone mode)
+    const isStandalone = window.matchMedia("(display-mode: standalone)").matches 
+      || (window.navigator as any).standalone === true;
+    
+    if (isStandalone) {
       setIsInstalled(true);
       return;
+    }
+
+    // For iOS, show install button with manual instructions
+    if (isIOSDevice && !isStandalone) {
+      setIsInstallable(true);
     }
 
     const handleBeforeInstallPrompt = (e: Event) => {
@@ -39,6 +52,11 @@ export function usePWA() {
   }, []);
 
   const installApp = async () => {
+    // For iOS, show instructions
+    if (isIOS && !deferredPrompt) {
+      return "ios";
+    }
+
     if (!deferredPrompt) return false;
 
     try {
@@ -61,6 +79,7 @@ export function usePWA() {
   return {
     isInstallable,
     isInstalled,
+    isIOS,
     installApp,
   };
 }
