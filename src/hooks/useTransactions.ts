@@ -33,6 +33,15 @@ export function useTransactions() {
   const { notifyNewTransaction } = useTabNotification();
   const initialLoadRef = useRef(true);
   const [hasNewTransaction, setHasNewTransaction] = useState(false);
+  
+  // Store callbacks in refs to avoid re-subscriptions
+  const notifyTransactionRef = useRef(notifyTransaction);
+  const notifyNewTransactionRef = useRef(notifyNewTransaction);
+  
+  useEffect(() => {
+    notifyTransactionRef.current = notifyTransaction;
+    notifyNewTransactionRef.current = notifyNewTransaction;
+  }, [notifyTransaction, notifyNewTransaction]);
 
   const { data: transactions, refetch, isLoading } = useQuery({
     queryKey: ["transactions"],
@@ -64,40 +73,20 @@ export function useTransactions() {
           console.log("initialLoadRef.current:", initialLoadRef.current);
           refetch();
 
-          // Send notification for new/updated transactions
+          // Send notification for new/updated transactions (INSERT only)
+          if (payload.eventType !== "INSERT") return;
+          
           const newData = payload.new as Transaction;
           if (newData && newData.type && newData.status && !initialLoadRef.current) {
-            const typeNames: Record<string, string> = {
-              boleto: "Boleto",
-              pix: "PIX",
-              cartao: "Cartão",
-            };
-            const statusNames: Record<string, string> = {
-              gerado: "gerado",
-              pago: "pago",
-              pendente: "pendente",
-              cancelado: "cancelado",
-              expirado: "expirado",
-            };
-            const formattedAmount = new Intl.NumberFormat("pt-BR", {
-              style: "currency",
-              currency: "BRL",
-            }).format(newData.amount);
-            
-            const title = `${typeNames[newData.type] || newData.type} ${statusNames[newData.status] || newData.status}`;
-            const body = newData.customer_name
-              ? `${newData.customer_name} - ${formattedAmount}`
-              : `Valor: ${formattedAmount}`;
-
             // Show alert in transactions section
             setHasNewTransaction(true);
 
             // Notify tab title when in background
-            notifyNewTransaction();
+            notifyNewTransactionRef.current();
 
             // Browser notification for background (mobile PWA)
             if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-              notifyTransaction(
+              notifyTransactionRef.current(
                 newData.type,
                 newData.status,
                 newData.amount,
@@ -118,7 +107,7 @@ export function useTransactions() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [refetch, notifyTransaction, notifyNewTransaction]);
+  }, [refetch]);
 
   // Calculate stats
   const stats: TransactionStats = {
