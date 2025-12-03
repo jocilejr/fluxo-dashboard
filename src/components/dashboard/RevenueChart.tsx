@@ -1,7 +1,7 @@
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Transaction } from '@/hooks/useTransactions';
 import { useMemo } from 'react';
-import { format, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, isWithinInterval, differenceInDays } from 'date-fns';
+import { format, eachDayOfInterval, isWithinInterval, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { DateFilterValue } from './DateFilter';
 
@@ -62,41 +62,20 @@ export function RevenueChart({ transactions, dateFilter }: RevenueChartProps) {
       return Object.values(dataMap);
     };
 
-    // Auto-select period based on date range
-    if (daysDiff <= 31) {
-      // Up to 31 days: show by day
-      const days = eachDayOfInterval({ start: dateFilter.startDate, end: dateFilter.endDate });
-      return aggregateData(
-        days,
-        (d) => format(d, 'yyyy-MM-dd'),
-        (d) => format(d, 'dd/MM', { locale: ptBR })
-      );
-    } else if (daysDiff <= 90) {
-      // Up to 90 days: show by week
-      const weeks = eachWeekOfInterval({ start: dateFilter.startDate, end: dateFilter.endDate }, { locale: ptBR, weekStartsOn: 0 });
-      return aggregateData(
-        weeks,
-        (d) => format(d, 'yyyy-ww'),
-        (d) => format(d, 'dd/MM', { locale: ptBR })
-      );
-    } else {
-      // More than 90 days: show by month
-      const months = eachMonthOfInterval({ start: dateFilter.startDate, end: dateFilter.endDate });
-      return aggregateData(
-        months,
-        (d) => format(d, 'yyyy-MM'),
-        (d) => format(d, 'MMM/yy', { locale: ptBR })
-      );
-    }
+    // Always show by day for any date range
+    const days = eachDayOfInterval({ start: dateFilter.startDate, end: dateFilter.endDate });
+    return aggregateData(
+      days,
+      (d) => format(d, 'yyyy-MM-dd'),
+      (d) => format(d, 'dd/MM', { locale: ptBR })
+    );
   }, [transactions, dateFilter]);
 
   const hasData = chartData.some((d) => d.boleto > 0 || d.pix > 0 || d.cartao > 0);
 
   const periodLabel = useMemo(() => {
     const daysDiff = differenceInDays(dateFilter.endDate, dateFilter.startDate);
-    if (daysDiff <= 31) return "por dia";
-    if (daysDiff <= 90) return "por semana";
-    return "por mês";
+    return "por dia";
   }, [dateFilter]);
 
   return (
@@ -148,9 +127,13 @@ export function RevenueChart({ transactions, dateFilter }: RevenueChartProps) {
               <XAxis 
                 dataKey="label" 
                 stroke="hsl(215, 20%, 55%)" 
-                fontSize={12}
+                fontSize={10}
                 tickLine={false}
                 axisLine={false}
+                interval={0}
+                angle={-45}
+                textAnchor="end"
+                height={60}
               />
               <YAxis 
                 stroke="hsl(215, 20%, 55%)" 
