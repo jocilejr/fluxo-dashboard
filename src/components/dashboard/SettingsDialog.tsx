@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Settings, Users, Webhook, Plus, Trash2, Loader2, KeyRound, DollarSign, Percent } from "lucide-react";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { WebhookInfo } from "./WebhookInfo";
+import { GroupWebhookInfo } from "./GroupWebhookInfo";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
@@ -275,18 +276,22 @@ export const SettingsDialog = ({ trigger, asMobileItem }: SettingsDialogProps) =
         </DialogHeader>
         
         <Tabs defaultValue="users" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
-              Usuários
+              <span className="hidden sm:inline">Usuários</span>
             </TabsTrigger>
             <TabsTrigger value="financeiro" className="flex items-center gap-2">
               <DollarSign className="h-4 w-4" />
-              Financeiro
+              <span className="hidden sm:inline">Financeiro</span>
             </TabsTrigger>
             <TabsTrigger value="webhook" className="flex items-center gap-2">
               <Webhook className="h-4 w-4" />
-              Webhook
+              <span className="hidden sm:inline">Webhook</span>
+            </TabsTrigger>
+            <TabsTrigger value="groups" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              <span className="hidden sm:inline">Grupos</span>
             </TabsTrigger>
           </TabsList>
           
@@ -531,6 +536,10 @@ export const SettingsDialog = ({ trigger, asMobileItem }: SettingsDialogProps) =
 
           <TabsContent value="webhook" className="mt-4">
             <WebhookInfo />
+          </TabsContent>
+
+          <TabsContent value="groups" className="mt-4">
+            <GroupWebhookInfo />
           </TabsContent>
         </Tabs>
       </DialogContent>
