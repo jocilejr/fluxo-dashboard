@@ -32,16 +32,18 @@ export function useBrowserNotifications() {
       }
 
       // Try to use Service Worker notification (works in background on mobile PWA)
+      // This is the ONLY method for mobile - do NOT fallback to regular Notification
       if ("serviceWorker" in navigator) {
         try {
           const registration = await navigator.serviceWorker.ready;
-          // Use any to allow vibrate property which is supported but not in TS types
           const notificationOptions: any = {
             icon: "/logo-origem-viva.png?v=2",
             badge: "/logo-origem-viva.png?v=2",
             vibrate: [200, 100, 200],
-            requireInteraction: true,
+            requireInteraction: false,
             silent: false,
+            tag: `notification-${Date.now()}`, // Unique tag prevents duplicates
+            renotify: false,
             ...options,
           };
           await registration.showNotification(title, notificationOptions);
@@ -49,16 +51,19 @@ export function useBrowserNotifications() {
           return true;
         } catch (error) {
           console.error("Service Worker notification failed:", error);
+          // Don't fallback on mobile - just return null
+          return null;
         }
       }
 
-      // Fallback to regular Notification API
+      // Desktop only fallback (no service worker)
       try {
         const notification = new Notification(title, {
           icon: "/logo-origem-viva.png?v=2",
           badge: "/logo-origem-viva.png?v=2",
-          requireInteraction: true,
+          requireInteraction: false,
           silent: false,
+          tag: `notification-${Date.now()}`,
           ...options,
         });
         setTimeout(() => notification.close(), 10000);
