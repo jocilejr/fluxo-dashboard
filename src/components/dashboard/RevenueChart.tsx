@@ -73,11 +73,11 @@ export function RevenueChart({ transactions, dateFilter }: RevenueChartProps) {
       );
     } else if (daysDiff <= 60) {
       // Up to 60 days: show by week
-      const weeks = eachWeekOfInterval({ start: dateFilter.startDate, end: dateFilter.endDate }, { locale: ptBR });
+      const weeks = eachWeekOfInterval({ start: dateFilter.startDate, end: dateFilter.endDate }, { locale: ptBR, weekStartsOn: 0 });
       return aggregateData(
         weeks,
         (d) => format(d, 'yyyy-ww'),
-        (d) => `Sem ${format(d, 'dd/MM', { locale: ptBR })}`
+        (d) => format(d, 'dd/MM', { locale: ptBR })
       );
     } else {
       // More than 60 days: show by month
