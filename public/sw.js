@@ -1,7 +1,7 @@
-const CACHE_NAME = 'origem-viva-dashboard-v1';
+const CACHE_NAME = 'origem-viva-dashboard-v2';
 const urlsToCache = [
   '/',
-  '/logo-origem-viva.png'
+  '/logo-origem-viva.png?v=2'
 ];
 
 // Install event
@@ -43,8 +43,8 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'Nova Venda - Origem Viva';
   const options = {
     body: data.body || 'Você recebeu uma nova venda!',
-    icon: '/logo-origem-viva.png',
-    badge: '/logo-origem-viva.png',
+    icon: '/logo-origem-viva.png?v=2',
+    badge: '/logo-origem-viva.png?v=2',
     vibrate: [200, 100, 200],
     requireInteraction: true,
     data: data.url || '/'
