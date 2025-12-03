@@ -25,7 +25,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useState } from "react";
-import { toast } from "sonner";
 
 export function Header() {
   const { user, signOut } = useAuth();
@@ -44,17 +43,9 @@ export function Header() {
     if (isLoading) return;
     
     if (isSubscribed) {
-      const success = await unsubscribe();
-      if (success) {
-        toast.success("Notificações desativadas");
-      }
+      await unsubscribe();
     } else {
-      const success = await subscribe();
-      if (success) {
-        toast.success("Notificações ativadas! Você receberá alertas mesmo com o app fechado.");
-      } else {
-        toast.error("Não foi possível ativar as notificações. Verifique as permissões do navegador.");
-      }
+      await subscribe();
     }
   };
 
