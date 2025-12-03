@@ -5,6 +5,7 @@ import { RevenueChart } from "@/components/dashboard/RevenueChart";
 import { TransactionsTable } from "@/components/dashboard/TransactionsTable";
 import { PaymentMethodsChart } from "@/components/dashboard/PaymentMethodsChart";
 import { DateFilter, DateFilterValue, getDefaultDateFilter } from "@/components/dashboard/DateFilter";
+import { SaleNotification } from "@/components/dashboard/SaleNotification";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
 import { supabase } from "@/integrations/supabase/client";
@@ -167,13 +168,17 @@ const Index = () => {
           </div>
         )}
 
+        {/* Sale Notification */}
+        <SaleNotification 
+          isVisible={hasNewTransaction}
+          onDismiss={dismissNewTransaction}
+        />
+
         {/* Transactions */}
         <TransactionsTable 
           transactions={filteredTransactions} 
           isLoading={isLoading} 
           onDelete={refetch}
-          hasNewTransaction={hasNewTransaction}
-          onDismissNewTransaction={dismissNewTransaction}
         />
       </div>
     </div>

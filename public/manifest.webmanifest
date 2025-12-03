@@ -1,22 +1,22 @@
 {
-  "name": "Fluxo Dashboard",
-  "short_name": "Fluxo",
+  "name": "Origem Viva - Dashboard de Vendas",
+  "short_name": "Origem Viva",
   "description": "Dashboard de gestão de pagamentos - Boletos, PIX e Cartões",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "theme_color": "#0f172a",
+  "theme_color": "#059669",
   "background_color": "#0f172a",
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/notification-icon.png",
+      "src": "/logo-origem-viva.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/notification-icon.png",
+      "src": "/logo-origem-viva.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

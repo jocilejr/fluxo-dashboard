@@ -1,7 +1,7 @@
-const CACHE_NAME = 'fluxo-dashboard-v1';
+const CACHE_NAME = 'origem-viva-dashboard-v1';
 const urlsToCache = [
   '/',
-  '/notification-icon.png'
+  '/logo-origem-viva.png'
 ];
 
 // Install event
@@ -40,11 +40,11 @@ self.addEventListener('fetch', (event) => {
 // Push notification event
 self.addEventListener('push', (event) => {
   const data = event.data?.json() || {};
-  const title = data.title || 'Nova Transação';
+  const title = data.title || 'Nova Venda - Origem Viva';
   const options = {
-    body: data.body || 'Você recebeu uma nova transação',
-    icon: '/notification-icon.png',
-    badge: '/notification-icon.png',
+    body: data.body || 'Você recebeu uma nova venda!',
+    icon: '/logo-origem-viva.png',
+    badge: '/logo-origem-viva.png',
     vibrate: [200, 100, 200],
     requireInteraction: true,
     data: data.url || '/'
