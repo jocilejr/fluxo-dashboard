@@ -38,22 +38,28 @@ Deno.serve(async (req) => {
       // Update existing group
       const updateData: Record<string, any> = {}
 
+      // If entries/exits/current_members are provided as numbers, SET them directly (replace)
+      if (entries !== undefined) {
+        updateData.total_entries = entries
+      }
+
+      if (exits !== undefined) {
+        updateData.total_exits = exits
+      }
+
       if (current_members !== undefined) {
         updateData.current_members = current_members
       }
 
-      if (event_type === 'entry' || entries !== undefined) {
-        updateData.total_entries = (existingGroup.total_entries || 0) + (entries || 1)
-        if (current_members === undefined) {
-          updateData.current_members = (existingGroup.current_members || 0) + (entries || 1)
-        }
+      // event_type "entry" or "exit" increments/decrements by 1
+      if (event_type === 'entry') {
+        updateData.total_entries = (existingGroup.total_entries || 0) + 1
+        updateData.current_members = (existingGroup.current_members || 0) + 1
       }
 
-      if (event_type === 'exit' || exits !== undefined) {
-        updateData.total_exits = (existingGroup.total_exits || 0) + (exits || 1)
-        if (current_members === undefined) {
-          updateData.current_members = Math.max(0, (existingGroup.current_members || 0) - (exits || 1))
-        }
+      if (event_type === 'exit') {
+        updateData.total_exits = (existingGroup.total_exits || 0) + 1
+        updateData.current_members = Math.max(0, (existingGroup.current_members || 0) - 1)
       }
 
       const { error: updateError } = await supabase
