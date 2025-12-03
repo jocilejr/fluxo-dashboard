@@ -59,48 +59,49 @@ export function useTransactions() {
         },
         (payload) => {
           console.log("Realtime update:", payload);
+          console.log("initialLoadRef.current:", initialLoadRef.current);
           refetch();
 
           // Send notification for new/updated transactions
-          if (!initialLoadRef.current) {
-            const newData = payload.new as Transaction;
-            if (newData && newData.type && newData.status) {
-              const typeNames: Record<string, string> = {
-                boleto: "Boleto",
-                pix: "PIX",
-                cartao: "Cartão",
-              };
-              const statusNames: Record<string, string> = {
-                gerado: "gerado",
-                pago: "pago",
-                pendente: "pendente",
-                cancelado: "cancelado",
-                expirado: "expirado",
-              };
-              const formattedAmount = new Intl.NumberFormat("pt-BR", {
-                style: "currency",
-                currency: "BRL",
-              }).format(newData.amount);
-              
-              const title = `${typeNames[newData.type] || newData.type} ${statusNames[newData.status] || newData.status}`;
-              const body = newData.customer_name
-                ? `${newData.customer_name} - ${formattedAmount}`
-                : `Valor: ${formattedAmount}`;
+          const newData = payload.new as Transaction;
+          if (newData && newData.type && newData.status && !initialLoadRef.current) {
+            const typeNames: Record<string, string> = {
+              boleto: "Boleto",
+              pix: "PIX",
+              cartao: "Cartão",
+            };
+            const statusNames: Record<string, string> = {
+              gerado: "gerado",
+              pago: "pago",
+              pendente: "pendente",
+              cancelado: "cancelado",
+              expirado: "expirado",
+            };
+            const formattedAmount = new Intl.NumberFormat("pt-BR", {
+              style: "currency",
+              currency: "BRL",
+            }).format(newData.amount);
+            
+            const title = `${typeNames[newData.type] || newData.type} ${statusNames[newData.status] || newData.status}`;
+            const body = newData.customer_name
+              ? `${newData.customer_name} - ${formattedAmount}`
+              : `Valor: ${formattedAmount}`;
 
-              // Always show toast notification (works when tab is focused)
-              toast(title, {
-                description: body,
-              });
+            console.log("Showing toast:", title, body);
+            
+            // Always show toast notification (works when tab is focused)
+            toast(title, {
+              description: body,
+            });
 
-              // Also try browser notification (works when tab is in background)
-              if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-                notifyTransaction(
-                  newData.type,
-                  newData.status,
-                  newData.amount,
-                  newData.customer_name || undefined
-                );
-              }
+            // Also try browser notification (works when tab is in background)
+            if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+              notifyTransaction(
+                newData.type,
+                newData.status,
+                newData.amount,
+                newData.customer_name || undefined
+              );
             }
           }
         }
@@ -109,8 +110,9 @@ export function useTransactions() {
 
     // Mark initial load as complete after first subscription
     setTimeout(() => {
+      console.log("Setting initialLoadRef to false");
       initialLoadRef.current = false;
-    }, 1000);
+    }, 2000);
 
     return () => {
       supabase.removeChannel(channel);
