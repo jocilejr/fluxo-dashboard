@@ -7,7 +7,6 @@ export function useBrowserNotifications() {
 
   const requestPermission = useCallback(async () => {
     if (typeof Notification === "undefined") {
-      console.warn("Notifications not supported");
       return false;
     }
 
@@ -31,45 +30,32 @@ export function useBrowserNotifications() {
         return null;
       }
 
-      // Try to use Service Worker notification (works in background on mobile PWA)
-      // This is the ONLY method for mobile - do NOT fallback to regular Notification
+      // Use Service Worker notification when available (works in PWA)
       if ("serviceWorker" in navigator) {
         try {
           const registration = await navigator.serviceWorker.ready;
-          const notificationOptions: any = {
-            icon: "/logo-origem-viva.png?v=2",
-            badge: "/logo-origem-viva.png?v=2",
-            vibrate: [200, 100, 200],
-            requireInteraction: false,
-            silent: false,
-            tag: `notification-${Date.now()}`, // Unique tag prevents duplicates
-            renotify: false,
+          await registration.showNotification(title, {
+            icon: "/logo-origem-viva.png",
+            badge: "/logo-origem-viva.png",
+            tag: `notification-${Date.now()}`,
             ...options,
-          };
-          await registration.showNotification(title, notificationOptions);
-          console.log("Service Worker notification sent:", title);
+          });
           return true;
         } catch (error) {
-          console.error("Service Worker notification failed:", error);
-          // Don't fallback on mobile - just return null
-          return null;
+          // Fallback to regular notification
         }
       }
 
-      // Desktop only fallback (no service worker)
+      // Desktop notification
       try {
         const notification = new Notification(title, {
-          icon: "/logo-origem-viva.png?v=2",
-          badge: "/logo-origem-viva.png?v=2",
-          requireInteraction: false,
-          silent: false,
+          icon: "/logo-origem-viva.png",
           tag: `notification-${Date.now()}`,
           ...options,
         });
-        setTimeout(() => notification.close(), 10000);
+        setTimeout(() => notification.close(), 8000);
         return notification;
-      } catch (error) {
-        console.error("Regular notification failed:", error);
+      } catch {
         return null;
       }
     },
@@ -102,7 +88,7 @@ export function useBrowserNotifications() {
         ? `${customerName} - ${formattedAmount}`
         : `Valor: ${formattedAmount}`;
 
-      return sendNotification(title, { body, tag: `transaction-${Date.now()}` });
+      return sendNotification(title, { body });
     },
     [sendNotification]
   );
