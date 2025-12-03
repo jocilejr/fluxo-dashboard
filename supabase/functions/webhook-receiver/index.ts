@@ -1,5 +1,4 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import webpush from 'https://esm.sh/web-push@3.6.7';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -25,106 +24,6 @@ interface WebhookPayload {
 function normalizePhone(phone?: string): string | undefined {
   if (!phone) return undefined;
   return phone.replace(/^\+/, '');
-}
-
-// deno-lint-ignore no-explicit-any
-async function sendPushNotifications(
-  supabase: any,
-  transactionData: { type: string; status: string; amount: number; customer_name?: string }
-) {
-  const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY');
-  const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY');
-
-  if (!vapidPublicKey || !vapidPrivateKey) {
-    console.log('VAPID keys not configured, skipping push notifications');
-    return;
-  }
-
-  // Set VAPID details
-  webpush.setVapidDetails(
-    'mailto:admin@origemviva.com',
-    vapidPublicKey,
-    vapidPrivateKey
-  );
-
-  // Get all push subscriptions
-  const { data: subscriptions, error } = await supabase
-    .from('push_subscriptions')
-    .select('endpoint, p256dh, auth');
-
-  if (error) {
-    console.error('Error fetching subscriptions:', error.message);
-    return;
-  }
-
-  if (!subscriptions || subscriptions.length === 0) {
-    console.log('No push subscriptions found');
-    return;
-  }
-
-  const typeNames: Record<string, string> = {
-    boleto: 'Boleto',
-    pix: 'PIX',
-    cartao: 'Cartão',
-  };
-
-  const statusNames: Record<string, string> = {
-    gerado: 'gerado',
-    pago: 'pago',
-    pendente: 'pendente',
-    cancelado: 'cancelado',
-    expirado: 'expirado',
-  };
-
-  const formattedAmount = new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  }).format(transactionData.amount);
-
-  const title = `${typeNames[transactionData.type] || transactionData.type} ${statusNames[transactionData.status] || transactionData.status}`;
-  const body = transactionData.customer_name
-    ? `${transactionData.customer_name} - ${formattedAmount}`
-    : `Valor: ${formattedAmount}`;
-
-  const payload = JSON.stringify({
-    title,
-    body,
-    icon: '/logo-ov.png',
-  });
-
-  console.log(`Sending push notifications to ${subscriptions.length} subscribers`);
-
-  // Send to all subscribers
-  const results = await Promise.allSettled(
-    subscriptions.map(async (sub: { endpoint: string; p256dh: string; auth: string }) => {
-      try {
-        const pushSubscription = {
-          endpoint: sub.endpoint,
-          keys: {
-            p256dh: sub.p256dh,
-            auth: sub.auth,
-          },
-        };
-        await webpush.sendNotification(pushSubscription, payload);
-        return true;
-      } catch (err: unknown) {
-        const error = err as { statusCode?: number; message?: string };
-        console.error(`Push failed for ${sub.endpoint.substring(0, 50)}:`, error.message);
-        // Remove invalid subscriptions
-        if (error.statusCode === 404 || error.statusCode === 410) {
-          await supabase
-            .from('push_subscriptions')
-            .delete()
-            .eq('endpoint', sub.endpoint);
-          console.log('Removed invalid subscription');
-        }
-        return false;
-      }
-    })
-  );
-
-  const successful = results.filter((r) => r.status === 'fulfilled' && r.value).length;
-  console.log(`Push notifications: ${successful}/${subscriptions.length} successful`);
 }
 
 Deno.serve(async (req) => {
@@ -194,14 +93,6 @@ Deno.serve(async (req) => {
 
         console.log('Transaction updated:', data.id);
 
-        // Send push notifications
-        await sendPushNotifications(supabase, {
-          type: payload.type,
-          status,
-          amount: payload.amount,
-          customer_name: payload.customer_name,
-        });
-
         return new Response(
           JSON.stringify({ success: true, action: 'updated', transaction_id: data.id }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -235,14 +126,6 @@ Deno.serve(async (req) => {
     }
 
     console.log('Transaction created:', data.id);
-
-    // Send push notifications
-    await sendPushNotifications(supabase, {
-      type: payload.type,
-      status,
-      amount: payload.amount,
-      customer_name: payload.customer_name,
-    });
 
     return new Response(
       JSON.stringify({ success: true, action: 'created', transaction_id: data.id }),
