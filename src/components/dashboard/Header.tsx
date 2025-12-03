@@ -72,7 +72,7 @@ export function Header() {
         {/* Logo and Brand */}
         <div className="flex items-center gap-2 sm:gap-3">
           <img 
-            src="/logo-origem-viva.png?v=2" 
+            src="/logo-origem-viva.png" 
             alt="Origem Viva" 
             className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl shadow-lg object-cover"
           />
