@@ -59,10 +59,6 @@ const Auth = () => {
         return;
       }
 
-      toast({
-        title: "Bem-vindo!",
-        description: "Login realizado com sucesso",
-      });
       navigate("/");
     } catch (error) {
       toast({
