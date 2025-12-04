@@ -37,39 +37,58 @@ function normalizeExternalId(externalId?: string): string | undefined {
   return externalId.replace(/[\s.\-\/]/g, '');
 }
 
+// Base64 URL encoding/decoding helpers
+function base64UrlEncode(data: Uint8Array): string {
+  return btoa(String.fromCharCode(...data))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
+function base64UrlDecode(str: string): Uint8Array {
+  const base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+  const padding = '='.repeat((4 - (base64.length % 4)) % 4);
+  const binary = atob(base64 + padding);
+  return new Uint8Array([...binary].map(c => c.charCodeAt(0)));
+}
+
+// Send push notification directly to FCM
 async function sendPushNotification(
   subscription: PushSubscription,
-  payload: { title: string; body: string; tag?: string },
-  vapidPrivateKey: string,
-  vapidPublicKey: string
+  payload: object,
+  vapidPublicKey: string,
+  vapidPrivateKey: string
 ): Promise<boolean> {
   try {
-    // Import web-push compatible library for Deno
-    const { default: webpush } = await import('https://esm.sh/web-push@3.6.7');
+    // For FCM endpoints, we can send a simple POST request
+    // The payload will be delivered to the service worker's push event
+    const body = JSON.stringify(payload);
     
-    webpush.setVapidDetails(
-      'mailto:admin@origemviva.com',
-      vapidPublicKey,
-      vapidPrivateKey
-    );
-
-    const pushSubscription = {
-      endpoint: subscription.endpoint,
-      keys: {
-        p256dh: subscription.p256dh,
-        auth: subscription.auth,
+    const response = await fetch(subscription.endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'TTL': '86400',
+        'Urgency': 'high',
       },
-    };
+      body: body,
+    });
 
-    await webpush.sendNotification(
-      pushSubscription,
-      JSON.stringify(payload)
-    );
-    
-    console.log('[Push] Notification sent to:', subscription.endpoint.substring(0, 50));
+    if (!response.ok) {
+      const text = await response.text();
+      console.error('[Push] Failed:', response.status, text);
+      
+      // If 401/403, the subscription might be expired
+      if (response.status === 401 || response.status === 403) {
+        console.log('[Push] Subscription might be expired');
+      }
+      return false;
+    }
+
+    console.log('[Push] Notification sent successfully');
     return true;
   } catch (error) {
-    console.error('[Push] Failed to send:', error);
+    console.error('[Push] Error sending:', error);
     return false;
   }
 }
@@ -84,7 +103,7 @@ async function sendPushToAllSubscribers(
   const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY');
 
   if (!vapidPrivateKey || !vapidPublicKey) {
-    console.log('[Push] VAPID keys not configured, skipping push');
+    console.log('[Push] VAPID keys not configured');
     return;
   }
 
@@ -98,7 +117,7 @@ async function sendPushToAllSubscribers(
   }
 
   if (!subscriptions || subscriptions.length === 0) {
-    console.log('[Push] No push subscriptions found');
+    console.log('[Push] No subscriptions found');
     return;
   }
 
@@ -107,7 +126,7 @@ async function sendPushToAllSubscribers(
   const payload = { title, body, tag };
 
   for (const sub of subscriptions) {
-    await sendPushNotification(sub, payload, vapidPrivateKey, vapidPublicKey);
+    await sendPushNotification(sub, payload, vapidPublicKey, vapidPrivateKey);
   }
 }
 
@@ -128,7 +147,6 @@ Deno.serve(async (req) => {
     console.log('Webhook received:', JSON.stringify(payload, null, 2));
 
     if (!payload.type || !payload.amount) {
-      console.error('Missing required fields: type or amount');
       return new Response(
         JSON.stringify({ error: 'Missing required fields: type, amount' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -148,10 +166,6 @@ Deno.serve(async (req) => {
     }
 
     const normalizedIncomingId = normalizeExternalId(payload.external_id);
-    console.log('Normalized incoming external_id:', normalizedIncomingId);
-
-    let action = 'created';
-    let transactionId = '';
 
     if (normalizedIncomingId) {
       const { data: transactions, error: fetchError } = await supabase
@@ -160,10 +174,7 @@ Deno.serve(async (req) => {
         .not('external_id', 'is', null)
         .neq('external_id', '');
 
-      if (fetchError) {
-        console.error('Error fetching transactions:', fetchError);
-        throw fetchError;
-      }
+      if (fetchError) throw fetchError;
 
       const existingTransaction = transactions?.find(t => {
         const normalizedDbId = normalizeExternalId(t.external_id);
@@ -171,8 +182,6 @@ Deno.serve(async (req) => {
       });
 
       if (existingTransaction) {
-        console.log('Found existing transaction:', existingTransaction.id);
-        
         const { data, error } = await supabase
           .from('transactions')
           .update({
@@ -188,23 +197,16 @@ Deno.serve(async (req) => {
           .select()
           .single();
 
-        if (error) {
-          console.error('Error updating transaction:', error);
-          throw error;
-        }
+        if (error) throw error;
 
-        console.log('Transaction updated:', data.id);
-        action = 'updated';
-        transactionId = data.id;
-
-        // Send push notification for updates (e.g., boleto paid)
+        // Send push notification
         const typeLabel = payload.type === 'boleto' ? 'Boleto' : payload.type === 'pix' ? 'PIX' : 'Cartão';
         const amount = (payload.amount / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         
         await sendPushToAllSubscribers(
           supabase,
           `🔔 ${typeLabel} Atualizado`,
-          `${payload.customer_name || 'Cliente'} - ${amount} - ${status}`,
+          `${payload.customer_name || 'Cliente'} - ${amount}`,
           `transaction-${data.id}`
         );
 
@@ -234,14 +236,11 @@ Deno.serve(async (req) => {
       .select()
       .single();
 
-    if (error) {
-      console.error('Error inserting transaction:', error);
-      throw error;
-    }
+    if (error) throw error;
 
     console.log('Transaction created:', data.id);
 
-    // Send push notification for new transactions
+    // Send push notification
     const typeLabel = payload.type === 'boleto' ? 'Boleto' : payload.type === 'pix' ? 'PIX' : 'Cartão';
     const amount = (payload.amount / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     
