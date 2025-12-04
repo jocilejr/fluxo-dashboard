@@ -5,6 +5,7 @@ import { Copy, Check, MessageSquare, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useWhatsAppExtension } from "@/hooks/useWhatsAppExtension";
+import { getGreeting } from "@/lib/greeting";
 import {
   Popover,
   PopoverContent,
@@ -31,6 +32,8 @@ export function PixCardQuickRecovery({ transaction }: PixCardQuickRecoveryProps)
       if (data?.message) {
         const firstName = transaction.customer_name?.split(" ")[0] || "";
         const formatted = data.message
+          .replace(/{saudação}/g, getGreeting())
+          .replace(/{saudacao}/g, getGreeting())
           .replace(/{nome}/g, transaction.customer_name || "")
           .replace(/{primeiro_nome}/g, firstName)
           .replace(/{valor}/g, new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(transaction.amount)));
