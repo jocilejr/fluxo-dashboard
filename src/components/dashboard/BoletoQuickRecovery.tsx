@@ -15,10 +15,15 @@ import {
   Loader2,
   ExternalLink,
   DollarSign,
-  Calendar
+  Calendar,
+  MessageCircle,
+  Wifi,
+  WifiOff
 } from "lucide-react";
 import { toast } from "sonner";
 import { pdfToImage } from "@/lib/pdfToImage";
+import { useWhatsAppExtension } from "@/hooks/useWhatsAppExtension";
+import { Badge } from "@/components/ui/badge";
 
 interface BoletoQuickRecoveryProps {
   open: boolean;
@@ -49,6 +54,9 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
   const [imageBlobUrl, setImageBlobUrl] = useState<string | null>(null);
   const [isLoadingImage, setIsLoadingImage] = useState(false);
   const [pdfArrayBuffer, setPdfArrayBuffer] = useState<ArrayBuffer | null>(null);
+  const [sendingWhatsApp, setSendingWhatsApp] = useState<string | null>(null);
+
+  const { extensionAvailable, sendText, sendImage, fallbackOpenWhatsApp } = useWhatsAppExtension();
 
   useEffect(() => {
     if (open) {
@@ -243,7 +251,78 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
     }
   };
 
-  if (!transaction) return null;
+  const handleSendTextWhatsApp = async (text: string, blockId: string) => {
+    if (!transaction?.customer_phone) {
+      toast.error("Telefone do cliente não disponível");
+      return;
+    }
+
+    const processedText = replaceVariables(text);
+    setSendingWhatsApp(blockId);
+
+    if (extensionAvailable) {
+      const success = await sendText(transaction.customer_phone, processedText);
+      if (success) {
+        toast.success("Mensagem enviada via WhatsApp!");
+      } else {
+        toast.error("Erro ao enviar. Abrindo WhatsApp...");
+        fallbackOpenWhatsApp(transaction.customer_phone, processedText);
+      }
+    } else {
+      await navigator.clipboard.writeText(processedText);
+      toast.success("Mensagem copiada! Abrindo WhatsApp...");
+      fallbackOpenWhatsApp(transaction.customer_phone, processedText);
+    }
+
+    setSendingWhatsApp(null);
+  };
+
+  const handleSendImageWhatsApp = async (blockId: string) => {
+    if (!transaction?.customer_phone) {
+      toast.error("Telefone do cliente não disponível");
+      return;
+    }
+
+    if (!imageBlobUrl) {
+      toast.error("Imagem não disponível");
+      return;
+    }
+
+    setSendingWhatsApp(blockId);
+
+    if (extensionAvailable) {
+      try {
+        // Convert blob URL to data URL
+        const response = await fetch(imageBlobUrl);
+        const blob = await response.blob();
+        const reader = new FileReader();
+        
+        const dataUrl = await new Promise<string>((resolve) => {
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(blob);
+        });
+
+        const success = await sendImage(transaction.customer_phone, dataUrl);
+        if (success) {
+          toast.success("Imagem enviada via WhatsApp!");
+        } else {
+          toast.error("Erro ao enviar imagem. Copiando...");
+          await handleCopyImage();
+          fallbackOpenWhatsApp(transaction.customer_phone);
+        }
+      } catch (error) {
+        toast.error("Erro ao processar imagem");
+        fallbackOpenWhatsApp(transaction.customer_phone);
+      }
+    } else {
+      await handleCopyImage();
+      toast.success("Imagem copiada! Abrindo WhatsApp...");
+      fallbackOpenWhatsApp(transaction.customer_phone);
+    }
+
+    setSendingWhatsApp(null);
+  };
+
 
   const metadata = transaction.metadata as Record<string, unknown> | null;
   const dueDate = metadata?.due_date ? formatDate(String(metadata.due_date)) : null;
@@ -254,11 +333,11 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
       return (
         <div key={block.id} className="group p-4 rounded-xl bg-card border border-border hover:border-primary/30 transition-colors">
           <p className="text-sm whitespace-pre-wrap leading-relaxed text-foreground/90">{processedText}</p>
-          <div className="mt-3 pt-3 border-t border-border/50">
+          <div className="mt-3 pt-3 border-t border-border/50 flex gap-2">
             <Button
               size="sm"
               variant="outline"
-              className="w-full gap-2 h-9"
+              className="flex-1 gap-2 h-9"
               onClick={() => handleCopy(block.content, block.id)}
             >
               {copiedId === block.id ? (
@@ -269,9 +348,22 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
               ) : (
                 <>
                   <Copy className="h-4 w-4" />
-                  Copiar mensagem
+                  Copiar
                 </>
               )}
+            </Button>
+            <Button
+              size="sm"
+              className="flex-1 gap-2 h-9 bg-[#25D366] hover:bg-[#20BD5A] text-white"
+              onClick={() => handleSendTextWhatsApp(block.content, `whatsapp-${block.id}`)}
+              disabled={sendingWhatsApp === `whatsapp-${block.id}` || !transaction?.customer_phone}
+            >
+              {sendingWhatsApp === `whatsapp-${block.id}` ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <MessageCircle className="h-4 w-4" />
+              )}
+              WhatsApp
             </Button>
           </div>
         </div>
@@ -339,11 +431,11 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
                   className="w-full h-auto max-h-32 object-contain"
                 />
               </div>
-              <div className="flex gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 <Button 
                   size="sm" 
                   variant="outline" 
-                  className="flex-1 gap-2 h-9"
+                  className="gap-2 h-9"
                   onClick={handleCopyImage}
                 >
                   {copiedId === "image-copy" ? (
@@ -360,11 +452,25 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
                 </Button>
                 <Button 
                   size="sm" 
-                  className="flex-1 gap-2 h-9 bg-emerald-600 hover:bg-emerald-700"
+                  variant="outline"
+                  className="gap-2 h-9"
                   onClick={handleDownloadImage}
                 >
                   <Download className="h-4 w-4" />
-                  Baixar JPG
+                  Baixar
+                </Button>
+                <Button 
+                  size="sm" 
+                  className="gap-2 h-9 bg-[#25D366] hover:bg-[#20BD5A] text-white"
+                  onClick={() => handleSendImageWhatsApp(`whatsapp-image-${block.id}`)}
+                  disabled={sendingWhatsApp === `whatsapp-image-${block.id}` || !transaction?.customer_phone}
+                >
+                  {sendingWhatsApp === `whatsapp-image-${block.id}` ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <MessageCircle className="h-4 w-4" />
+                  )}
+                  WhatsApp
                 </Button>
               </div>
             </div>
@@ -384,15 +490,33 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[85vh] p-0 gap-0">
         <DialogHeader className="px-6 py-4 border-b bg-muted/30">
-          <DialogTitle className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <FileText className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <span className="text-lg">Recuperação de Boleto</span>
-              <p className="text-sm font-normal text-muted-foreground">Copie as mensagens para enviar ao cliente</p>
-            </div>
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <FileText className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <span className="text-lg">Recuperação de Boleto</span>
+                <p className="text-sm font-normal text-muted-foreground">Copie as mensagens para enviar ao cliente</p>
+              </div>
+            </DialogTitle>
+            <Badge 
+              variant={extensionAvailable ? "default" : "secondary"}
+              className={`gap-1.5 ${extensionAvailable ? "bg-[#25D366] hover:bg-[#25D366]" : ""}`}
+            >
+              {extensionAvailable ? (
+                <>
+                  <Wifi className="h-3 w-3" />
+                  Extensão conectada
+                </>
+              ) : (
+                <>
+                  <WifiOff className="h-3 w-3" />
+                  Modo manual
+                </>
+              )}
+            </Badge>
+          </div>
         </DialogHeader>
 
         <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] min-h-0">
