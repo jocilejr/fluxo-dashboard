@@ -167,7 +167,7 @@ async function sendPushToAllSubscribers(
 
   const { data: subscriptions, error } = await supabase
     .from('push_subscriptions')
-    .select('endpoint, p256dh, auth');
+    .select('id, endpoint, p256dh, auth');
 
   if (error) {
     console.error('[Push] Error fetching subscriptions:', error);
@@ -182,9 +182,22 @@ async function sendPushToAllSubscribers(
   console.log(`[Push] Sending to ${subscriptions.length} subscriber(s)`);
 
   const payload = { title, body, tag };
+  const invalidSubscriptions: string[] = [];
 
   for (const sub of subscriptions) {
-    await sendPushNotification(sub, payload, vapidPublicKey, vapidPrivateKey);
+    const success = await sendPushNotification(sub, payload, vapidPublicKey, vapidPrivateKey);
+    if (!success) {
+      invalidSubscriptions.push(sub.id);
+    }
+  }
+
+  // Remove invalid subscriptions (expired or unsubscribed)
+  if (invalidSubscriptions.length > 0) {
+    console.log(`[Push] Removing ${invalidSubscriptions.length} invalid subscription(s)`);
+    await supabase
+      .from('push_subscriptions')
+      .delete()
+      .in('id', invalidSubscriptions);
   }
 }
 
