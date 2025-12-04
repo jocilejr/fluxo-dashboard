@@ -26,31 +26,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Get stats from Typebot API
-    const statsUrl = `${TYPEBOT_BASE_URL}/api/v1/typebots/${TYPEBOT_ID}/analytics/stats`
-    console.log('[typebot-stats] Fetching stats from:', statsUrl)
-
-    const statsResponse = await fetch(statsUrl, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${typebotToken}`,
-        'Content-Type': 'application/json',
-      },
-    })
-
-    if (!statsResponse.ok) {
-      const errorText = await statsResponse.text()
-      console.error('[typebot-stats] Stats API error:', statsResponse.status, errorText)
-      return new Response(
-        JSON.stringify({ error: 'Failed to fetch Typebot stats', details: errorText }),
-        { status: statsResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    const statsData = await statsResponse.json()
-    console.log('[typebot-stats] Stats data:', JSON.stringify(statsData))
-
-    // Get results list to calculate today's count
+    // Get results list to calculate today's count and totals
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     
@@ -65,28 +41,38 @@ Deno.serve(async (req) => {
       },
     })
 
-    let todayCount = 0
-    let results: any[] = []
-
-    if (resultsResponse.ok) {
-      const resultsData = await resultsResponse.json()
-      results = resultsData.results || []
-      console.log('[typebot-stats] Total results:', results.length)
-
-      // Count results from today
-      todayCount = results.filter((result: any) => {
-        const createdAt = new Date(result.createdAt)
-        return createdAt >= today
-      }).length
-
-      console.log('[typebot-stats] Today count:', todayCount)
-    } else {
-      console.error('[typebot-stats] Results API error:', resultsResponse.status)
+    if (!resultsResponse.ok) {
+      const errorText = await resultsResponse.text()
+      console.error('[typebot-stats] Results API error:', resultsResponse.status, errorText)
+      return new Response(
+        JSON.stringify({ error: 'Failed to fetch Typebot results', details: errorText }),
+        { status: resultsResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
-    // Return combined stats
+    const resultsData = await resultsResponse.json()
+    const results = resultsData.results || []
+    console.log('[typebot-stats] Total results:', results.length)
+
+    // Count results from today
+    const todayCount = results.filter((result: any) => {
+      const createdAt = new Date(result.createdAt)
+      return createdAt >= today
+    }).length
+
+    // Count completed results (those with hasStarted and isCompleted)
+    const completedCount = results.filter((result: any) => result.isCompleted).length
+
+    console.log('[typebot-stats] Today count:', todayCount)
+    console.log('[typebot-stats] Completed count:', completedCount)
+
+    // Return stats based on results
     const response = {
-      stats: statsData.stats || {},
+      stats: {
+        totalViews: results.length,
+        totalStarts: results.length,
+        totalCompleted: completedCount,
+      },
       todayCount,
       totalResults: results.length,
     }
