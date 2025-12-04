@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/dashboard/Header";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { RevenueChart } from "@/components/dashboard/RevenueChart";
@@ -23,13 +24,12 @@ import {
 } from "lucide-react";
 import { GroupStatsCards } from "@/components/dashboard/GroupStatsCards";
 import { GroupHistoryChart } from "@/components/dashboard/GroupHistoryChart";
-import { TypebotStats } from "@/components/dashboard/TypebotStats";
 
 const Index = () => {
+  const navigate = useNavigate();
   const { transactions, isLoading, refetch, hasNewTransaction, dismissNewTransaction } = useTransactions();
   const { user } = useAdminCheck();
   const [dateFilter, setDateFilter] = useState<DateFilterValue>(getDefaultDateFilter);
-  const [showTypebotStats, setShowTypebotStats] = useState(false);
 
   // Check if current user has admin role (not just 'user' role)
   const [isRealAdmin, setIsRealAdmin] = useState<boolean | null>(null);
@@ -142,24 +142,19 @@ const Index = () => {
       <div className="container mx-auto px-3 sm:px-4 pb-8">
         <Header />
         
-        {/* Typebot Stats Button - Admin only */}
+        {/* Typebot Ranking Button - Admin only */}
         {isRealAdmin && (
           <div className="mb-4">
             <Button
-              variant={showTypebotStats ? "default" : "outline"}
+              variant="outline"
               size="sm"
-              onClick={() => setShowTypebotStats(!showTypebotStats)}
+              onClick={() => navigate("/typebot-ranking")}
               className="gap-2"
             >
               <Bot className="h-4 w-4" />
-              {showTypebotStats ? "Ocultar Typebot" : "Ver Typebot Stats"}
+              Ranking de Typebots
             </Button>
           </div>
-        )}
-
-        {/* Typebot Stats Panel */}
-        {isRealAdmin && showTypebotStats && (
-          <TypebotStats onClose={() => setShowTypebotStats(false)} />
         )}
         
         {/* Admin-only: Date Filter and Stats */}
