@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/tooltip";
 import { BoletoRecoveryModal } from "./BoletoRecoveryModal";
 import { BoletoQuickRecovery } from "./BoletoQuickRecovery";
+import { PixCardQuickRecovery } from "./PixCardQuickRecovery";
 
 interface TransactionsTableProps {
   transactions: Transaction[];
@@ -663,6 +664,20 @@ export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin =
                             </TooltipTrigger>
                             <TooltipContent>
                               <p>Baixar boleto</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                      {(transaction.type === 'pix' || transaction.type === 'cartao') && transaction.status === 'pendente' && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span>
+                                <PixCardQuickRecovery transaction={transaction} />
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Recuperação rápida</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>

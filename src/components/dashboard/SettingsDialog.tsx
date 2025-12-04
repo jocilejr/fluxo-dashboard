@@ -4,7 +4,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Settings, Users, Webhook, Plus, Trash2, Loader2, KeyRound, DollarSign, Percent } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Settings, Users, Webhook, Plus, Trash2, Loader2, KeyRound, DollarSign, Percent, MessageSquare } from "lucide-react";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { WebhookInfo } from "./WebhookInfo";
 import { GroupWebhookInfo } from "./GroupWebhookInfo";
@@ -29,6 +30,7 @@ export const SettingsDialog = ({ trigger, asMobileItem }: SettingsDialogProps) =
   const [taxRate, setTaxRate] = useState("");
   const [manualDescription, setManualDescription] = useState("");
   const [manualAmount, setManualAmount] = useState("");
+  const [recoveryMessage, setRecoveryMessage] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -76,6 +78,42 @@ export const SettingsDialog = ({ trigger, asMobileItem }: SettingsDialogProps) =
       return data;
     },
     enabled: open,
+  });
+
+  // Fetch PIX/Card recovery message
+  const { data: recoverySettings } = useQuery({
+    queryKey: ["pix-card-recovery-settings"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("pix_card_recovery_settings")
+        .select("*")
+        .maybeSingle();
+      
+      if (error) throw error;
+      if (data) setRecoveryMessage(data.message);
+      return data;
+    },
+    enabled: open,
+  });
+
+  // Update recovery message mutation
+  const updateRecoveryMessage = useMutation({
+    mutationFn: async (message: string) => {
+      if (recoverySettings?.id) {
+        const { error } = await supabase
+          .from("pix_card_recovery_settings")
+          .update({ message })
+          .eq("id", recoverySettings.id);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      toast({ title: "Sucesso", description: "Mensagem de recuperação atualizada" });
+      queryClient.invalidateQueries({ queryKey: ["pix-card-recovery-settings"] });
+    },
+    onError: () => {
+      toast({ title: "Erro", description: "Não foi possível atualizar", variant: "destructive" });
+    },
   });
 
   // Update tax rate mutation
@@ -276,7 +314,7 @@ export const SettingsDialog = ({ trigger, asMobileItem }: SettingsDialogProps) =
         </DialogHeader>
         
         <Tabs defaultValue="users" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               <span className="hidden sm:inline">Usuários</span>
@@ -284,6 +322,10 @@ export const SettingsDialog = ({ trigger, asMobileItem }: SettingsDialogProps) =
             <TabsTrigger value="financeiro" className="flex items-center gap-2">
               <DollarSign className="h-4 w-4" />
               <span className="hidden sm:inline">Financeiro</span>
+            </TabsTrigger>
+            <TabsTrigger value="recuperacao" className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              <span className="hidden sm:inline">Recuperação</span>
             </TabsTrigger>
             <TabsTrigger value="webhook" className="flex items-center gap-2">
               <Webhook className="h-4 w-4" />
@@ -531,6 +573,42 @@ export const SettingsDialog = ({ trigger, asMobileItem }: SettingsDialogProps) =
                   Nenhum faturamento manual cadastrado
                 </p>
               )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="recuperacao" className="space-y-4 mt-4">
+            <div className="space-y-4 p-4 border rounded-lg">
+              <h3 className="font-semibold flex items-center gap-2">
+                <MessageSquare className="h-4 w-4" />
+                Mensagem de Recuperação PIX/Cartão
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Configure a mensagem que será enviada para recuperar pagamentos pendentes de PIX e Cartão.
+                Use as variáveis: {"{nome}"}, {"{primeiro_nome}"}, {"{valor}"}
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="recoveryMsg">Mensagem</Label>
+                <Textarea
+                  id="recoveryMsg"
+                  placeholder="Ex: Olá {nome}! Seu pagamento de {valor} está pendente..."
+                  value={recoveryMessage}
+                  onChange={(e) => setRecoveryMessage(e.target.value)}
+                  className="min-h-[100px]"
+                />
+              </div>
+              <Button 
+                onClick={() => {
+                  if (!recoveryMessage.trim()) {
+                    toast({ title: "Erro", description: "Digite uma mensagem", variant: "destructive" });
+                    return;
+                  }
+                  updateRecoveryMessage.mutate(recoveryMessage.trim());
+                }}
+                disabled={updateRecoveryMessage.isPending}
+              >
+                {updateRecoveryMessage.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Salvar Mensagem
+              </Button>
             </div>
           </TabsContent>
 
