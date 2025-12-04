@@ -80,19 +80,34 @@ export function useTransactions() {
             // Notify tab title when in background
             notifyNewTransactionRef.current();
             
-            // Browser notification via Service Worker (iOS PWA compatible)
-            if (Notification.permission === 'granted') {
+            // Browser notification via Service Worker
+            console.log('[Notification] Attempting to send notification...');
+            console.log('[Notification] Permission:', Notification.permission);
+            console.log('[Notification] ServiceWorker available:', !!navigator.serviceWorker);
+            
+            if (Notification.permission === 'granted' && navigator.serviceWorker) {
               const typeLabel = newData.type === 'boleto' ? 'Boleto' : newData.type === 'pix' ? 'PIX' : 'Cartão';
               const amount = (newData.amount / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
               
-              navigator.serviceWorker?.ready.then((registration) => {
-                registration.showNotification(`🔔 Nova Transação - ${typeLabel}`, {
-                  body: `${newData.customer_name || 'Cliente'} - ${amount}`,
-                  icon: '/logo-ov.png',
-                  badge: '/favicon.png',
-                  tag: `transaction-${newData.id}`,
+              console.log('[Notification] Getting SW registration...');
+              navigator.serviceWorker.ready
+                .then((registration) => {
+                  console.log('[Notification] SW ready, showing notification...');
+                  return registration.showNotification(`🔔 Nova Transação - ${typeLabel}`, {
+                    body: `${newData.customer_name || 'Cliente'} - ${amount}`,
+                    icon: '/logo-ov.png',
+                    badge: '/favicon.png',
+                    tag: `transaction-${newData.id}`,
+                  });
+                })
+                .then(() => {
+                  console.log('[Notification] Notification sent successfully!');
+                })
+                .catch((err) => {
+                  console.error('[Notification] Error:', err);
                 });
-              }).catch(console.error);
+            } else {
+              console.log('[Notification] Skipped - permission or SW not available');
             }
           }
         }
