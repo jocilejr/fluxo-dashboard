@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Transaction } from "@/hooks/useTransactions";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trash2, Download, Search, ChevronDown, ChevronUp, Users, Clock, CheckCircle2, AlertCircle, RefreshCw, CalendarIcon } from "lucide-react";
+import { Trash2, Download, Search, ChevronDown, ChevronUp, Users, Clock, CheckCircle2, AlertCircle, RefreshCw, CalendarIcon, MessageSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -31,6 +31,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { BoletoRecoveryModal } from "./BoletoRecoveryModal";
 
 interface TransactionsTableProps {
   transactions: Transaction[];
@@ -89,6 +90,8 @@ export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin =
   const [visibleCount, setVisibleCount] = useState(15);
   const [customRange, setCustomRange] = useState<DateRange | undefined>();
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [recoveryModalOpen, setRecoveryModalOpen] = useState(false);
+  const [selectedBoleto, setSelectedBoleto] = useState<Transaction | null>(null);
   
   // Transaction date filter state
   const [dateFilter, setDateFilter] = useState<TransactionDateFilter>(() => {
@@ -332,6 +335,13 @@ export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin =
     setActiveTab(value as TabKey);
   };
 
+  const handleBoletoClick = (transaction: Transaction) => {
+    if (transaction.type === "boleto" && transaction.status === "gerado") {
+      setSelectedBoleto(transaction);
+      setRecoveryModalOpen(true);
+    }
+  };
+
   const SortIcon = ({ field }: { field: SortField }) => {
     if (sortField !== field) return null;
     return sortDirection === "asc" ? 
@@ -360,12 +370,21 @@ export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin =
       {filteredTransactions.slice(0, 10).map((transaction) => (
         <div 
           key={transaction.id} 
-          className="border border-border/30 rounded-lg p-3 bg-secondary/10"
+          className={cn(
+            "border border-border/30 rounded-lg p-3 bg-secondary/10",
+            transaction.type === "boleto" && transaction.status === "gerado" && "cursor-pointer border-primary/30 hover:bg-primary/5"
+          )}
+          onClick={() => handleBoletoClick(transaction)}
         >
           <div className="flex items-center justify-between mb-2">
-            <Badge variant="outline" className={cn("font-medium text-xs", typeStyles[transaction.type])}>
-              {typeLabels[transaction.type]}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className={cn("font-medium text-xs", typeStyles[transaction.type])}>
+                {typeLabels[transaction.type]}
+              </Badge>
+              {transaction.type === "boleto" && transaction.status === "gerado" && (
+                <MessageSquare className="h-3.5 w-3.5 text-primary" />
+              )}
+            </div>
             <Badge variant="outline" className={cn("font-medium text-xs", statusStyles[transaction.status])}>
               {statusLabels[transaction.status]}
             </Badge>
@@ -528,13 +547,31 @@ export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin =
               filteredTransactions.slice(0, visibleCount).map((transaction, index) => (
                 <tr 
                   key={transaction.id} 
-                  className="group hover:bg-secondary/40 transition-all duration-200 animate-fade-in"
+                  className={cn(
+                    "group hover:bg-secondary/40 transition-all duration-200 animate-fade-in",
+                    transaction.type === "boleto" && transaction.status === "gerado" && "cursor-pointer hover:bg-primary/5"
+                  )}
                   style={{ animationDelay: `${index * 30}ms` }}
+                  onClick={() => handleBoletoClick(transaction)}
                 >
                   <td className="py-3.5 px-4">
-                    <Badge variant="outline" className={cn("font-medium text-xs", typeStyles[transaction.type])}>
-                      {typeLabels[transaction.type]}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className={cn("font-medium text-xs", typeStyles[transaction.type])}>
+                        {typeLabels[transaction.type]}
+                      </Badge>
+                      {transaction.type === "boleto" && transaction.status === "gerado" && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <MessageSquare className="h-3.5 w-3.5 text-primary" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Clique para recuperação</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </div>
                   </td>
                   <td className="py-3.5 px-4">
                     <div className="flex flex-col">
@@ -793,6 +830,12 @@ export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin =
       
       {renderMobileView()}
       {renderDesktopView()}
+
+      <BoletoRecoveryModal
+        open={recoveryModalOpen}
+        onOpenChange={setRecoveryModalOpen}
+        transaction={selectedBoleto}
+      />
     </div>
   );
 }

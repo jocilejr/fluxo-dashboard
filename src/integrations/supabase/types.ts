@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      boleto_recovery_templates: {
+        Row: {
+          blocks: Json
+          created_at: string
+          id: string
+          is_default: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          blocks?: Json
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          blocks?: Json
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       financial_settings: {
         Row: {
           created_at: string
