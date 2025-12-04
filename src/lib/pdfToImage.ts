@@ -1,13 +1,18 @@
 import * as pdfjsLib from 'pdfjs-dist';
 
-// Configure pdf.js worker using the local module
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.mjs',
-  import.meta.url
-).toString();
+// Disable worker to avoid CORS/loading issues in browser
+// @ts-ignore
+pdfjsLib.GlobalWorkerOptions.workerSrc = '';
 
 export async function pdfToImage(pdfData: ArrayBuffer, scale: number = 2): Promise<Blob> {
-  const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
+  const loadingTask = pdfjsLib.getDocument({ 
+    data: pdfData,
+    useWorkerFetch: false,
+    isEvalSupported: false,
+    useSystemFonts: true
+  });
+  
+  const pdf = await loadingTask.promise;
   const page = await pdf.getPage(1);
   
   const viewport = page.getViewport({ scale });
