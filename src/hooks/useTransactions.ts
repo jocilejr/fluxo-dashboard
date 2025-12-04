@@ -84,6 +84,7 @@ export function useTransactions() {
             if (Notification.permission === 'granted' && navigator.serviceWorker) {
               const typeLabel = newData.type === 'boleto' ? 'Boleto' : newData.type === 'pix' ? 'PIX' : 'Cartão';
               const amount = newData.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+              console.log('[Notification] Raw amount:', newData.amount, 'Formatted:', amount);
               
               navigator.serviceWorker.ready
                 .then((registration) => {
