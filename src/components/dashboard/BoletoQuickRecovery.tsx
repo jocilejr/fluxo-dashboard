@@ -60,7 +60,7 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
   const [imageBlob, setImageBlob] = useState<Blob | null>(null);
   const [isDragging, setIsDragging] = useState<string | null>(null);
 
-  const { extensionAvailable, extensionStatus, sendText, sendImage, retryConnection } = useWhatsAppExtension();
+  const { extensionAvailable, extensionStatus, openChat, sendText, sendImage, retryConnection } = useWhatsAppExtension();
 
   useEffect(() => {
     if (open) {
@@ -351,11 +351,11 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
       return (
         <div key={block.id} className="group p-4 rounded-xl bg-card border border-border hover:border-primary/30 transition-colors">
           <p className="text-sm whitespace-pre-wrap leading-relaxed text-foreground/90">{processedText}</p>
-          <div className="mt-3 pt-3 border-t border-border/50 flex gap-2">
+          <div className="mt-3 pt-3 border-t border-border/50">
             <Button
               size="sm"
               variant="outline"
-              className="flex-1 gap-2 h-9"
+              className="w-full gap-2 h-9"
               onClick={() => handleCopy(block.content, block.id)}
             >
               {copiedId === block.id ? (
@@ -366,22 +366,9 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
               ) : (
                 <>
                   <Copy className="h-4 w-4" />
-                  Copiar
+                  Copiar mensagem
                 </>
               )}
-            </Button>
-            <Button
-              size="sm"
-              className="flex-1 gap-2 h-9 bg-[#25D366] hover:bg-[#20BD5A] text-white"
-              onClick={() => handleSendTextWhatsApp(block.content, `whatsapp-${block.id}`)}
-              disabled={sendingWhatsApp === `whatsapp-${block.id}` || !transaction?.customer_phone}
-            >
-              {sendingWhatsApp === `whatsapp-${block.id}` ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <MessageCircle className="h-4 w-4" />
-              )}
-              WhatsApp
             </Button>
           </div>
         </div>
@@ -443,48 +430,64 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
             <span>Imagem do Boleto</span>
           </div>
           {isLoadingImage ? (
-            <div className="flex items-center justify-center py-6">
-              <Loader2 className="h-5 w-5 animate-spin text-emerald-500" />
+            <div className="flex items-center justify-center py-8 rounded-xl bg-muted/30 border border-border">
+              <div className="text-center">
+                <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto mb-2" />
+                <span className="text-xs text-muted-foreground">Gerando imagem...</span>
+              </div>
             </div>
           ) : imageBlobUrl ? (
-            <a
-              href={imageBlobUrl}
-              download={`boleto-${transaction?.customer_name?.split(" ")[0] || "cliente"}.jpg`}
-              className="block relative group rounded-xl border-2 border-dashed border-emerald-500/30 hover:border-emerald-500/60 cursor-grab active:cursor-grabbing transition-all overflow-hidden no-underline"
-              draggable="true"
-            >
-              <img 
-                src={imageBlobUrl} 
-                alt="Boleto" 
-                className="w-full h-auto max-h-48 object-contain bg-white"
-                draggable="false"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-3">
-                <span className="text-white text-sm font-medium flex items-center gap-2">
-                  <GripVertical className="h-4 w-4" />
-                  Arraste ou clique para baixar
-                </span>
+            <div className="rounded-xl overflow-hidden border border-border bg-white shadow-sm">
+              <a
+                href={imageBlobUrl}
+                download={`boleto-${transaction?.customer_name?.split(" ")[0] || "cliente"}.jpg`}
+                className="block relative group cursor-pointer"
+              >
+                <img 
+                  src={imageBlobUrl} 
+                  alt="Boleto" 
+                  className="w-full h-auto object-contain"
+                  draggable="false"
+                />
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <div className="bg-white rounded-lg px-4 py-2 shadow-lg flex items-center gap-2">
+                    <Download className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium text-foreground">Baixar imagem</span>
+                  </div>
+                </div>
+              </a>
+              <div className="p-3 bg-muted/30 border-t flex gap-2">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="flex-1 gap-2 h-8 text-xs"
+                  onClick={handleCopyImage}
+                >
+                  {copiedId === "image-copy" ? (
+                    <Check className="h-3 w-3 text-emerald-500" />
+                  ) : (
+                    <Copy className="h-3 w-3" />
+                  )}
+                  Copiar
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  className="flex-1 gap-2 h-8 text-xs"
+                  onClick={handleDownloadImage}
+                >
+                  <Download className="h-3 w-3" />
+                  Baixar
+                </Button>
               </div>
-            </a>
+            </div>
           ) : (
-            <p className="text-sm text-muted-foreground text-center py-2">
-              {isLoadingPdf ? "Aguardando PDF..." : "Imagem não disponível"}
-            </p>
-          )}
-          {imageBlobUrl && (
-            <Button 
-              size="sm" 
-              variant="ghost" 
-              className="w-full gap-2 h-8 text-xs"
-              onClick={handleCopyImage}
-            >
-              {copiedId === "image-copy" ? (
-                <Check className="h-3 w-3 text-emerald-500" />
-              ) : (
-                <Copy className="h-3 w-3" />
-              )}
-              Copiar para área de transferência
-            </Button>
+            <div className="py-8 rounded-xl bg-muted/20 border border-dashed border-border text-center">
+              <ImageIcon className="h-8 w-8 text-muted-foreground/50 mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">
+                {isLoadingPdf ? "Aguardando PDF..." : "Imagem não disponível"}
+              </p>
+            </div>
           )}
         </div>
       );
@@ -616,6 +619,25 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
                   )}
                 </div>
               </div>
+
+              {/* Botão WhatsApp */}
+              {transaction.customer_phone && (
+                <Button
+                  className="w-full gap-2 h-11 mt-4 bg-[#25D366] hover:bg-[#20BD5A] text-white font-medium shadow-lg shadow-[#25D366]/25"
+                  onClick={() => {
+                    if (extensionAvailable) {
+                      openChat(transaction.customer_phone!).catch(() => {
+                        window.open(`https://web.whatsapp.com/send?phone=${transaction.customer_phone?.replace(/\D/g, "")}`, "_blank");
+                      });
+                    } else {
+                      window.open(`https://web.whatsapp.com/send?phone=${transaction.customer_phone?.replace(/\D/g, "")}`, "_blank");
+                    }
+                  }}
+                >
+                  <MessageCircle className="h-5 w-5" />
+                  Abrir conversa no WhatsApp
+                </Button>
+              )}
             </div>
           </div>
 
