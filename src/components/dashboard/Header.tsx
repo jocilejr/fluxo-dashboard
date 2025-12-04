@@ -34,8 +34,6 @@ export function Header() {
   const { isSupported, isSubscribed, isLoading, subscribe, unsubscribe, testNotification, permission, swReady } = usePushNotifications();
   const [showInstallDialog, setShowInstallDialog] = useState(false);
   const [installDialogType, setInstallDialogType] = useState<"ios" | "android">("ios");
-  const [showDebug, setShowDebug] = useState(false);
-  const [debugLog, setDebugLog] = useState<string[]>([]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -60,41 +58,26 @@ export function Header() {
     }
   };
 
-  const addLog = (msg: string) => {
-    setDebugLog(prev => [...prev.slice(-10), `${new Date().toLocaleTimeString()}: ${msg}`]);
-  };
-
   const handleToggleNotifications = async () => {
     if (isLoading) return;
-    
-    setShowDebug(true);
-    addLog(`Iniciando... supported=${isSupported}, subscribed=${isSubscribed}, permission=${permission}, swReady=${swReady}`);
 
     if (isSubscribed) {
       const result = await unsubscribe();
       if (result) {
-        addLog('Notificações desativadas');
         toast({
           title: "Notificações desativadas",
           description: "Você não receberá mais notificações push.",
         });
       }
     } else {
-      addLog('Solicitando permissão...');
       const result = await subscribe();
-      addLog(`Resultado: success=${result.success}, reason=${result.reason || 'none'}`);
       
       if (result.success) {
         toast({
           title: "Notificações ativadas!",
           description: "Você receberá notificações de novas transações.",
         });
-        // Send test notification
-        addLog('Enviando notificação de teste...');
-        setTimeout(async () => {
-          const testResult = await testNotification();
-          addLog(`Teste enviado: ${testResult}`);
-        }, 1000);
+        setTimeout(() => testNotification(), 1000);
       } else {
         let description = "Verifique se as notificações estão permitidas no navegador.";
         
@@ -304,41 +287,6 @@ export function Header() {
           </DialogHeader>
         </DialogContent>
       </Dialog>
-
-      {/* Debug Panel */}
-      {showDebug && (
-        <div className="fixed bottom-4 left-4 right-4 bg-card border border-border rounded-lg p-3 shadow-lg z-50 max-h-64 overflow-auto">
-          <div className="flex justify-between items-center mb-2">
-            <span className="font-semibold text-sm">Debug Notificações</span>
-            <Button variant="ghost" size="sm" onClick={() => setShowDebug(false)} className="h-6 px-2 text-xs">
-              Fechar
-            </Button>
-          </div>
-          <div className="text-xs space-y-1 font-mono">
-            <div className="grid grid-cols-2 gap-1 mb-2 p-2 bg-muted rounded">
-              <span>Supported: <strong className={isSupported ? "text-green-500" : "text-red-500"}>{String(isSupported)}</strong></span>
-              <span>SW Ready: <strong className={swReady ? "text-green-500" : "text-red-500"}>{String(swReady)}</strong></span>
-              <span>Permission: <strong className={permission === 'granted' ? "text-green-500" : "text-yellow-500"}>{permission}</strong></span>
-              <span>Subscribed: <strong className={isSubscribed ? "text-green-500" : "text-red-500"}>{String(isSubscribed)}</strong></span>
-            </div>
-            {debugLog.map((log, i) => (
-              <div key={i} className="text-muted-foreground">{log}</div>
-            ))}
-          </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="w-full mt-2 text-xs"
-            onClick={async () => {
-              addLog('Teste manual...');
-              const result = await testNotification();
-              addLog(`Teste resultado: ${result}`);
-            }}
-          >
-            Testar Notificação
-          </Button>
-        </div>
-      )}
     </>
   );
 }
