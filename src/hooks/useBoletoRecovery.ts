@@ -134,10 +134,10 @@ export function useBoletoRecovery(transactions: Transaction[]) {
     },
   });
 
-  // Process boletos with recovery info
+  // Process boletos with recovery info (exclude paid, canceled, expired)
   const processedBoletos = useMemo(() => {
     const unpaidBoletos = transactions.filter(
-      (t) => t.type === "boleto" && t.status === "gerado"
+      (t) => t.type === "boleto" && !["pago", "cancelado", "expirado"].includes(t.status)
     );
 
     const expirationDays = settings?.default_expiration_days || 3;
