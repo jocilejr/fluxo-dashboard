@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useToast } from "@/hooks/use-toast";
 import { Transaction } from "@/hooks/useTransactions";
 import { useBoletoRecovery, BoletoWithRecovery } from "@/hooks/useBoletoRecovery";
+import { useWhatsAppExtension } from "@/hooks/useWhatsAppExtension";
 import { BoletoRecoveryHeroCard } from "./BoletoRecoveryHeroCard";
 import { BoletoRecoveryRulesConfig } from "./BoletoRecoveryRulesConfig";
 import { BoletoRecoveryQueue } from "./BoletoRecoveryQueue";
@@ -200,6 +201,7 @@ function BoletoList({
   showOverdueWarning,
 }: BoletoListProps) {
   const { toast } = useToast();
+  const { extensionStatus, sendText } = useWhatsAppExtension();
 
   const formatCurrency = (value: number) =>
     value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -209,12 +211,19 @@ function BoletoList({
     toast({ title: "Copiado!", description: "Código de barras copiado" });
   };
 
-  const handleWhatsApp = (phone: string, message?: string) => {
+  const handleWhatsApp = async (phone: string, message?: string) => {
+    if (extensionStatus !== "connected") {
+      toast({ title: "Erro", description: "Extensão WhatsApp não detectada", variant: "destructive" });
+      return;
+    }
     const normalizedPhone = phone.replace(/\D/g, "").replace(/^0+/, "");
-    const url = message
-      ? `https://wa.me/55${normalizedPhone}?text=${encodeURIComponent(message)}`
-      : `https://wa.me/55${normalizedPhone}`;
-    window.open(url, "_blank");
+    const fullPhone = normalizedPhone.startsWith("55") ? normalizedPhone : `55${normalizedPhone}`;
+    const success = await sendText(fullPhone, message || "");
+    if (success) {
+      toast({ title: "Sucesso", description: "Mensagem preparada no WhatsApp" });
+    } else {
+      toast({ title: "Erro", description: "Erro ao preparar mensagem", variant: "destructive" });
+    }
   };
 
   if (boletos.length === 0) {
@@ -339,6 +348,7 @@ interface BoletoDetailDialogProps {
 
 function BoletoDetailDialog({ boleto, onClose, onMarkContacted }: BoletoDetailDialogProps) {
   const { toast } = useToast();
+  const { extensionStatus, sendText } = useWhatsAppExtension();
 
   const formatCurrency = (value: number) =>
     value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -350,13 +360,20 @@ function BoletoDetailDialog({ boleto, onClose, onMarkContacted }: BoletoDetailDi
     }
   };
 
-  const handleWhatsApp = () => {
+  const handleWhatsApp = async () => {
     if (!boleto.customer_phone) return;
+    if (extensionStatus !== "connected") {
+      toast({ title: "Erro", description: "Extensão WhatsApp não detectada", variant: "destructive" });
+      return;
+    }
     const phone = boleto.customer_phone.replace(/\D/g, "").replace(/^0+/, "");
-    const url = boleto.formattedMessage
-      ? `https://wa.me/55${phone}?text=${encodeURIComponent(boleto.formattedMessage)}`
-      : `https://wa.me/55${phone}`;
-    window.open(url, "_blank");
+    const fullPhone = phone.startsWith("55") ? phone : `55${phone}`;
+    const success = await sendText(fullPhone, boleto.formattedMessage || "");
+    if (success) {
+      toast({ title: "Sucesso", description: "Mensagem preparada no WhatsApp" });
+    } else {
+      toast({ title: "Erro", description: "Erro ao preparar mensagem", variant: "destructive" });
+    }
   };
 
   return (

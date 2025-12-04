@@ -41,7 +41,7 @@ export function BoletoRecoveryQueue({
   const { toast } = useToast();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [notes, setNotes] = useState("");
-  const { extensionStatus, openChat, sendText, fallbackOpenWhatsApp } = useWhatsAppExtension();
+  const { extensionStatus, sendText } = useWhatsAppExtension();
 
   // Reset index when modal opens
   useEffect(() => {
@@ -76,21 +76,20 @@ export function BoletoRecoveryQueue({
       return;
     }
 
-    const phone = normalizePhone(currentBoleto.customer_phone);
-
-    if (extensionStatus === "connected") {
-      try {
-        await openChat(phone);
-        if (currentBoleto.formattedMessage) {
-          await sendText(phone, currentBoleto.formattedMessage);
-        }
-      } catch (error) {
-        fallbackOpenWhatsApp(phone, currentBoleto.formattedMessage || "");
-      }
-    } else {
-      fallbackOpenWhatsApp(phone, currentBoleto.formattedMessage || "");
+    if (extensionStatus !== "connected") {
+      toast({ title: "Erro", description: "Extensão WhatsApp não detectada", variant: "destructive" });
+      return;
     }
-  }, [currentBoleto, extensionStatus, openChat, sendText, fallbackOpenWhatsApp, toast]);
+
+    const phone = normalizePhone(currentBoleto.customer_phone);
+    const success = await sendText(phone, currentBoleto.formattedMessage || "");
+
+    if (success) {
+      toast({ title: "Sucesso", description: "Mensagem preparada no WhatsApp" });
+    } else {
+      toast({ title: "Erro", description: "Erro ao preparar mensagem", variant: "destructive" });
+    }
+  }, [currentBoleto, extensionStatus, sendText, toast]);
 
   const handleMarkContacted = useCallback(() => {
     if (!currentBoleto) return;
