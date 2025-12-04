@@ -1,8 +1,7 @@
 import * as pdfjsLib from 'pdfjs-dist';
 
-// Disable worker to avoid CORS/loading issues in browser
-// @ts-ignore
-pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+// Configure worker using CDN for pdfjs-dist v4.x
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 
 export async function pdfToImage(pdfData: ArrayBuffer, scale: number = 2): Promise<Blob> {
   const loadingTask = pdfjsLib.getDocument({ 
