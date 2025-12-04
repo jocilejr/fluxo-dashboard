@@ -349,43 +349,31 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
     if (block.type === "text") {
       const processedText = replaceVariables(block.content);
       return (
-        <div key={block.id} className="group p-4 rounded-xl bg-card border border-border hover:border-primary/30 transition-colors">
-          <p className="text-sm whitespace-pre-wrap leading-relaxed text-foreground/90">{processedText}</p>
-          <div className="mt-3 pt-3 border-t border-border/50">
-            <Button
-              size="sm"
-              variant="outline"
-              className="w-full gap-2 h-9"
-              onClick={() => handleCopy(block.content, block.id)}
-            >
-              {copiedId === block.id ? (
-                <>
-                  <Check className="h-4 w-4 text-emerald-500" />
-                  <span className="text-emerald-500">Copiado!</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="h-4 w-4" />
-                  Copiar mensagem
-                </>
-              )}
-            </Button>
-          </div>
+        <div key={block.id} className="flex items-start gap-2 p-3 rounded-lg bg-card border border-border hover:border-primary/30 transition-colors">
+          <p className="text-sm whitespace-pre-wrap leading-relaxed text-foreground/90 flex-1">{processedText}</p>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8 shrink-0"
+            onClick={() => handleCopy(block.content, block.id)}
+          >
+            {copiedId === block.id ? (
+              <Check className="h-4 w-4 text-emerald-500" />
+            ) : (
+              <Copy className="h-4 w-4" />
+            )}
+          </Button>
         </div>
       );
     }
 
     if (block.type === "pdf") {
       return (
-        <div key={block.id} className="space-y-2">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <FileText className="h-3.5 w-3.5" />
-            <span>PDF do Boleto</span>
-          </div>
+        <div key={block.id}>
           {isLoadingPdf ? (
-            <div className="flex items-center justify-center py-4">
-              <Loader2 className="h-4 w-4 animate-spin text-primary mr-2" />
-              <span className="text-xs text-muted-foreground">Carregando...</span>
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/30 border border-border">
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              <span className="text-xs text-muted-foreground">Carregando PDF...</span>
             </div>
           ) : pdfBlobUrl ? (
             <a 
@@ -407,80 +395,44 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
           ) : (
             <p className="text-xs text-muted-foreground text-center py-2">PDF não disponível</p>
           )}
-          {pdfBlobUrl && (
-            <Button size="sm" variant="ghost" className="w-full gap-1.5 h-7 text-xs" onClick={handleOpenPdfInNewTab}>
-              <ExternalLink className="h-3 w-3" />
-              Abrir em nova aba
-            </Button>
-          )}
         </div>
       );
     }
 
     if (block.type === "image") {
       return (
-        <div key={block.id} className="space-y-2">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <ImageIcon className="h-3.5 w-3.5" />
-            <span>Imagem do Boleto</span>
-          </div>
+        <div key={block.id}>
           {isLoadingImage ? (
-            <div className="flex items-center justify-center py-4 rounded-lg bg-muted/30 border border-border">
-              <Loader2 className="h-4 w-4 animate-spin text-primary mr-2" />
-              <span className="text-xs text-muted-foreground">Gerando...</span>
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/30 border border-border">
+              <Loader2 className="h-4 w-4 animate-spin text-emerald-500" />
+              <span className="text-xs text-muted-foreground">Gerando imagem...</span>
             </div>
           ) : imageBlobUrl ? (
-            <div className="rounded-lg overflow-hidden border border-border bg-white">
-              <a
-                href={imageBlobUrl}
-                download={`boleto-${transaction?.customer_name?.split(" ")[0] || "cliente"}.jpg`}
-                className="block relative group cursor-pointer max-h-40 overflow-hidden"
-              >
+            <a
+              href={imageBlobUrl}
+              download={`boleto-${transaction?.customer_name?.split(" ")[0] || "cliente"}.jpg`}
+              className="flex items-center gap-3 p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20 hover:border-emerald-500/40 transition-all no-underline"
+            >
+              <div className="w-10 h-12 bg-white rounded shadow-sm flex items-center justify-center border shrink-0 overflow-hidden">
                 <img 
                   src={imageBlobUrl} 
                   alt="Boleto" 
-                  className="w-full h-auto object-cover object-top"
+                  className="w-full h-full object-cover"
                   draggable="false"
                 />
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <div className="bg-white rounded-lg px-3 py-1.5 shadow-lg flex items-center gap-2">
-                    <Download className="h-3.5 w-3.5 text-primary" />
-                    <span className="text-xs font-medium text-foreground">Baixar</span>
-                  </div>
-                </div>
-              </a>
-              <div className="p-2 bg-muted/30 border-t flex gap-2">
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  className="flex-1 gap-1.5 h-7 text-xs"
-                  onClick={handleCopyImage}
-                >
-                  {copiedId === "image-copy" ? (
-                    <Check className="h-3 w-3 text-emerald-500" />
-                  ) : (
-                    <Copy className="h-3 w-3" />
-                  )}
-                  Copiar
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  className="flex-1 gap-1.5 h-7 text-xs"
-                  onClick={handleDownloadImage}
-                >
-                  <Download className="h-3 w-3" />
-                  Baixar
-                </Button>
               </div>
-            </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground truncate">
+                  boleto-{transaction?.customer_name?.split(" ")[0] || "cliente"}.jpg
+                </p>
+                <p className="text-xs text-muted-foreground">Clique para baixar</p>
+              </div>
+              <Download className="h-4 w-4 text-muted-foreground shrink-0" />
+            </a>
           ) : (
-            <div className="py-8 rounded-xl bg-muted/20 border border-dashed border-border text-center">
-              <ImageIcon className="h-8 w-8 text-muted-foreground/50 mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">
-                {isLoadingPdf ? "Aguardando PDF..." : "Imagem não disponível"}
-              </p>
-            </div>
+            <p className="text-xs text-muted-foreground text-center py-2">
+              {isLoadingPdf ? "Aguardando PDF..." : "Imagem não disponível"}
+            </p>
           )}
         </div>
       );
