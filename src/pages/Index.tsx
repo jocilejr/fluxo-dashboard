@@ -7,12 +7,14 @@ import { TransactionsTable } from "@/components/dashboard/TransactionsTable";
 import { PaymentMethodsChart } from "@/components/dashboard/PaymentMethodsChart";
 import { DateFilter, DateFilterValue, getDefaultDateFilter } from "@/components/dashboard/DateFilter";
 import { SaleNotification } from "@/components/dashboard/SaleNotification";
+import { BoletoRecoveryList } from "@/components/dashboard/BoletoRecoveryList";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
 import { supabase } from "@/integrations/supabase/client";
 import { isWithinInterval } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   FileText, 
   QrCode, 
@@ -20,7 +22,9 @@ import {
   DollarSign,
   Percent,
   Wallet,
-  Bot
+  Bot,
+  RefreshCcw,
+  List
 } from "lucide-react";
 import { GroupStatsCards } from "@/components/dashboard/GroupStatsCards";
 import { GroupHistoryChart } from "@/components/dashboard/GroupHistoryChart";
@@ -280,13 +284,35 @@ const Index = () => {
           onDismiss={dismissNewTransaction}
         />
 
-        {/* Transactions */}
-        <TransactionsTable 
-          transactions={transactions} 
-          isLoading={isLoading} 
-          onDelete={refetch}
-          isAdmin={isRealAdmin === true}
-        />
+        {/* Transactions / Boleto Recovery Tabs */}
+        <Tabs defaultValue="transactions" className="w-full">
+          <TabsList className="grid w-full max-w-md grid-cols-2 mb-4">
+            <TabsTrigger value="transactions" className="gap-2">
+              <List className="h-4 w-4" />
+              Transações Recentes
+            </TabsTrigger>
+            <TabsTrigger value="recovery" className="gap-2">
+              <RefreshCcw className="h-4 w-4" />
+              Recuperação de Boletos
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="transactions">
+            <TransactionsTable 
+              transactions={transactions} 
+              isLoading={isLoading} 
+              onDelete={refetch}
+              isAdmin={isRealAdmin === true}
+            />
+          </TabsContent>
+          
+          <TabsContent value="recovery">
+            <BoletoRecoveryList 
+              transactions={transactions}
+              isLoading={isLoading}
+            />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
