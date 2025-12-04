@@ -37,7 +37,7 @@ function normalizeExternalId(externalId?: string): string | undefined {
   return externalId.replace(/[\s.\-\/]/g, '');
 }
 
-// Base64 URL encoding/decoding helpers
+// Base64 URL helpers
 function base64UrlEncode(data: Uint8Array): string {
   return btoa(String.fromCharCode(...data))
     .replace(/\+/g, '-')
@@ -52,7 +52,59 @@ function base64UrlDecode(str: string): Uint8Array {
   return new Uint8Array([...binary].map(c => c.charCodeAt(0)));
 }
 
-// Send push notification directly to FCM
+// Create VAPID JWT using Web Crypto
+async function createVapidJwt(
+  audience: string,
+  subject: string,
+  publicKeyBase64: string,
+  privateKeyBase64: string
+): Promise<string> {
+  const header = { typ: 'JWT', alg: 'ES256' };
+  const now = Math.floor(Date.now() / 1000);
+  const payload = {
+    aud: audience,
+    exp: now + 12 * 60 * 60,
+    sub: subject,
+  };
+
+  const headerB64 = base64UrlEncode(new TextEncoder().encode(JSON.stringify(header)));
+  const payloadB64 = base64UrlEncode(new TextEncoder().encode(JSON.stringify(payload)));
+  const unsignedToken = `${headerB64}.${payloadB64}`;
+
+  // Decode the raw private key (32 bytes)
+  const privateKeyBytes = base64UrlDecode(privateKeyBase64);
+  const publicKeyBytes = base64UrlDecode(publicKeyBase64);
+  
+  // Create JWK from raw keys
+  const jwk = {
+    kty: 'EC',
+    crv: 'P-256',
+    x: base64UrlEncode(publicKeyBytes.slice(1, 33)),
+    y: base64UrlEncode(publicKeyBytes.slice(33, 65)),
+    d: base64UrlEncode(privateKeyBytes),
+  };
+
+  // Import private key as JWK
+  const privateKey = await crypto.subtle.importKey(
+    'jwk',
+    jwk,
+    { name: 'ECDSA', namedCurve: 'P-256' },
+    false,
+    ['sign']
+  );
+
+  // Sign the token
+  const signature = await crypto.subtle.sign(
+    { name: 'ECDSA', hash: 'SHA-256' },
+    privateKey,
+    new TextEncoder().encode(unsignedToken)
+  );
+
+  const signatureB64 = base64UrlEncode(new Uint8Array(signature));
+  return `${unsignedToken}.${signatureB64}`;
+}
+
+// Send push notification with VAPID auth
 async function sendPushNotification(
   subscription: PushSubscription,
   payload: object,
@@ -60,13 +112,24 @@ async function sendPushNotification(
   vapidPrivateKey: string
 ): Promise<boolean> {
   try {
-    // For FCM endpoints, we can send a simple POST request
-    // The payload will be delivered to the service worker's push event
+    const endpoint = new URL(subscription.endpoint);
+    const audience = `${endpoint.protocol}//${endpoint.host}`;
+    
+    console.log('[Push] Creating VAPID JWT for:', audience);
+    
+    const jwt = await createVapidJwt(
+      audience,
+      'mailto:admin@origemviva.com',
+      vapidPublicKey,
+      vapidPrivateKey
+    );
+    
     const body = JSON.stringify(payload);
     
     const response = await fetch(subscription.endpoint, {
       method: 'POST',
       headers: {
+        'Authorization': `vapid t=${jwt}, k=${vapidPublicKey}`,
         'Content-Type': 'application/json',
         'TTL': '86400',
         'Urgency': 'high',
@@ -77,18 +140,13 @@ async function sendPushNotification(
     if (!response.ok) {
       const text = await response.text();
       console.error('[Push] Failed:', response.status, text);
-      
-      // If 401/403, the subscription might be expired
-      if (response.status === 401 || response.status === 403) {
-        console.log('[Push] Subscription might be expired');
-      }
       return false;
     }
 
-    console.log('[Push] Notification sent successfully');
+    console.log('[Push] Notification sent successfully!');
     return true;
   } catch (error) {
-    console.error('[Push] Error sending:', error);
+    console.error('[Push] Error:', error);
     return false;
   }
 }
@@ -199,7 +257,6 @@ Deno.serve(async (req) => {
 
         if (error) throw error;
 
-        // Send push notification
         const typeLabel = payload.type === 'boleto' ? 'Boleto' : payload.type === 'pix' ? 'PIX' : 'Cartão';
         const amount = (payload.amount / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         
@@ -240,7 +297,6 @@ Deno.serve(async (req) => {
 
     console.log('Transaction created:', data.id);
 
-    // Send push notification
     const typeLabel = payload.type === 'boleto' ? 'Boleto' : payload.type === 'pix' ? 'PIX' : 'Cartão';
     const amount = (payload.amount / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     
