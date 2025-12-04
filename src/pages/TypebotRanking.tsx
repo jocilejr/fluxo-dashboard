@@ -3,11 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Bot, Trophy, RefreshCw, ArrowLeft, Calendar } from "lucide-react";
+import { Bot, Trophy, RefreshCw, ArrowLeft, Calendar, Filter } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, startOfDay, startOfWeek, startOfMonth, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -20,9 +21,15 @@ interface TypebotRankItem {
   count: number;
 }
 
+interface TypebotListItem {
+  id: string;
+  name: string;
+}
+
 export default function TypebotRanking() {
   const navigate = useNavigate();
   const [dateFilter, setDateFilter] = useState<DateFilter>("today");
+  const [selectedTypebot, setSelectedTypebot] = useState<string>("all");
   const [customDateRange, setCustomDateRange] = useState<{
     from: Date | undefined;
     to: Date | undefined;
@@ -49,14 +56,28 @@ export default function TypebotRanking() {
 
   const dateRange = getDateRange();
 
+  // Fetch list of typebots for the selector
+  const { data: typebotList } = useQuery<TypebotListItem[]>({
+    queryKey: ["typebot-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("typebot-stats", {
+        body: { action: "list" },
+      });
+      if (error) throw error;
+      return data.typebots || [];
+    },
+    staleTime: 300000,
+  });
+
   const { data: ranking, isLoading, error, refetch, isRefetching } = useQuery<TypebotRankItem[]>({
-    queryKey: ["typebot-ranking", dateFilter, customDateRange.from?.toISOString(), customDateRange.to?.toISOString()],
+    queryKey: ["typebot-ranking", dateFilter, customDateRange.from?.toISOString(), customDateRange.to?.toISOString(), selectedTypebot],
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke("typebot-stats", {
         body: {
           action: "ranking",
           fromDate: dateRange.from.toISOString(),
           toDate: dateRange.to.toISOString(),
+          typebotId: selectedTypebot !== "all" ? selectedTypebot : undefined,
         },
       });
       if (error) throw error;
@@ -108,9 +129,28 @@ export default function TypebotRanking() {
           </Button>
         </div>
 
-        {/* Date Filters */}
+        {/* Filters */}
         <Card className="mb-6">
-          <CardContent className="pt-4">
+          <CardContent className="pt-4 space-y-4">
+            {/* Typebot Selector */}
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Select value={selectedTypebot} onValueChange={setSelectedTypebot}>
+                <SelectTrigger className="w-full md:w-[300px]">
+                  <SelectValue placeholder="Selecionar typebot" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Typebots</SelectItem>
+                  {typebotList?.map((typebot) => (
+                    <SelectItem key={typebot.id} value={typebot.id}>
+                      {typebot.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Date Filters */}
             <div className="flex flex-wrap gap-2">
               {filterButtons.map((btn) => (
                 <Button
