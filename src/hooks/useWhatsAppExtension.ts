@@ -26,7 +26,9 @@ export function useWhatsAppExtension(): UseWhatsAppExtensionReturn {
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
+      console.log("[WhatsApp Extension] Message received:", event.data);
       if (event.data?.type === "WHATSAPP_EXTENSION_READY") {
+        console.log("[WhatsApp Extension] Extension detected!");
         setExtensionAvailable(true);
       }
     };
@@ -34,6 +36,7 @@ export function useWhatsAppExtension(): UseWhatsAppExtensionReturn {
     window.addEventListener("message", handleMessage);
 
     // Check if extension is already loaded
+    console.log("[WhatsApp Extension] Sending PING...");
     window.postMessage({ type: "WHATSAPP_EXTENSION_PING" }, "*");
 
     return () => {
@@ -45,12 +48,16 @@ export function useWhatsAppExtension(): UseWhatsAppExtensionReturn {
     return new Promise((resolve) => {
       const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
+      console.log("[WhatsApp Extension] Sending command:", action, data, "requestId:", requestId);
+      
       const handleResponse = (event: MessageEvent) => {
+        console.log("[WhatsApp Extension] Response received:", event.data);
         if (
           event.data?.type === "WHATSAPP_EXTENSION_RESPONSE" &&
           event.data?.requestId === requestId
         ) {
           window.removeEventListener("message", handleResponse);
+          console.log("[WhatsApp Extension] Command success:", event.data.success);
           resolve(event.data.success === true);
         }
       };
@@ -60,6 +67,7 @@ export function useWhatsAppExtension(): UseWhatsAppExtensionReturn {
       // Timeout after 5 seconds
       setTimeout(() => {
         window.removeEventListener("message", handleResponse);
+        console.log("[WhatsApp Extension] Command timeout");
         resolve(false);
       }, EXTENSION_TIMEOUT);
 
