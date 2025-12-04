@@ -323,6 +323,7 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
     setSendingWhatsApp(null);
   };
 
+  if (!transaction) return null;
 
   const metadata = transaction.metadata as Record<string, unknown> | null;
   const dueDate = metadata?.due_date ? formatDate(String(metadata.due_date)) : null;
