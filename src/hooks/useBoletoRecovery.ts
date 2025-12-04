@@ -262,16 +262,6 @@ export function useBoletoRecovery(transactions: Transaction[]) {
     // Remaining to contact
     const remainingToContact = todayBoletos.length;
 
-    // Debug log
-    console.log('[BoletoRecovery Stats]', {
-      totalMatchingToday,
-      contactedToday,
-      remainingToContact,
-      todayBoletosIds: todayBoletos.map(b => ({ id: b.id, name: b.customer_name, shouldContact: b.shouldContactToday, rule: b.applicableRule?.name })),
-      rulesLoaded: rules?.length || 0,
-      contactsLoaded: contacts?.length || 0,
-    });
-
     return {
       todayCount: totalMatchingToday,
       todayValue: totalValue,
@@ -281,7 +271,7 @@ export function useBoletoRecovery(transactions: Transaction[]) {
       overdueCount: overdueBoletos.length,
       totalCount: processedBoletos.length,
     };
-  }, [boletosMatchingRulesToday, todayBoletos, pendingBoletos, overdueBoletos, processedBoletos, rules, contacts]);
+  }, [boletosMatchingRulesToday, todayBoletos, pendingBoletos, overdueBoletos, processedBoletos]);
 
   return {
     settings,
