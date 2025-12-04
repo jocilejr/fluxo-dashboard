@@ -19,7 +19,7 @@ interface UseWhatsAppExtensionReturn {
   fallbackOpenWhatsApp: (phone: string, text?: string) => void;
 }
 
-const EXTENSION_TIMEOUT = 5000;
+const EXTENSION_TIMEOUT = 15000; // Increased for async operations
 
 export function useWhatsAppExtension(): UseWhatsAppExtensionReturn {
   const [extensionAvailable, setExtensionAvailable] = useState(false);
@@ -128,17 +128,12 @@ export function useWhatsAppExtension(): UseWhatsAppExtensionReturn {
 }
 
 function normalizePhone(phone: string): string {
-  // Remove all non-numeric characters except +
-  let normalized = phone.replace(/[^\d+]/g, "");
+  // Remove all non-numeric characters
+  let normalized = phone.replace(/[^\d]/g, "");
   
-  // If doesn't start with +, assume it's Brazilian and add +55
-  if (!normalized.startsWith("+")) {
-    // If starts with 55, add +
-    if (normalized.startsWith("55")) {
-      normalized = "+" + normalized;
-    } else {
-      normalized = "+55" + normalized;
-    }
+  // If doesn't start with 55, assume it's Brazilian and add 55
+  if (!normalized.startsWith("55")) {
+    normalized = "55" + normalized;
   }
   
   return normalized;
