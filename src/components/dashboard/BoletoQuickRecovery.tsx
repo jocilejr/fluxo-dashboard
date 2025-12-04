@@ -14,7 +14,9 @@ import {
   Barcode,
   Download,
   Loader2,
-  ExternalLink
+  ExternalLink,
+  DollarSign,
+  Calendar
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -64,9 +66,9 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
         .from("boleto_recovery_templates")
         .select("*")
         .eq("is_default", true)
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== "PGRST116") throw error;
+      if (error) throw error;
 
       if (data) {
         setTemplate({
@@ -80,7 +82,7 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
           .from("boleto_recovery_templates")
           .select("*")
           .limit(1)
-          .single();
+          .maybeSingle();
 
         if (anyTemplate) {
           setTemplate({
@@ -189,94 +191,86 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
   if (!transaction) return null;
 
   const metadata = transaction.metadata as Record<string, unknown> | null;
+  const dueDate = metadata?.due_date ? formatDate(String(metadata.due_date)) : null;
 
   const renderBlock = (block: RecoveryBlock) => {
     if (block.type === "text") {
       const processedText = replaceVariables(block.content);
       return (
-        <div
-          key={block.id}
-          className="p-4 rounded-lg bg-secondary/30 border border-border/30 cursor-pointer hover:bg-secondary/50 transition-colors group"
-          onClick={() => handleCopy(block.content, block.id)}
-        >
-          <div className="flex items-start justify-between gap-3">
-            <p className="text-sm whitespace-pre-wrap flex-1 leading-relaxed">{processedText}</p>
-            <div className="shrink-0 mt-1">
-              {copiedId === block.id ? (
-                <Check className="h-5 w-5 text-success" />
-              ) : (
-                <Copy className="h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-              )}
-            </div>
-          </div>
-          <p className="text-[10px] text-muted-foreground mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-            Clique para copiar
-          </p>
+        <div key={block.id} className="p-3 rounded-lg bg-secondary/30 border border-border/30">
+          <p className="text-sm whitespace-pre-wrap leading-relaxed mb-2">{processedText}</p>
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full gap-2"
+            onClick={() => handleCopy(block.content, block.id)}
+          >
+            {copiedId === block.id ? (
+              <>
+                <Check className="h-4 w-4 text-success" />
+                Copiado
+              </>
+            ) : (
+              <>
+                <Copy className="h-4 w-4" />
+                Copiar mensagem
+              </>
+            )}
+          </Button>
         </div>
       );
     }
 
     if (block.type === "pdf") {
       return (
-        <div
-          key={block.id}
-          className="p-4 rounded-lg bg-primary/5 border-2 border-dashed border-primary/30"
-        >
-          <div className="flex items-center gap-4">
-            <div className="p-3 rounded-lg bg-primary/10">
-              <FileText className="h-8 w-8 text-primary" />
-            </div>
-            <div className="flex-1">
-              <p className="font-medium text-sm">PDF do Boleto</p>
-              <p className="text-xs text-muted-foreground">
-                {isLoadingPdf ? "Carregando..." : pdfBlobUrl ? "Baixe e arraste para o WhatsApp" : "Indisponível"}
-              </p>
-            </div>
-            {isLoadingPdf ? (
-              <Loader2 className="h-5 w-5 animate-spin text-primary" />
-            ) : pdfBlobUrl ? (
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={handleOpenPdfInNewTab} className="gap-1">
-                  <ExternalLink className="h-4 w-4" />
-                  Abrir
-                </Button>
-                <Button size="sm" onClick={handleDownloadPdf} className="gap-1">
-                  <Download className="h-4 w-4" />
-                  Baixar
-                </Button>
-              </div>
-            ) : null}
+        <div key={block.id} className="p-3 rounded-lg bg-primary/5 border border-primary/30">
+          <div className="flex items-center gap-3 mb-2">
+            <FileText className="h-5 w-5 text-primary" />
+            <span className="text-sm font-medium">PDF do Boleto</span>
           </div>
+          {isLoadingPdf ? (
+            <div className="flex items-center justify-center py-2">
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              <span className="text-xs ml-2">Carregando...</span>
+            </div>
+          ) : pdfBlobUrl ? (
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" className="flex-1 gap-2" onClick={handleOpenPdfInNewTab}>
+                <ExternalLink className="h-4 w-4" />
+                Abrir
+              </Button>
+              <Button size="sm" className="flex-1 gap-2" onClick={handleDownloadPdf}>
+                <Download className="h-4 w-4" />
+                Baixar
+              </Button>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground text-center">PDF indisponível</p>
+          )}
         </div>
       );
     }
 
     if (block.type === "image") {
       return (
-        <div
-          key={block.id}
-          className="p-4 rounded-lg bg-success/5 border-2 border-dashed border-success/30"
-        >
-          <div className="flex items-center gap-4">
-            <div className="p-3 rounded-lg bg-success/10">
-              <ImageIcon className="h-8 w-8 text-success" />
-            </div>
-            <div className="flex-1">
-              <p className="font-medium text-sm">Imagem do Boleto</p>
-              <p className="text-xs text-muted-foreground">
-                {isLoadingPdf ? "Carregando PDF..." : pdfBlobUrl ? "Abra o PDF e tire um print" : "Indisponível"}
+        <div key={block.id} className="p-3 rounded-lg bg-success/5 border border-success/30">
+          <div className="flex items-center gap-3 mb-2">
+            <ImageIcon className="h-5 w-5 text-success" />
+            <span className="text-sm font-medium">Imagem do Boleto</span>
+          </div>
+          {pdfBlobUrl ? (
+            <div className="space-y-2">
+              <Button size="sm" variant="outline" className="w-full gap-2" onClick={handleOpenPdfInNewTab}>
+                <ExternalLink className="h-4 w-4" />
+                Abrir PDF para print
+              </Button>
+              <p className="text-xs text-muted-foreground text-center">
+                Use Win+Shift+S para capturar
               </p>
             </div>
-            {pdfBlobUrl && (
-              <Button size="sm" variant="outline" onClick={handleOpenPdfInNewTab} className="gap-1">
-                <ExternalLink className="h-4 w-4" />
-                Abrir PDF
-              </Button>
-            )}
-          </div>
-          <p className="text-xs text-muted-foreground mt-3 text-center">
-            💡 Dica: Abra o PDF, tire um print (Win+Shift+S) e arraste para o WhatsApp
-          </p>
+          ) : (
+            <p className="text-xs text-muted-foreground text-center">Aguardando PDF...</p>
+          )}
         </div>
       );
     }
@@ -284,101 +278,148 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
     return null;
   };
 
+  const InfoCard = ({ 
+    icon: Icon, 
+    label, 
+    value, 
+    fieldId,
+    highlight = false 
+  }: { 
+    icon: typeof User; 
+    label: string; 
+    value: string | null; 
+    fieldId: string;
+    highlight?: boolean;
+  }) => (
+    <div className={`p-3 rounded-lg border ${highlight ? 'bg-primary/10 border-primary/30' : 'bg-secondary/30 border-border/30'}`}>
+      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+        <Icon className="h-3 w-3" />
+        <span>{label}</span>
+      </div>
+      <div className="flex items-center justify-between gap-2">
+        <p className={`text-sm ${highlight ? 'font-bold text-primary' : 'font-medium'} truncate`}>
+          {value || "-"}
+        </p>
+        {value && (
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-6 w-6 shrink-0"
+            onClick={() => handleCopyField(value, fieldId)}
+          >
+            {copiedId === fieldId ? (
+              <Check className="h-3 w-3 text-success" />
+            ) : (
+              <Copy className="h-3 w-3" />
+            )}
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden p-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/30">
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-primary" />
             Recuperação de Boleto
           </DialogTitle>
         </DialogHeader>
 
-        {/* Customer info grid */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div 
-            className="p-3 rounded-lg bg-secondary/30 border border-border/30 cursor-pointer hover:bg-secondary/50 transition-colors group"
-            onClick={() => transaction.customer_name && handleCopyField(transaction.customer_name, "name")}
-          >
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-              <User className="h-3 w-3" />
-              <span>Cliente</span>
-              {transaction.customer_name && (
-                copiedId === "name" ? (
-                  <Check className="h-3 w-3 text-success ml-auto" />
-                ) : (
-                  <Copy className="h-3 w-3 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
-                )
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-0 md:gap-6 p-6 overflow-hidden">
+          {/* Left side - Boleto Info */}
+          <div className="space-y-4">
+            <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+              Informações do Boleto
+            </h4>
+            
+            <div className="space-y-3">
+              <InfoCard 
+                icon={User} 
+                label="Cliente" 
+                value={transaction.customer_name} 
+                fieldId="name" 
+              />
+              
+              <InfoCard 
+                icon={Phone} 
+                label="Telefone" 
+                value={transaction.customer_phone} 
+                fieldId="phone" 
+              />
+              
+              <InfoCard 
+                icon={DollarSign} 
+                label="Valor" 
+                value={formatCurrency(Number(transaction.amount))} 
+                fieldId="value"
+                highlight 
+              />
+              
+              {dueDate && (
+                <InfoCard 
+                  icon={Calendar} 
+                  label="Vencimento" 
+                  value={dueDate} 
+                  fieldId="dueDate" 
+                />
               )}
-            </div>
-            <p className="font-medium text-sm">{transaction.customer_name || "-"}</p>
-          </div>
-
-          <div 
-            className="p-3 rounded-lg bg-secondary/30 border border-border/30 cursor-pointer hover:bg-secondary/50 transition-colors group"
-            onClick={() => transaction.customer_phone && handleCopyField(transaction.customer_phone, "phone")}
-          >
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-              <Phone className="h-3 w-3" />
-              <span>Telefone</span>
-              {transaction.customer_phone && (
-                copiedId === "phone" ? (
-                  <Check className="h-3 w-3 text-success ml-auto" />
-                ) : (
-                  <Copy className="h-3 w-3 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
-                )
-              )}
-            </div>
-            <p className="font-medium text-sm">{transaction.customer_phone || "-"}</p>
-          </div>
-
-          <div 
-            className="p-3 rounded-lg bg-primary/10 border border-primary/30 cursor-pointer hover:bg-primary/20 transition-colors group col-span-2"
-            onClick={() => transaction.external_id && handleCopyField(transaction.external_id, "barcode")}
-          >
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-              <Barcode className="h-3 w-3" />
-              <span>Código de Barras</span>
-              {transaction.external_id && (
-                copiedId === "barcode" ? (
-                  <Check className="h-3 w-3 text-success ml-auto" />
-                ) : (
-                  <Copy className="h-3 w-3 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
-                )
-              )}
-            </div>
-            <p className="font-mono text-sm">{transaction.external_id || "-"}</p>
-          </div>
-        </div>
-
-        {/* Value highlight */}
-        <div className="p-3 rounded-lg bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 mb-4 text-center">
-          <p className="text-xs text-muted-foreground">Valor do Boleto</p>
-          <p className="text-xl font-bold text-primary">{formatCurrency(Number(transaction.amount))}</p>
-        </div>
-
-        {/* Stacked blocks section */}
-        <div className="border-t border-border/30 pt-4">
-          <h4 className="text-sm font-medium mb-3">Sequência de Recuperação</h4>
-          
-          {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            </div>
-          ) : !template || template.blocks.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground border-2 border-dashed border-border/30 rounded-lg">
-              <p className="text-sm">Nenhum template configurado</p>
-              <p className="text-xs mt-1">Configure templates clicando na ⚙️ nas ações</p>
-            </div>
-          ) : (
-            <ScrollArea className="h-[300px] pr-2">
-              <div className="space-y-3">
-                {template.blocks
-                  .sort((a, b) => a.order - b.order)
-                  .map((block) => renderBlock(block))}
+              
+              <div className="p-3 rounded-lg bg-secondary/30 border border-border/30">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                  <Barcode className="h-3 w-3" />
+                  <span>Código de Barras</span>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-mono text-xs break-all flex-1">
+                    {transaction.external_id || "-"}
+                  </p>
+                  {transaction.external_id && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-6 w-6 shrink-0"
+                      onClick={() => handleCopyField(transaction.external_id!, "barcode")}
+                    >
+                      {copiedId === "barcode" ? (
+                        <Check className="h-3 w-3 text-success" />
+                      ) : (
+                        <Copy className="h-3 w-3" />
+                      )}
+                    </Button>
+                  )}
+                </div>
               </div>
-            </ScrollArea>
-          )}
+            </div>
+          </div>
+
+          {/* Right side - Recovery sequence */}
+          <div className="space-y-4 mt-6 md:mt-0 border-t md:border-t-0 md:border-l border-border/30 pt-6 md:pt-0 md:pl-6">
+            <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+              Mensagens de Recuperação
+            </h4>
+            
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            ) : !template || template.blocks.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground border-2 border-dashed border-border/30 rounded-lg">
+                <p className="text-sm">Nenhum template configurado</p>
+                <p className="text-xs mt-1">Configure templates clicando na ⚙️ nas ações</p>
+              </div>
+            ) : (
+              <ScrollArea className="h-[350px] pr-2">
+                <div className="space-y-3">
+                  {template.blocks
+                    .sort((a, b) => a.order - b.order)
+                    .map((block) => renderBlock(block))}
+                </div>
+              </ScrollArea>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
