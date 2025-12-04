@@ -142,18 +142,31 @@ const Index = () => {
       <div className="container mx-auto px-3 sm:px-4 pb-8">
         <Header />
         
-        {/* Typebot Ranking Button - Admin only */}
+        {/* Typebot Analytics - Admin only */}
         {isRealAdmin && (
-          <div className="mb-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate("/typebot-ranking")}
-              className="gap-2"
+          <div className="mb-6">
+            <button
+              onClick={() => navigate("/typebots")}
+              className="group relative w-full overflow-hidden rounded-xl bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 p-[1px] transition-all hover:shadow-lg hover:shadow-purple-500/25"
             >
-              <Bot className="h-4 w-4" />
-              Ranking de Typebots
-            </Button>
+              <div className="relative flex items-center justify-between rounded-xl bg-background/95 px-6 py-4 backdrop-blur-sm transition-all group-hover:bg-background/80">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 shadow-lg">
+                    <Bot className="h-6 w-6 text-white" />
+                  </div>
+                  <div className="text-left">
+                    <h3 className="font-semibold text-foreground">Analytics de Typebots</h3>
+                    <p className="text-sm text-muted-foreground">Métricas, funil e performance em tempo real</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 text-sm font-medium text-purple-500 group-hover:text-purple-400">
+                  Acessar
+                  <svg className="h-4 w-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </div>
+            </button>
           </div>
         )}
         

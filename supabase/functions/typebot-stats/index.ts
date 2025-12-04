@@ -1,3 +1,5 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -6,76 +8,12 @@ const corsHeaders = {
 const TYPEBOT_BASE_URL = 'https://typebot.origemdavida.online'
 const WORKSPACE_ID = 'cmghj8t790000o918ec7vgtt8'
 
-async function getFluxosFolderId(typebotToken: string): Promise<string | null> {
-  // First get root folders
-  const foldersUrl = `${TYPEBOT_BASE_URL}/api/v1/folders?workspaceId=${WORKSPACE_ID}`
-  console.log('[typebot-stats] Fetching folders from:', foldersUrl)
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
-  const foldersResponse = await fetch(foldersUrl, {
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${typebotToken}`,
-      'Content-Type': 'application/json',
-    },
-  })
-
-  if (!foldersResponse.ok) return null
-
-  const foldersData = await foldersResponse.json()
-  const folders = foldersData.folders || foldersData
-  console.log('[typebot-stats] All folders:', JSON.stringify(folders))
-  
-  // Find "Espiritualidade" folder first
-  const espiritualidadeFolder = folders?.find((f: any) => f.name === 'Espiritualidade')
-  
-  if (espiritualidadeFolder) {
-    console.log('[typebot-stats] Found Espiritualidade folder ID:', espiritualidadeFolder.id)
-    
-    // Now fetch subfolders inside Espiritualidade
-    const subFoldersUrl = `${TYPEBOT_BASE_URL}/api/v1/folders?workspaceId=${WORKSPACE_ID}&parentFolderId=${espiritualidadeFolder.id}`
-    console.log('[typebot-stats] Fetching subfolders from:', subFoldersUrl)
-    
-    const subFoldersResponse = await fetch(subFoldersUrl, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${typebotToken}`,
-        'Content-Type': 'application/json',
-      },
-    })
-    
-    if (subFoldersResponse.ok) {
-      const subFoldersData = await subFoldersResponse.json()
-      const subFolders = subFoldersData.folders || subFoldersData
-      console.log('[typebot-stats] Subfolders in Espiritualidade:', JSON.stringify(subFolders))
-      
-      const fluxosFolder = subFolders?.find((f: any) => f.name === 'Fluxos')
-      if (fluxosFolder) {
-        console.log('[typebot-stats] Found Fluxos folder ID:', fluxosFolder.id)
-        return fluxosFolder.id
-      }
-    }
-    
-    // If no subfolder API, try finding Fluxos with parentFolderId matching Espiritualidade
-    const fluxosFolder = folders?.find(
-      (f: any) => f.name === 'Fluxos' && f.parentFolderId === espiritualidadeFolder.id
-    )
-    if (fluxosFolder) {
-      console.log('[typebot-stats] Found Fluxos folder ID (from main list):', fluxosFolder.id)
-      return fluxosFolder.id
-    }
-    
-    // Fallback: return Espiritualidade folder if Fluxos not found
-    console.log('[typebot-stats] Fluxos not found, using Espiritualidade folder')
-    return espiritualidadeFolder.id
-  }
-  
-  console.log('[typebot-stats] Espiritualidade folder not found')
-  return null
-}
-
-async function getTypebotsInFolder(typebotToken: string, folderId: string): Promise<any[]> {
-  const listUrl = `${TYPEBOT_BASE_URL}/api/v1/typebots?workspaceId=${WORKSPACE_ID}&folderId=${folderId}`
-  console.log('[typebot-stats] Listing typebots from:', listUrl)
+async function getAllTypebots(typebotToken: string): Promise<any[]> {
+  const listUrl = `${TYPEBOT_BASE_URL}/api/v1/typebots?workspaceId=${WORKSPACE_ID}`
+  console.log('[typebot-stats] Listing all typebots from workspace')
 
   const listResponse = await fetch(listUrl, {
     method: 'GET',
@@ -91,8 +29,8 @@ async function getTypebotsInFolder(typebotToken: string, folderId: string): Prom
   return listData.typebots || listData || []
 }
 
-async function getTypebotResultsCount(typebotToken: string, typebotId: string, fromDate: Date, toDate: Date): Promise<number> {
-  let count = 0
+async function getTypebotResults(typebotToken: string, typebotId: string, fromDate?: Date, toDate?: Date): Promise<any[]> {
+  let allResults: any[] = []
   let cursor: string | null = null
   let hasMore = true
   
@@ -111,18 +49,22 @@ async function getTypebotResultsCount(typebotToken: string, typebotId: string, f
 
     if (!response.ok) {
       console.error('[typebot-stats] Error fetching results for', typebotId)
-      return count
+      return allResults
     }
 
     const data = await response.json()
     const results = data.results || []
     
-    // Count results within date range
-    for (const result of results) {
-      const createdAt = new Date(result.createdAt)
-      if (createdAt >= fromDate && createdAt <= toDate) {
-        count++
+    // Filter by date range if provided
+    if (fromDate && toDate) {
+      for (const result of results) {
+        const createdAt = new Date(result.createdAt)
+        if (createdAt >= fromDate && createdAt <= toDate) {
+          allResults.push(result)
+        }
       }
+    } else {
+      allResults = [...allResults, ...results]
     }
     
     if (data.nextCursor) {
@@ -132,12 +74,113 @@ async function getTypebotResultsCount(typebotToken: string, typebotId: string, f
     }
     
     // Safety limit
-    if (count >= 10000) {
+    if (allResults.length >= 10000) {
       hasMore = false
     }
   }
   
-  return count
+  return allResults
+}
+
+async function getTypebotDetails(typebotToken: string, typebotId: string): Promise<any> {
+  const url = `${TYPEBOT_BASE_URL}/api/v1/typebots/${typebotId}`
+  
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${typebotToken}`,
+      'Content-Type': 'application/json',
+    },
+  })
+
+  if (!response.ok) return null
+  
+  const data = await response.json()
+  return data.typebot || data
+}
+
+function analyzeResults(results: any[], typebotDetails: any): any {
+  const totalLeads = results.length
+  const completedLeads = results.filter(r => r.isCompleted).length
+  const completionRate = totalLeads > 0 ? (completedLeads / totalLeads * 100).toFixed(1) : 0
+  
+  // Analyze answers to find drop-off points
+  const answerCounts: Record<string, number> = {}
+  const lastAnswers: Record<string, number> = {}
+  
+  for (const result of results) {
+    const answers = result.answers || []
+    
+    // Count how many people answered each question
+    for (const answer of answers) {
+      const blockId = answer.blockId || 'unknown'
+      answerCounts[blockId] = (answerCounts[blockId] || 0) + 1
+    }
+    
+    // Track last answer (drop-off point) for incomplete leads
+    if (!result.isCompleted && answers.length > 0) {
+      const lastAnswer = answers[answers.length - 1]
+      const blockId = lastAnswer?.blockId || 'unknown'
+      lastAnswers[blockId] = (lastAnswers[blockId] || 0) + 1
+    }
+  }
+  
+  // Get block names from typebot details if available
+  const blocks = typebotDetails?.groups?.flatMap((g: any) => g.blocks || []) || []
+  const blockNameMap: Record<string, string> = {}
+  for (const block of blocks) {
+    if (block.id && block.content?.plainText) {
+      blockNameMap[block.id] = block.content.plainText.substring(0, 50)
+    } else if (block.id && block.title) {
+      blockNameMap[block.id] = block.title
+    }
+  }
+  
+  // Build funnel data
+  const funnelSteps = Object.entries(answerCounts)
+    .map(([blockId, count]) => ({
+      blockId,
+      name: blockNameMap[blockId] || `Etapa ${blockId.substring(0, 8)}`,
+      count,
+      percentage: totalLeads > 0 ? (count / totalLeads * 100).toFixed(1) : 0
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10)
+  
+  // Build drop-off points
+  const dropOffPoints = Object.entries(lastAnswers)
+    .map(([blockId, count]) => ({
+      blockId,
+      name: blockNameMap[blockId] || `Etapa ${blockId.substring(0, 8)}`,
+      count,
+      percentage: totalLeads > 0 ? (count / totalLeads * 100).toFixed(1) : 0
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5)
+  
+  // Analyze by hour
+  const hourlyDistribution: Record<number, number> = {}
+  for (const result of results) {
+    const hour = new Date(result.createdAt).getHours()
+    hourlyDistribution[hour] = (hourlyDistribution[hour] || 0) + 1
+  }
+  
+  const peakHour = Object.entries(hourlyDistribution)
+    .sort((a, b) => b[1] - a[1])[0]
+  
+  return {
+    totalLeads,
+    completedLeads,
+    incompletedLeads: totalLeads - completedLeads,
+    completionRate: Number(completionRate),
+    funnelSteps,
+    dropOffPoints,
+    peakHour: peakHour ? { hour: Number(peakHour[0]), count: peakHour[1] } : null,
+    hourlyDistribution: Object.entries(hourlyDistribution).map(([hour, count]) => ({
+      hour: Number(hour),
+      count
+    })).sort((a, b) => a.hour - b.hour)
+  }
 }
 
 Deno.serve(async (req) => {
@@ -158,76 +201,67 @@ Deno.serve(async (req) => {
       )
     }
 
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
     const body = await req.json().catch(() => ({}))
     const action = body.action || 'stats'
 
-    // Get Fluxos folder ID (used by list and ranking)
-    const fluxosFolderId = await getFluxosFolderId(typebotToken)
+    // LIST: List all typebots in workspace
+    if (action === 'list') {
+      const typebots = await getAllTypebots(typebotToken)
+      console.log('[typebot-stats] Found', typebots.length, 'typebots')
 
-    // RANKING: Get top 10 typebots by leads in date range
+      return new Response(
+        JSON.stringify({ typebots: typebots.map(t => ({ id: t.id, name: t.name })) }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // RANKING: Get typebots ranked by leads
     if (action === 'ranking') {
-      // Use dates directly from frontend - they already include timezone adjustment
       const fromDate = body.fromDate ? new Date(body.fromDate) : new Date()
       const toDate = body.toDate ? new Date(body.toDate) : new Date()
       const specificTypebotId = body.typebotId
       
       console.log('[typebot-stats] Ranking for period:', fromDate.toISOString(), '-', toDate.toISOString())
-      console.log('[typebot-stats] Specific typebot filter:', specificTypebotId || 'none')
 
-      // If specific typebot is selected, just get its count
+      // If specific typebot, just get its count
       if (specificTypebotId) {
-        const count = await getTypebotResultsCount(typebotToken, specificTypebotId, fromDate, toDate)
+        const results = await getTypebotResults(typebotToken, specificTypebotId, fromDate, toDate)
+        const details = await getTypebotDetails(typebotToken, specificTypebotId)
         
-        // Get typebot details
-        const typebotUrl = `${TYPEBOT_BASE_URL}/api/v1/typebots/${specificTypebotId}`
-        const typebotResponse = await fetch(typebotUrl, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${typebotToken}`,
-            'Content-Type': 'application/json',
-          },
-        })
-        
-        let typebotName = 'Typebot'
-        if (typebotResponse.ok) {
-          const typebotData = await typebotResponse.json()
-          typebotName = typebotData.typebot?.name || typebotData.name || 'Typebot'
-        }
-
         return new Response(
-          JSON.stringify({ ranking: [{ id: specificTypebotId, name: typebotName, count }] }),
+          JSON.stringify({ 
+            ranking: [{ 
+              id: specificTypebotId, 
+              name: details?.name || 'Typebot', 
+              count: results.length,
+              completed: results.filter(r => r.isCompleted).length
+            }] 
+          }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
 
-      if (!fluxosFolderId) {
-        return new Response(
-          JSON.stringify({ ranking: [] }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-
-      const typebots = await getTypebotsInFolder(typebotToken, fluxosFolderId)
-      console.log('[typebot-stats] Found', typebots.length, 'typebots in folder')
+      const typebots = await getAllTypebots(typebotToken)
+      console.log('[typebot-stats] Found', typebots.length, 'typebots in workspace')
 
       // Get results count for each typebot
       const rankingPromises = typebots.map(async (typebot: any) => {
-        const count = await getTypebotResultsCount(typebotToken, typebot.id, fromDate, toDate)
+        const results = await getTypebotResults(typebotToken, typebot.id, fromDate, toDate)
         return {
           id: typebot.id,
           name: typebot.name,
-          count,
+          count: results.length,
+          completed: results.filter((r: any) => r.isCompleted).length
         }
       })
 
       const ranking = await Promise.all(rankingPromises)
       
-      // Sort by count descending and take top 10
-      const sortedRanking = ranking
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 10)
+      // Sort by count descending
+      const sortedRanking = ranking.sort((a, b) => b.count - a.count)
 
-      console.log('[typebot-stats] Ranking calculated:', JSON.stringify(sortedRanking))
+      console.log('[typebot-stats] Ranking calculated with', sortedRanking.length, 'typebots')
 
       return new Response(
         JSON.stringify({ ranking: sortedRanking }),
@@ -235,113 +269,118 @@ Deno.serve(async (req) => {
       )
     }
 
-    // LIST: List all typebots in workspace
-    if (action === 'list') {
-      const listUrl = `${TYPEBOT_BASE_URL}/api/v1/typebots?workspaceId=${WORKSPACE_ID}`
-      console.log('[typebot-stats] Listing all typebots from workspace:', listUrl)
-
-      const listResponse = await fetch(listUrl, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${typebotToken}`,
-          'Content-Type': 'application/json',
-        },
-      })
-
-      if (!listResponse.ok) {
+    // DETAILS: Get detailed analytics for a specific typebot
+    if (action === 'details') {
+      const typebotId = body.typebotId
+      if (!typebotId) {
         return new Response(
-          JSON.stringify({ typebots: [] }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ error: 'typebotId is required' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
 
-      const listData = await listResponse.json()
-      const typebots = listData.typebots || listData || []
-      console.log('[typebot-stats] Found', typebots.length, 'typebots in workspace')
+      const fromDate = body.fromDate ? new Date(body.fromDate) : new Date()
+      const toDate = body.toDate ? new Date(body.toDate) : new Date()
+      
+      console.log('[typebot-stats] Getting details for typebot:', typebotId)
+
+      const [results, typebotDetails] = await Promise.all([
+        getTypebotResults(typebotToken, typebotId, fromDate, toDate),
+        getTypebotDetails(typebotToken, typebotId)
+      ])
+
+      const analytics = analyzeResults(results, typebotDetails)
 
       return new Response(
-        JSON.stringify({ typebots }),
+        JSON.stringify({ 
+          typebot: {
+            id: typebotId,
+            name: typebotDetails?.name || 'Typebot'
+          },
+          analytics 
+        }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // STATS: Get stats for a specific typebot
-    const typebotId = body.typebotId
-    if (!typebotId) {
+    // SYNC: Sync daily stats to database (for historical data)
+    if (action === 'sync') {
+      const targetDate = body.date ? new Date(body.date) : new Date()
+      const dateStr = targetDate.toISOString().split('T')[0]
+      
+      const startOfDay = new Date(dateStr + 'T00:00:00.000Z')
+      const endOfDay = new Date(dateStr + 'T23:59:59.999Z')
+      
+      console.log('[typebot-stats] Syncing stats for date:', dateStr)
+
+      const typebots = await getAllTypebots(typebotToken)
+      
+      for (const typebot of typebots) {
+        const results = await getTypebotResults(typebotToken, typebot.id, startOfDay, endOfDay)
+        const completedCount = results.filter(r => r.isCompleted).length
+        
+        // Upsert to database
+        const { error } = await supabase
+          .from('typebot_daily_stats')
+          .upsert({
+            typebot_id: typebot.id,
+            typebot_name: typebot.name,
+            date: dateStr,
+            total_leads: results.length,
+            completed_leads: completedCount,
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'typebot_id,date'
+          })
+        
+        if (error) {
+          console.error('[typebot-stats] Error upserting stats:', error)
+        }
+      }
+
       return new Response(
-        JSON.stringify({ error: 'typebotId is required for stats action' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: true, date: dateStr, typebotsProcessed: typebots.length }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    
-    let allResults: any[] = []
-    let cursor: string | null = null
-    let hasMore = true
-    
-    while (hasMore) {
-      const url: string = cursor 
-        ? `${TYPEBOT_BASE_URL}/api/v1/typebots/${typebotId}/results?limit=100&cursor=${cursor}`
-        : `${TYPEBOT_BASE_URL}/api/v1/typebots/${typebotId}/results?limit=100`
+    // HISTORY: Get historical data from database
+    if (action === 'history') {
+      const typebotId = body.typebotId
+      const days = body.days || 30
       
-      console.log('[typebot-stats] Fetching results from:', url)
-
-      const response: Response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${typebotToken}`,
-          'Content-Type': 'application/json',
-        },
-      })
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error('[typebot-stats] Results API error:', response.status, errorText)
+      const fromDate = new Date()
+      fromDate.setDate(fromDate.getDate() - days)
+      
+      let query = supabase
+        .from('typebot_daily_stats')
+        .select('*')
+        .gte('date', fromDate.toISOString().split('T')[0])
+        .order('date', { ascending: true })
+      
+      if (typebotId) {
+        query = query.eq('typebot_id', typebotId)
+      }
+      
+      const { data, error } = await query
+      
+      if (error) {
+        console.error('[typebot-stats] Error fetching history:', error)
         return new Response(
-          JSON.stringify({ error: 'Failed to fetch Typebot results', details: errorText }),
-          { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ error: 'Failed to fetch history' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
 
-      const data = await response.json()
-      const results = data.results || []
-      allResults = [...allResults, ...results]
-      
-      if (data.nextCursor) {
-        cursor = data.nextCursor
-      } else {
-        hasMore = false
-      }
-      
-      if (allResults.length >= 10000) {
-        hasMore = false
-      }
-    }
-    
-    console.log('[typebot-stats] Total results fetched:', allResults.length)
-
-    const todayCount = allResults.filter((result: any) => {
-      const createdAt = new Date(result.createdAt)
-      return createdAt >= today
-    }).length
-
-    const completedCount = allResults.filter((result: any) => result.isCompleted).length
-
-    const responseData = {
-      stats: {
-        totalViews: allResults.length,
-        totalStarts: allResults.length,
-        totalCompleted: completedCount,
-      },
-      todayCount,
-      totalResults: allResults.length,
+      return new Response(
+        JSON.stringify({ history: data }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
     return new Response(
-      JSON.stringify(responseData),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: 'Unknown action' }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
   } catch (error) {
