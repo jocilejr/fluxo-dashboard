@@ -33,7 +33,9 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 export function RevenueChart({ transactions, dateFilter }: RevenueChartProps) {
   const chartData = useMemo(() => {
     const filteredTransactions = transactions.filter((t) => {
-      const date = new Date(t.created_at);
+      // For paid transactions, use paid_at if available
+      const dateStr = t.paid_at || t.created_at;
+      const date = new Date(dateStr);
       return isWithinInterval(date, { start: dateFilter.startDate, end: dateFilter.endDate }) && t.status === 'pago';
     });
 
@@ -52,7 +54,8 @@ export function RevenueChart({ transactions, dateFilter }: RevenueChartProps) {
       });
 
       filteredTransactions.forEach((t) => {
-        const date = new Date(t.created_at);
+        const dateStr = t.paid_at || t.created_at;
+        const date = new Date(dateStr);
         const key = getKey(date);
         if (dataMap[key]) {
           dataMap[key][t.type] += Number(t.amount);
