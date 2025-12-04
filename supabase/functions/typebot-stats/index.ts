@@ -6,6 +6,107 @@ const corsHeaders = {
 const TYPEBOT_BASE_URL = 'https://typebot.origemdavida.online'
 const WORKSPACE_ID = 'cmghj8t790000o918ec7vgtt8'
 
+async function getFluxosFolderId(typebotToken: string): Promise<string | null> {
+  const foldersUrl = `${TYPEBOT_BASE_URL}/api/v1/folders?workspaceId=${WORKSPACE_ID}`
+  console.log('[typebot-stats] Fetching folders from:', foldersUrl)
+
+  const foldersResponse = await fetch(foldersUrl, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${typebotToken}`,
+      'Content-Type': 'application/json',
+    },
+  })
+
+  if (!foldersResponse.ok) return null
+
+  const foldersData = await foldersResponse.json()
+  const folders = foldersData.folders || foldersData
+  
+  // Find "Espiritualidade" folder first
+  const espiritualidadeFolder = folders?.find((f: any) => f.name === 'Espiritualidade')
+  
+  if (espiritualidadeFolder) {
+    // Find "Fluxos" folder inside Espiritualidade
+    const fluxosFolder = folders?.find(
+      (f: any) => f.name === 'Fluxos' && f.parentFolderId === espiritualidadeFolder.id
+    )
+    if (fluxosFolder) {
+      console.log('[typebot-stats] Found Fluxos folder ID:', fluxosFolder.id)
+      return fluxosFolder.id
+    }
+  }
+  
+  return null
+}
+
+async function getTypebotsInFolder(typebotToken: string, folderId: string): Promise<any[]> {
+  const listUrl = `${TYPEBOT_BASE_URL}/api/v1/typebots?workspaceId=${WORKSPACE_ID}&folderId=${folderId}`
+  console.log('[typebot-stats] Listing typebots from:', listUrl)
+
+  const listResponse = await fetch(listUrl, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${typebotToken}`,
+      'Content-Type': 'application/json',
+    },
+  })
+
+  if (!listResponse.ok) return []
+
+  const listData = await listResponse.json()
+  return listData.typebots || listData || []
+}
+
+async function getTypebotResultsCount(typebotToken: string, typebotId: string, fromDate: Date, toDate: Date): Promise<number> {
+  let count = 0
+  let cursor: string | null = null
+  let hasMore = true
+  
+  while (hasMore) {
+    const url: string = cursor 
+      ? `${TYPEBOT_BASE_URL}/api/v1/typebots/${typebotId}/results?limit=100&cursor=${cursor}`
+      : `${TYPEBOT_BASE_URL}/api/v1/typebots/${typebotId}/results?limit=100`
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${typebotToken}`,
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      console.error('[typebot-stats] Error fetching results for', typebotId)
+      return count
+    }
+
+    const data = await response.json()
+    const results = data.results || []
+    
+    // Count results within date range
+    for (const result of results) {
+      const createdAt = new Date(result.createdAt)
+      if (createdAt >= fromDate && createdAt <= toDate) {
+        count++
+      }
+    }
+    
+    if (data.nextCursor) {
+      cursor = data.nextCursor
+    } else {
+      hasMore = false
+    }
+    
+    // Safety limit
+    if (count >= 10000) {
+      hasMore = false
+    }
+  }
+  
+  return count
+}
+
 Deno.serve(async (req) => {
   console.log('[typebot-stats] Request received')
 
@@ -27,84 +128,72 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}))
     const action = body.action || 'stats'
 
-    // List all typebots in "Espiritualidade > Fluxos" folder
-    if (action === 'list') {
-      // First, get all folders to find the nested folder path
-      const foldersUrl = `${TYPEBOT_BASE_URL}/api/v1/folders?workspaceId=${WORKSPACE_ID}`
-      console.log('[typebot-stats] Fetching folders from:', foldersUrl)
+    // Get Fluxos folder ID (used by list and ranking)
+    const fluxosFolderId = await getFluxosFolderId(typebotToken)
 
-      const foldersResponse = await fetch(foldersUrl, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${typebotToken}`,
-          'Content-Type': 'application/json',
-        },
-      })
-
-      let fluxosFolderId: string | null = null
-
-      if (foldersResponse.ok) {
-        const foldersData = await foldersResponse.json()
-        const folders = foldersData.folders || foldersData
-        console.log('[typebot-stats] Folders found:', JSON.stringify(folders))
-        
-        // Find "Espiritualidade" folder first
-        const espiritualidadeFolder = folders?.find((f: any) => f.name === 'Espiritualidade')
-        
-        if (espiritualidadeFolder) {
-          console.log('[typebot-stats] Found Espiritualidade folder ID:', espiritualidadeFolder.id)
-          
-          // Find "Fluxos" folder inside Espiritualidade (check parentFolderId)
-          const fluxosFolder = folders?.find(
-            (f: any) => f.name === 'Fluxos' && f.parentFolderId === espiritualidadeFolder.id
-          )
-          
-          if (fluxosFolder) {
-            fluxosFolderId = fluxosFolder.id
-            console.log('[typebot-stats] Found Fluxos folder ID:', fluxosFolderId)
-          }
-        }
-      }
+    // RANKING: Get top 10 typebots by leads in date range
+    if (action === 'ranking') {
+      const fromDate = body.fromDate ? new Date(body.fromDate) : new Date()
+      const toDate = body.toDate ? new Date(body.toDate) : new Date()
+      
+      fromDate.setHours(0, 0, 0, 0)
+      toDate.setHours(23, 59, 59, 999)
+      
+      console.log('[typebot-stats] Ranking for period:', fromDate.toISOString(), '-', toDate.toISOString())
 
       if (!fluxosFolderId) {
-        console.log('[typebot-stats] Fluxos folder not found, returning empty list')
+        return new Response(
+          JSON.stringify({ ranking: [] }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      const typebots = await getTypebotsInFolder(typebotToken, fluxosFolderId)
+      console.log('[typebot-stats] Found', typebots.length, 'typebots in folder')
+
+      // Get results count for each typebot
+      const rankingPromises = typebots.map(async (typebot: any) => {
+        const count = await getTypebotResultsCount(typebotToken, typebot.id, fromDate, toDate)
+        return {
+          id: typebot.id,
+          name: typebot.name,
+          count,
+        }
+      })
+
+      const ranking = await Promise.all(rankingPromises)
+      
+      // Sort by count descending and take top 10
+      const sortedRanking = ranking
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10)
+
+      console.log('[typebot-stats] Ranking calculated:', JSON.stringify(sortedRanking))
+
+      return new Response(
+        JSON.stringify({ ranking: sortedRanking }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // LIST: List all typebots in "Espiritualidade > Fluxos" folder
+    if (action === 'list') {
+      if (!fluxosFolderId) {
         return new Response(
           JSON.stringify({ typebots: [] }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
 
-      // List typebots filtered by folder
-      const listUrl = `${TYPEBOT_BASE_URL}/api/v1/typebots?workspaceId=${WORKSPACE_ID}&folderId=${fluxosFolderId}`
-      console.log('[typebot-stats] Listing typebots from:', listUrl)
-
-      const listResponse = await fetch(listUrl, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${typebotToken}`,
-          'Content-Type': 'application/json',
-        },
-      })
-
-      if (!listResponse.ok) {
-        const errorText = await listResponse.text()
-        console.error('[typebot-stats] List API error:', listResponse.status, errorText)
-        return new Response(
-          JSON.stringify({ error: 'Failed to list typebots', details: errorText }),
-          { status: listResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-
-      const listData = await listResponse.json()
-      console.log('[typebot-stats] Typebots found:', JSON.stringify(listData))
+      const typebots = await getTypebotsInFolder(typebotToken, fluxosFolderId)
 
       return new Response(
-        JSON.stringify({ typebots: listData.typebots || listData }),
+        JSON.stringify({ typebots }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Get stats for a specific typebot
+    // STATS: Get stats for a specific typebot
     const typebotId = body.typebotId
     if (!typebotId) {
       return new Response(
@@ -167,9 +256,6 @@ Deno.serve(async (req) => {
     }).length
 
     const completedCount = allResults.filter((result: any) => result.isCompleted).length
-
-    console.log('[typebot-stats] Today count:', todayCount)
-    console.log('[typebot-stats] Completed count:', completedCount)
 
     const responseData = {
       stats: {
