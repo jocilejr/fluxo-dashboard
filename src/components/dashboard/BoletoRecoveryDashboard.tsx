@@ -149,7 +149,7 @@ export function BoletoRecoveryDashboard({ transactions, isLoading }: BoletoRecov
 
       {/* Settings Dialog */}
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Configurar Régua de Cobrança</DialogTitle>
           </DialogHeader>
