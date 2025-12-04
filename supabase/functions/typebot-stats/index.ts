@@ -237,16 +237,29 @@ Deno.serve(async (req) => {
       )
     }
 
-    // LIST: List all typebots in "Espiritualidade > Fluxos" folder
+    // LIST: List all typebots in workspace
     if (action === 'list') {
-      if (!fluxosFolderId) {
+      const listUrl = `${TYPEBOT_BASE_URL}/api/v1/typebots?workspaceId=${WORKSPACE_ID}`
+      console.log('[typebot-stats] Listing all typebots from workspace:', listUrl)
+
+      const listResponse = await fetch(listUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${typebotToken}`,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (!listResponse.ok) {
         return new Response(
           JSON.stringify({ typebots: [] }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
 
-      const typebots = await getTypebotsInFolder(typebotToken, fluxosFolderId)
+      const listData = await listResponse.json()
+      const typebots = listData.typebots || listData || []
+      console.log('[typebot-stats] Found', typebots.length, 'typebots in workspace')
 
       return new Response(
         JSON.stringify({ typebots }),
