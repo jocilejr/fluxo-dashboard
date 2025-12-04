@@ -5,10 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Transaction } from "@/hooks/useTransactions";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trash2, Download, Search, ChevronDown, ChevronUp, Users, Clock, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
+import { Trash2, Download, Search, ChevronDown, ChevronUp, Users, Clock, CheckCircle2, AlertCircle, RefreshCw, CalendarIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format, startOfDay, endOfDay, subDays, isWithinInterval } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { DateRange } from "react-day-picker";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,6 +36,14 @@ interface TransactionsTableProps {
   transactions: Transaction[];
   isLoading?: boolean;
   onDelete?: () => void;
+}
+
+type TransactionDateFilterType = "today" | "yesterday" | "7days" | "30days" | "custom";
+
+interface TransactionDateFilter {
+  type: TransactionDateFilterType;
+  startDate: Date;
+  endDate: Date;
 }
 
 const typeLabels = {
@@ -73,6 +86,19 @@ export function TransactionsTable({ transactions, isLoading, onDelete }: Transac
   const [sortField, setSortField] = useState<SortField>("created_at");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [visibleCount, setVisibleCount] = useState(15);
+  const [customRange, setCustomRange] = useState<DateRange | undefined>();
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  
+  // Transaction date filter state
+  const [dateFilter, setDateFilter] = useState<TransactionDateFilter>(() => {
+    const now = new Date();
+    return {
+      type: "today",
+      startDate: startOfDay(now),
+      endDate: endOfDay(now),
+    };
+  });
+  
   const [viewedIds, setViewedIds] = useState<Record<TabKey, string[]>>(() => {
     try {
       const stored = localStorage.getItem(VIEWED_STORAGE_KEY);
@@ -81,6 +107,52 @@ export function TransactionsTable({ transactions, isLoading, onDelete }: Transac
       return { aprovados: [], "boletos-gerados": [], "pix-cartao-pendentes": [] };
     }
   });
+
+  const handleDatePreset = (type: TransactionDateFilterType) => {
+    const now = new Date();
+    let startDate: Date;
+    let endDate = endOfDay(now);
+
+    switch (type) {
+      case "today":
+        startDate = startOfDay(now);
+        break;
+      case "yesterday":
+        startDate = startOfDay(subDays(now, 1));
+        endDate = endOfDay(subDays(now, 1));
+        break;
+      case "7days":
+        startDate = startOfDay(subDays(now, 6));
+        break;
+      case "30days":
+        startDate = startOfDay(subDays(now, 29));
+        break;
+      default:
+        startDate = startOfDay(now);
+    }
+
+    setDateFilter({ type, startDate, endDate });
+  };
+
+  const handleCustomRangeSelect = (range: DateRange | undefined) => {
+    setCustomRange(range);
+    if (range?.from && range?.to) {
+      setDateFilter({
+        type: "custom",
+        startDate: startOfDay(range.from),
+        endDate: endOfDay(range.to),
+      });
+      setIsCalendarOpen(false);
+    }
+  };
+
+  // Filter transactions by date first
+  const dateFilteredTransactions = useMemo(() => {
+    return transactions.filter((t) => {
+      const date = new Date(t.created_at);
+      return isWithinInterval(date, { start: dateFilter.startDate, end: dateFilter.endDate });
+    });
+  }, [transactions, dateFilter]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -109,12 +181,12 @@ export function TransactionsTable({ transactions, isLoading, onDelete }: Transac
     return date.toLocaleDateString('pt-BR');
   };
 
-  // Get transactions for each tab
+  // Get transactions for each tab (filtered by date)
   const tabTransactions = useMemo(() => ({
-    aprovados: transactions.filter(t => t.status === "pago"),
-    "boletos-gerados": transactions.filter(t => t.type === "boleto" && t.status === "gerado"),
-    "pix-cartao-pendentes": transactions.filter(t => (t.type === "pix" || t.type === "cartao") && t.status === "pendente"),
-  }), [transactions]);
+    aprovados: dateFilteredTransactions.filter(t => t.status === "pago"),
+    "boletos-gerados": dateFilteredTransactions.filter(t => t.type === "boleto" && t.status === "gerado"),
+    "pix-cartao-pendentes": dateFilteredTransactions.filter(t => (t.type === "pix" || t.type === "cartao") && t.status === "pendente"),
+  }), [dateFilteredTransactions]);
 
   // Calculate stats for current tab
   const tabStats = useMemo(() => {
@@ -625,6 +697,72 @@ export function TransactionsTable({ transactions, isLoading, onDelete }: Transac
         <span className="text-xs sm:text-sm text-muted-foreground hidden sm:block">
           Mostrando {Math.min(visibleCount, filteredTransactions.length)} de {filteredTransactions.length}
         </span>
+      </div>
+
+      {/* Transaction Date Filter */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide">
+        <Button
+          variant={dateFilter.type === "today" ? "default" : "outline"}
+          size="sm"
+          onClick={() => handleDatePreset("today")}
+          className="h-8 shrink-0 text-xs"
+        >
+          Hoje
+        </Button>
+        <Button
+          variant={dateFilter.type === "yesterday" ? "default" : "outline"}
+          size="sm"
+          onClick={() => handleDatePreset("yesterday")}
+          className="h-8 shrink-0 text-xs"
+        >
+          Ontem
+        </Button>
+        <Button
+          variant={dateFilter.type === "7days" ? "default" : "outline"}
+          size="sm"
+          onClick={() => handleDatePreset("7days")}
+          className="h-8 shrink-0 text-xs"
+        >
+          7 dias
+        </Button>
+        <Button
+          variant={dateFilter.type === "30days" ? "default" : "outline"}
+          size="sm"
+          onClick={() => handleDatePreset("30days")}
+          className="h-8 shrink-0 text-xs"
+        >
+          30 dias
+        </Button>
+        <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant={dateFilter.type === "custom" ? "default" : "outline"}
+              size="sm"
+              className={cn("h-8 gap-2 shrink-0 text-xs", dateFilter.type === "custom" && "min-w-[140px]")}
+            >
+              <CalendarIcon className="h-3.5 w-3.5" />
+              {dateFilter.type === "custom" ? (
+                <span>
+                  {format(dateFilter.startDate, "dd/MM", { locale: ptBR })} - {format(dateFilter.endDate, "dd/MM", { locale: ptBR })}
+                </span>
+              ) : (
+                <span>Personalizado</span>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              initialFocus
+              mode="range"
+              defaultMonth={customRange?.from}
+              selected={customRange}
+              onSelect={handleCustomRangeSelect}
+              numberOfMonths={1}
+              locale={ptBR}
+              className="pointer-events-auto"
+            />
+          </PopoverContent>
+        </Popover>
       </div>
       
       <Tabs value={activeTab} onValueChange={handleTabChange} className="mb-4">

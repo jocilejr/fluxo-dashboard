@@ -248,7 +248,7 @@ const Index = () => {
 
         {/* Transactions */}
         <TransactionsTable 
-          transactions={filteredTransactions} 
+          transactions={transactions} 
           isLoading={isLoading} 
           onDelete={refetch}
         />
