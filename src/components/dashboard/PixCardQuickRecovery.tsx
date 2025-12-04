@@ -20,7 +20,7 @@ export function PixCardQuickRecovery({ transaction }: PixCardQuickRecoveryProps)
   const [message, setMessage] = useState("");
   const [copied, setCopied] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  const { sendText, extensionStatus, fallbackOpenWhatsApp } = useWhatsAppExtension();
+  const { sendText, extensionStatus } = useWhatsAppExtension();
 
   useEffect(() => {
     const fetchMessage = async () => {
@@ -59,18 +59,19 @@ export function PixCardQuickRecovery({ transaction }: PixCardQuickRecoveryProps)
       return;
     }
 
+    if (extensionStatus !== "connected") {
+      toast.error("Extensão WhatsApp não detectada");
+      return;
+    }
+
     const phone = transaction.customer_phone.replace(/\D/g, "");
+    const success = await sendText(phone, message);
     
-    if (extensionStatus === "connected") {
-      const success = await sendText(phone, message);
-      if (success) {
-        toast.success("Mensagem enviada para o WhatsApp");
-        setIsOpen(false);
-      } else {
-        fallbackOpenWhatsApp(phone, message);
-      }
+    if (success) {
+      toast.success("Mensagem enviada para o WhatsApp");
+      setIsOpen(false);
     } else {
-      fallbackOpenWhatsApp(phone, message);
+      toast.error("Erro ao enviar mensagem");
     }
   };
 
