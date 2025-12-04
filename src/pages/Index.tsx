@@ -216,11 +216,6 @@ const Index = () => {
           )}
         </div>
 
-        {/* Group Stats Cards */}
-        <div className="mb-6">
-          <GroupStatsCards />
-        </div>
-
         {/* Charts Row - Only visible for admins */}
         {isRealAdmin && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
@@ -232,6 +227,11 @@ const Index = () => {
             </div>
           </div>
         )}
+
+        {/* Group Stats Cards */}
+        <div className="mb-6">
+          <GroupStatsCards />
+        </div>
 
         {/* Group History Chart - Admin only */}
         {isRealAdmin && (
