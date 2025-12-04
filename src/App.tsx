@@ -28,7 +28,7 @@ const App = () => (
             }
           />
           <Route
-            path="/typebot-ranking"
+            path="/typebots"
             element={
               <ProtectedRoute>
                 <TypebotRanking />

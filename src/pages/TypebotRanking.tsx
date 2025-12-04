@@ -1,14 +1,34 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Bot, Trophy, RefreshCw, ArrowLeft, CalendarIcon, Users, TrendingUp } from "lucide-react";
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { Progress } from "@/components/ui/progress";
+import { 
+  Bot, 
+  RefreshCw, 
+  ArrowLeft, 
+  CalendarIcon, 
+  Users, 
+  TrendingUp,
+  TrendingDown,
+  BarChart3,
+  Target,
+  Clock,
+  AlertTriangle,
+  CheckCircle2,
+  XCircle,
+  ChevronRight,
+  Activity,
+  Zap
+} from "lucide-react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { format, startOfDay, endOfDay, startOfWeek, startOfMonth, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -16,21 +36,29 @@ import { DateRange } from "react-day-picker";
 
 type DateFilter = "today" | "yesterday" | "week" | "month" | "custom";
 
-interface TypebotRankItem {
+interface TypebotItem {
   id: string;
   name: string;
   count: number;
+  completed: number;
 }
 
-interface TypebotListItem {
-  id: string;
-  name: string;
+interface TypebotAnalytics {
+  totalLeads: number;
+  completedLeads: number;
+  incompletedLeads: number;
+  completionRate: number;
+  funnelSteps: { blockId: string; name: string; count: number; percentage: string }[];
+  dropOffPoints: { blockId: string; name: string; count: number; percentage: string }[];
+  peakHour: { hour: number; count: number } | null;
+  hourlyDistribution: { hour: number; count: number }[];
 }
 
 export default function TypebotRanking() {
   const navigate = useNavigate();
   const [dateFilter, setDateFilter] = useState<DateFilter>("today");
-  const [selectedTypebot, setSelectedTypebot] = useState<string>("all");
+  const [selectedTypebot, setSelectedTypebot] = useState<TypebotItem | null>(null);
+  const [showDetails, setShowDetails] = useState(false);
   const [customRange, setCustomRange] = useState<DateRange | undefined>({
     from: subDays(new Date(), 7),
     to: new Date(),
@@ -63,29 +91,14 @@ export default function TypebotRanking() {
 
   const dateRange = getDateRange();
 
-  const { data: typebotList } = useQuery<TypebotListItem[]>({
-    queryKey: ["typebot-list"],
+  const { data: ranking, isLoading, error, refetch, isRefetching } = useQuery<TypebotItem[]>({
+    queryKey: ["typebot-ranking", dateFilter, customRange?.from?.toISOString(), customRange?.to?.toISOString()],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("typebot-stats", {
-        body: { action: "list" },
-      });
-      if (error) throw error;
-      return data.typebots || [];
-    },
-    staleTime: 300000,
-  });
-
-  const { data: ranking, isLoading, error, refetch, isRefetching } = useQuery<TypebotRankItem[]>({
-    queryKey: ["typebot-ranking", dateFilter, selectedTypebot, customRange?.from?.toISOString(), customRange?.to?.toISOString()],
-    queryFn: async () => {
-      const timezoneOffset = new Date().getTimezoneOffset();
       const { data, error } = await supabase.functions.invoke("typebot-stats", {
         body: {
           action: "ranking",
           fromDate: dateRange.from.toISOString(),
           toDate: dateRange.to.toISOString(),
-          timezoneOffset,
-          typebotId: selectedTypebot !== "all" ? selectedTypebot : undefined,
         },
       });
       if (error) throw error;
@@ -94,8 +107,28 @@ export default function TypebotRanking() {
     staleTime: 60000,
   });
 
+  const { data: typebotDetails, isLoading: detailsLoading } = useQuery<{ typebot: { id: string; name: string }; analytics: TypebotAnalytics }>({
+    queryKey: ["typebot-details", selectedTypebot?.id, dateFilter, customRange?.from?.toISOString(), customRange?.to?.toISOString()],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("typebot-stats", {
+        body: {
+          action: "details",
+          typebotId: selectedTypebot?.id,
+          fromDate: dateRange.from.toISOString(),
+          toDate: dateRange.to.toISOString(),
+        },
+      });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!selectedTypebot && showDetails,
+  });
+
   const totalLeads = ranking?.reduce((sum, item) => sum + item.count, 0) || 0;
-  const topTypebot = ranking?.[0];
+  const totalCompleted = ranking?.reduce((sum, item) => sum + item.completed, 0) || 0;
+  const avgCompletionRate = totalLeads > 0 ? ((totalCompleted / totalLeads) * 100).toFixed(1) : "0";
+  const topPerformers = ranking?.filter(t => t.count > 0).slice(0, 5) || [];
+  const lowPerformers = ranking?.filter(t => t.count > 0).sort((a, b) => a.count - b.count).slice(0, 5) || [];
 
   const filterButtons = [
     { key: "today" as DateFilter, label: "Hoje" },
@@ -105,243 +138,434 @@ export default function TypebotRanking() {
     { key: "custom" as DateFilter, label: "Personalizado" },
   ];
 
-  const getMedalStyle = (index: number) => {
-    switch (index) {
-      case 0:
-        return "bg-gradient-to-br from-yellow-400 to-yellow-600 text-yellow-950";
-      case 1:
-        return "bg-gradient-to-br from-slate-300 to-slate-500 text-slate-950";
-      case 2:
-        return "bg-gradient-to-br from-amber-500 to-amber-700 text-amber-950";
-      default:
-        return "bg-muted text-muted-foreground";
-    }
+  const handleTypebotClick = (typebot: TypebotItem) => {
+    setSelectedTypebot(typebot);
+    setShowDetails(true);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b">
-        <div className="max-w-6xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+      <header className="sticky top-0 z-50 border-b border-white/5 bg-slate-950/80 backdrop-blur-xl">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex h-16 items-center justify-between">
+            <div className="flex items-center gap-4">
               <Button 
                 variant="ghost" 
                 size="sm"
                 onClick={() => navigate("/")}
-                className="gap-2"
+                className="gap-2 text-slate-400 hover:text-white hover:bg-white/5"
               >
                 <ArrowLeft className="h-4 w-4" />
-                Voltar
+                <span className="hidden sm:inline">Dashboard</span>
               </Button>
-              <div className="h-6 w-px bg-border" />
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <Bot className="h-5 w-5 text-primary" />
+              <div className="h-6 w-px bg-white/10" />
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-purple-600">
+                  <Bot className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-lg font-semibold">Ranking de Typebots</h1>
-                  <p className="text-xs text-muted-foreground">
+                  <h1 className="text-lg font-semibold text-white">Typebots Analytics</h1>
+                  <p className="text-xs text-slate-500">
                     {format(dateRange.from, "dd MMM", { locale: ptBR })} - {format(dateRange.to, "dd MMM yyyy", { locale: ptBR })}
                   </p>
                 </div>
               </div>
             </div>
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
               onClick={() => refetch()}
               disabled={isRefetching}
-              className="gap-2"
+              className="gap-2 text-slate-400 hover:text-white hover:bg-white/5"
             >
               <RefreshCw className={cn("h-4 w-4", isRefetching && "animate-spin")} />
-              Atualizar
+              <span className="hidden sm:inline">Atualizar</span>
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-3 rounded-xl bg-primary/10">
-                  <Users className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Total de Leads</p>
-                  <p className="text-3xl font-bold">{totalLeads.toLocaleString('pt-BR')}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-gradient-to-br from-yellow-500/5 to-yellow-500/10 border-yellow-500/20">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-3 rounded-xl bg-yellow-500/10">
-                  <Trophy className="h-6 w-6 text-yellow-600" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm text-muted-foreground">Líder</p>
-                  <p className="text-lg font-bold truncate">{topTypebot?.name || "-"}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-emerald-500/5 to-emerald-500/10 border-emerald-500/20">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-3 rounded-xl bg-emerald-500/10">
-                  <TrendingUp className="h-6 w-6 text-emerald-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Leads do Líder</p>
-                  <p className="text-3xl font-bold">{topTypebot?.count?.toLocaleString('pt-BR') || "0"}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        {/* Date Filters */}
+        <div className="mb-6 flex flex-wrap items-center gap-2">
+          {filterButtons.map((btn) => (
+            <Button
+              key={btn.key}
+              variant="ghost"
+              size="sm"
+              onClick={() => setDateFilter(btn.key)}
+              className={cn(
+                "rounded-full px-4 transition-all",
+                dateFilter === btn.key 
+                  ? "bg-violet-500/20 text-violet-400 hover:bg-violet-500/30 hover:text-violet-300" 
+                  : "text-slate-400 hover:text-white hover:bg-white/5"
+              )}
+            >
+              {btn.label}
+            </Button>
+          ))}
+          {dateFilter === "custom" && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2 rounded-full border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white">
+                  <CalendarIcon className="h-4 w-4" />
+                  {customRange?.from && customRange?.to ? (
+                    `${format(customRange.from, "dd/MM", { locale: ptBR })} - ${format(customRange.to, "dd/MM", { locale: ptBR })}`
+                  ) : "Selecionar"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 border-white/10 bg-slate-900" align="start">
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  defaultMonth={customRange?.from}
+                  selected={customRange}
+                  onSelect={setCustomRange}
+                  numberOfMonths={1}
+                  locale={ptBR}
+                  className="p-3 pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+          )}
         </div>
 
-        {/* Filters */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-col lg:flex-row gap-4">
-              {/* Typebot Selector */}
-              <Select value={selectedTypebot} onValueChange={setSelectedTypebot}>
-                <SelectTrigger className="lg:w-[280px]">
-                  <SelectValue placeholder="Selecionar typebot" />
-                </SelectTrigger>
-                <SelectContent className="bg-background">
-                  <SelectItem value="all">Todos os Typebots</SelectItem>
-                  {typebotList?.map((typebot) => (
-                    <SelectItem key={typebot.id} value={typebot.id}>
-                      {typebot.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+        <Tabs defaultValue="dashboard" className="space-y-6">
+          <TabsList className="bg-white/5 border border-white/10 p-1">
+            <TabsTrigger value="dashboard" className="data-[state=active]:bg-violet-500 data-[state=active]:text-white text-slate-400">
+              <BarChart3 className="h-4 w-4 mr-2" />
+              Dashboard
+            </TabsTrigger>
+            <TabsTrigger value="typebots" className="data-[state=active]:bg-violet-500 data-[state=active]:text-white text-slate-400">
+              <Bot className="h-4 w-4 mr-2" />
+              Typebots
+            </TabsTrigger>
+          </TabsList>
 
-              {/* Date Filters */}
-              <div className="flex flex-wrap gap-2 flex-1">
-                {filterButtons.map((btn) => (
-                  <Button
-                    key={btn.key}
-                    variant={dateFilter === btn.key ? "default" : "ghost"}
-                    size="sm"
-                    onClick={() => setDateFilter(btn.key)}
-                    className={cn(
-                      "transition-all",
-                      dateFilter === btn.key && "shadow-md"
-                    )}
-                  >
-                    {btn.label}
-                  </Button>
-                ))}
-              </div>
-
-              {/* Custom Date Range */}
-              {dateFilter === "custom" && (
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="gap-2 lg:w-auto w-full justify-start">
-                      <CalendarIcon className="h-4 w-4" />
-                      {customRange?.from ? (
-                        customRange.to ? (
-                          <>
-                            {format(customRange.from, "dd/MM/yy", { locale: ptBR })} - {format(customRange.to, "dd/MM/yy", { locale: ptBR })}
-                          </>
-                        ) : (
-                          format(customRange.from, "dd/MM/yyyy", { locale: ptBR })
-                        )
-                      ) : (
-                        "Selecionar período"
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 bg-background" align="end">
-                    <Calendar
-                      initialFocus
-                      mode="range"
-                      defaultMonth={customRange?.from}
-                      selected={customRange}
-                      onSelect={setCustomRange}
-                      numberOfMonths={1}
-                      locale={ptBR}
-                      className="p-3 pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Ranking List */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 mb-6">
-              <Trophy className="h-5 w-5 text-yellow-500" />
-              <h2 className="text-lg font-semibold">Top 10 Typebots</h2>
-            </div>
-
-            {isLoading ? (
-              <div className="space-y-3">
-                {[...Array(5)].map((_, i) => (
-                  <Skeleton key={i} className="h-16 rounded-xl" />
-                ))}
-              </div>
-            ) : error ? (
-              <div className="text-center py-12">
-                <p className="text-destructive mb-2">Erro ao carregar ranking</p>
-                <Button variant="outline" size="sm" onClick={() => refetch()}>
-                  Tentar novamente
-                </Button>
-              </div>
-            ) : ranking && ranking.length > 0 ? (
-              <div className="space-y-3">
-                {ranking.map((item, index) => (
-                  <div
-                    key={item.id}
-                    className={cn(
-                      "flex items-center gap-4 p-4 rounded-xl transition-all hover:scale-[1.01]",
-                      index < 3 ? "bg-gradient-to-r from-muted/80 to-muted/40" : "bg-muted/30 hover:bg-muted/50"
-                    )}
-                  >
-                    <div className={cn(
-                      "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0",
-                      getMedalStyle(index)
-                    )}>
-                      {index + 1}
+          {/* Dashboard Tab */}
+          <TabsContent value="dashboard" className="space-y-6">
+            {/* Stats Grid */}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <Card className="border-white/5 bg-gradient-to-br from-white/5 to-white/[0.02]">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-violet-500/10">
+                      <Users className="h-6 w-6 text-violet-400" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{item.name}</p>
-                      {index < 3 && (
-                        <p className="text-xs text-muted-foreground">
-                          {index === 0 ? "🏆 Primeiro lugar" : index === 1 ? "🥈 Segundo lugar" : "🥉 Terceiro lugar"}
-                        </p>
-                      )}
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-2xl font-bold tabular-nums">{item.count.toLocaleString('pt-BR')}</p>
-                      <p className="text-xs text-muted-foreground">leads</p>
+                    <div>
+                      <p className="text-sm text-slate-500">Total de Leads</p>
+                      <p className="text-3xl font-bold text-white">{totalLeads.toLocaleString('pt-BR')}</p>
                     </div>
                   </div>
-                ))}
+                </CardContent>
+              </Card>
+
+              <Card className="border-white/5 bg-gradient-to-br from-white/5 to-white/[0.02]">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10">
+                      <CheckCircle2 className="h-6 w-6 text-emerald-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-500">Concluídos</p>
+                      <p className="text-3xl font-bold text-white">{totalCompleted.toLocaleString('pt-BR')}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-white/5 bg-gradient-to-br from-white/5 to-white/[0.02]">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-500/10">
+                      <Target className="h-6 w-6 text-amber-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-500">Taxa de Conclusão</p>
+                      <p className="text-3xl font-bold text-white">{avgCompletionRate}%</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-white/5 bg-gradient-to-br from-white/5 to-white/[0.02]">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/10">
+                      <Activity className="h-6 w-6 text-blue-400" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-500">Typebots Ativos</p>
+                      <p className="text-3xl font-bold text-white">{ranking?.filter(t => t.count > 0).length || 0}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Top & Low Performers */}
+            <div className="grid gap-6 lg:grid-cols-2">
+              <Card className="border-white/5 bg-gradient-to-br from-white/5 to-white/[0.02]">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-white">
+                    <TrendingUp className="h-5 w-5 text-emerald-400" />
+                    Mais Leads
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {isLoading ? (
+                    [...Array(5)].map((_, i) => <Skeleton key={i} className="h-14 bg-white/5" />)
+                  ) : topPerformers.length > 0 ? (
+                    topPerformers.map((typebot, i) => (
+                      <button
+                        key={typebot.id}
+                        onClick={() => handleTypebotClick(typebot)}
+                        className="flex w-full items-center gap-4 rounded-lg bg-white/5 p-3 text-left transition-all hover:bg-white/10"
+                      >
+                        <div className={cn(
+                          "flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold",
+                          i === 0 ? "bg-emerald-500/20 text-emerald-400" : "bg-white/10 text-slate-400"
+                        )}>
+                          {i + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="truncate font-medium text-white">{typebot.name}</p>
+                          <p className="text-xs text-slate-500">{typebot.completed} concluídos</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-bold text-emerald-400">{typebot.count}</p>
+                          <p className="text-xs text-slate-500">leads</p>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-slate-500" />
+                      </button>
+                    ))
+                  ) : (
+                    <p className="py-8 text-center text-slate-500">Nenhum lead no período</p>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="border-white/5 bg-gradient-to-br from-white/5 to-white/[0.02]">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-white">
+                    <TrendingDown className="h-5 w-5 text-rose-400" />
+                    Menos Leads
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {isLoading ? (
+                    [...Array(5)].map((_, i) => <Skeleton key={i} className="h-14 bg-white/5" />)
+                  ) : lowPerformers.length > 0 ? (
+                    lowPerformers.map((typebot, i) => (
+                      <button
+                        key={typebot.id}
+                        onClick={() => handleTypebotClick(typebot)}
+                        className="flex w-full items-center gap-4 rounded-lg bg-white/5 p-3 text-left transition-all hover:bg-white/10"
+                      >
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-rose-500/20 text-rose-400 text-sm font-bold">
+                          {i + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="truncate font-medium text-white">{typebot.name}</p>
+                          <p className="text-xs text-slate-500">{typebot.completed} concluídos</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-bold text-rose-400">{typebot.count}</p>
+                          <p className="text-xs text-slate-500">leads</p>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-slate-500" />
+                      </button>
+                    ))
+                  ) : (
+                    <p className="py-8 text-center text-slate-500">Nenhum lead no período</p>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Typebots Tab */}
+          <TabsContent value="typebots" className="space-y-4">
+            {isLoading ? (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-32 rounded-xl bg-white/5" />)}
+              </div>
+            ) : error ? (
+              <Card className="border-white/5 bg-white/5">
+                <CardContent className="py-12 text-center">
+                  <p className="text-rose-400 mb-2">Erro ao carregar dados</p>
+                  <Button variant="outline" size="sm" onClick={() => refetch()}>Tentar novamente</Button>
+                </CardContent>
+              </Card>
+            ) : ranking && ranking.length > 0 ? (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {ranking.map((typebot) => {
+                  const completionRate = typebot.count > 0 ? (typebot.completed / typebot.count * 100) : 0;
+                  return (
+                    <button
+                      key={typebot.id}
+                      onClick={() => handleTypebotClick(typebot)}
+                      className="group relative overflow-hidden rounded-xl border border-white/5 bg-gradient-to-br from-white/5 to-white/[0.02] p-5 text-left transition-all hover:border-violet-500/30 hover:bg-white/10"
+                    >
+                      <div className="mb-4 flex items-start justify-between">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-500/10">
+                          <Bot className="h-5 w-5 text-violet-400" />
+                        </div>
+                        <div className={cn(
+                          "flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium",
+                          typebot.count > 0 ? "bg-emerald-500/10 text-emerald-400" : "bg-slate-500/10 text-slate-400"
+                        )}>
+                          <Zap className="h-3 w-3" />
+                          {typebot.count > 0 ? "Ativo" : "Inativo"}
+                        </div>
+                      </div>
+                      <h3 className="mb-2 font-semibold text-white line-clamp-2">{typebot.name}</h3>
+                      <div className="mb-3 flex items-baseline gap-2">
+                        <span className="text-3xl font-bold text-white">{typebot.count}</span>
+                        <span className="text-sm text-slate-500">leads</span>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-slate-500">Taxa de conclusão</span>
+                          <span className="text-slate-300">{completionRate.toFixed(0)}%</span>
+                        </div>
+                        <Progress value={completionRate} className="h-1.5 bg-white/10" />
+                      </div>
+                      <ChevronRight className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500 opacity-0 transition-all group-hover:opacity-100 group-hover:translate-x-1" />
+                    </button>
+                  );
+                })}
               </div>
             ) : (
-              <div className="text-center py-12 text-muted-foreground">
-                <Bot className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                <p>Nenhum lead encontrado no período selecionado</p>
-              </div>
+              <Card className="border-white/5 bg-white/5">
+                <CardContent className="py-12 text-center">
+                  <Bot className="mx-auto h-12 w-12 text-slate-600 mb-3" />
+                  <p className="text-slate-500">Nenhum typebot encontrado</p>
+                </CardContent>
+              </Card>
             )}
-          </CardContent>
-        </Card>
+          </TabsContent>
+        </Tabs>
       </main>
+
+      {/* Details Modal */}
+      <Dialog open={showDetails} onOpenChange={setShowDetails}>
+        <DialogContent className="max-w-3xl border-white/10 bg-slate-900 text-white">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3 text-xl">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-500/20">
+                <Bot className="h-5 w-5 text-violet-400" />
+              </div>
+              {selectedTypebot?.name}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {detailsLoading ? (
+            <div className="space-y-4 py-8">
+              <Skeleton className="h-24 bg-white/5" />
+              <Skeleton className="h-48 bg-white/5" />
+            </div>
+          ) : typebotDetails ? (
+            <div className="space-y-6">
+              {/* Quick Stats */}
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <div className="rounded-lg bg-white/5 p-4">
+                  <div className="flex items-center gap-2 text-slate-400 text-sm mb-1">
+                    <Users className="h-4 w-4" />
+                    Total
+                  </div>
+                  <p className="text-2xl font-bold">{typebotDetails.analytics.totalLeads}</p>
+                </div>
+                <div className="rounded-lg bg-white/5 p-4">
+                  <div className="flex items-center gap-2 text-emerald-400 text-sm mb-1">
+                    <CheckCircle2 className="h-4 w-4" />
+                    Concluídos
+                  </div>
+                  <p className="text-2xl font-bold text-emerald-400">{typebotDetails.analytics.completedLeads}</p>
+                </div>
+                <div className="rounded-lg bg-white/5 p-4">
+                  <div className="flex items-center gap-2 text-rose-400 text-sm mb-1">
+                    <XCircle className="h-4 w-4" />
+                    Abandonos
+                  </div>
+                  <p className="text-2xl font-bold text-rose-400">{typebotDetails.analytics.incompletedLeads}</p>
+                </div>
+                <div className="rounded-lg bg-white/5 p-4">
+                  <div className="flex items-center gap-2 text-amber-400 text-sm mb-1">
+                    <Target className="h-4 w-4" />
+                    Conversão
+                  </div>
+                  <p className="text-2xl font-bold text-amber-400">{typebotDetails.analytics.completionRate}%</p>
+                </div>
+              </div>
+
+              {/* Peak Hour */}
+              {typebotDetails.analytics.peakHour && (
+                <div className="flex items-center gap-3 rounded-lg bg-violet-500/10 border border-violet-500/20 p-4">
+                  <Clock className="h-5 w-5 text-violet-400" />
+                  <div>
+                    <p className="text-sm text-slate-400">Horário de pico</p>
+                    <p className="font-semibold">
+                      {typebotDetails.analytics.peakHour.hour}:00 - {typebotDetails.analytics.peakHour.hour + 1}:00
+                      <span className="ml-2 text-sm text-slate-400">({typebotDetails.analytics.peakHour.count} leads)</span>
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Drop-off Points */}
+              {typebotDetails.analytics.dropOffPoints.length > 0 && (
+                <div>
+                  <h4 className="flex items-center gap-2 mb-3 font-medium">
+                    <AlertTriangle className="h-4 w-4 text-amber-400" />
+                    Pontos de Abandono
+                  </h4>
+                  <div className="space-y-2">
+                    {typebotDetails.analytics.dropOffPoints.map((point, i) => (
+                      <div key={point.blockId} className="flex items-center gap-3 rounded-lg bg-white/5 p-3">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-500/20 text-amber-400 text-xs font-bold">
+                          {i + 1}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="truncate text-sm">{point.name}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold text-amber-400">{point.count}</p>
+                          <p className="text-xs text-slate-500">{point.percentage}%</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Funnel Steps */}
+              {typebotDetails.analytics.funnelSteps.length > 0 && (
+                <div>
+                  <h4 className="flex items-center gap-2 mb-3 font-medium">
+                    <BarChart3 className="h-4 w-4 text-violet-400" />
+                    Etapas do Funil
+                  </h4>
+                  <div className="space-y-2">
+                    {typebotDetails.analytics.funnelSteps.map((step) => (
+                      <div key={step.blockId} className="space-y-1">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="truncate text-slate-300">{step.name}</span>
+                          <span className="text-slate-500">{step.count} ({step.percentage}%)</span>
+                        </div>
+                        <Progress value={Number(step.percentage)} className="h-2 bg-white/10" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="py-8 text-center text-slate-500">Erro ao carregar detalhes</p>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

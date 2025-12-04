@@ -235,6 +235,39 @@ export type Database = {
         }
         Relationships: []
       }
+      typebot_daily_stats: {
+        Row: {
+          completed_leads: number
+          created_at: string
+          date: string
+          id: string
+          total_leads: number
+          typebot_id: string
+          typebot_name: string
+          updated_at: string
+        }
+        Insert: {
+          completed_leads?: number
+          created_at?: string
+          date?: string
+          id?: string
+          total_leads?: number
+          typebot_id: string
+          typebot_name: string
+          updated_at?: string
+        }
+        Update: {
+          completed_leads?: number
+          created_at?: string
+          date?: string
+          id?: string
+          total_leads?: number
+          typebot_id?: string
+          typebot_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
