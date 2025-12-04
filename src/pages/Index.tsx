@@ -11,7 +11,7 @@ import { BoletoRecoveryDashboard } from "@/components/dashboard/BoletoRecoveryDa
 import { useTransactions } from "@/hooks/useTransactions";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
 import { supabase } from "@/integrations/supabase/client";
-import { startOfDay, endOfDay } from "date-fns";
+import { format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -84,23 +84,24 @@ const Index = () => {
   });
 
   // Filter transactions by date (use paid_at for paid transactions, created_at for others)
-  // Convert transaction date to Brazil timezone for accurate date comparison
+  // Convert to Brazil timezone (UTC-3) for accurate date comparison
   const filteredTransactions = useMemo(() => {
+    // Helper to get date string in Brazil timezone (YYYY-MM-DD)
+    const getBrazilDateString = (utcDateStr: string) => {
+      const date = new Date(utcDateStr);
+      // Format in Brazil timezone
+      return date.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+    };
+    
+    // Get filter date strings (YYYY-MM-DD format)
+    const startDateStr = dateFilter.startDate.toLocaleDateString('en-CA');
+    const endDateStr = dateFilter.endDate.toLocaleDateString('en-CA');
+    
     return transactions.filter((t) => {
       const dateStr = t.status === "pago" && t.paid_at ? t.paid_at : t.created_at;
-      const transactionDate = new Date(dateStr);
+      const transactionDateStr = getBrazilDateString(dateStr);
       
-      // Get the date in Brazil timezone (UTC-3)
-      // brDate represents the transaction time as it would appear in Brazil
-      const brOffset = -3 * 60; // Brazil is UTC-3 (minutes)
-      const localOffset = transactionDate.getTimezoneOffset();
-      const brDate = new Date(transactionDate.getTime() + (localOffset - brOffset) * 60 * 1000);
-      
-      // Compare with filter dates
-      const filterStart = startOfDay(dateFilter.startDate);
-      const filterEnd = endOfDay(dateFilter.endDate);
-      
-      return brDate >= filterStart && brDate <= filterEnd;
+      return transactionDateStr >= startDateStr && transactionDateStr <= endDateStr;
     });
   }, [transactions, dateFilter]);
 
