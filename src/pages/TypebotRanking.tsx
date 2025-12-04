@@ -3,14 +3,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Bot, Trophy, RefreshCw, ArrowLeft, Filter } from "lucide-react";
+import { Bot, Trophy, RefreshCw, ArrowLeft, Filter, CalendarIcon } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { format, startOfDay, endOfDay, startOfWeek, startOfMonth, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
+import { DateRange } from "react-day-picker";
 
-type DateFilter = "today" | "yesterday" | "week" | "month";
+type DateFilter = "today" | "yesterday" | "week" | "month" | "custom";
 
 interface TypebotRankItem {
   id: string;
@@ -27,6 +31,10 @@ export default function TypebotRanking() {
   const navigate = useNavigate();
   const [dateFilter, setDateFilter] = useState<DateFilter>("today");
   const [selectedTypebot, setSelectedTypebot] = useState<string>("all");
+  const [customRange, setCustomRange] = useState<DateRange | undefined>({
+    from: subDays(new Date(), 7),
+    to: new Date(),
+  });
 
   const getDateRange = () => {
     const now = new Date();
@@ -43,6 +51,11 @@ export default function TypebotRanking() {
         return { from: startOfWeek(now, { weekStartsOn: 0 }), to: todayEnd };
       case "month":
         return { from: startOfMonth(now), to: todayEnd };
+      case "custom":
+        return {
+          from: customRange?.from ? startOfDay(customRange.from) : today,
+          to: customRange?.to ? endOfDay(customRange.to) : todayEnd,
+        };
       default:
         return { from: today, to: todayEnd };
     }
@@ -64,9 +77,8 @@ export default function TypebotRanking() {
   });
 
   const { data: ranking, isLoading, error, refetch, isRefetching } = useQuery<TypebotRankItem[]>({
-    queryKey: ["typebot-ranking", dateFilter, selectedTypebot],
+    queryKey: ["typebot-ranking", dateFilter, selectedTypebot, customRange?.from?.toISOString(), customRange?.to?.toISOString()],
     queryFn: async () => {
-      // Send timezone offset to backend for accurate date filtering
       const timezoneOffset = new Date().getTimezoneOffset();
       const { data, error } = await supabase.functions.invoke("typebot-stats", {
         body: {
@@ -88,6 +100,7 @@ export default function TypebotRanking() {
     { key: "yesterday" as DateFilter, label: "Ontem" },
     { key: "week" as DateFilter, label: "Semana" },
     { key: "month" as DateFilter, label: "Mês" },
+    { key: "custom" as DateFilter, label: "Personalizado" },
   ];
 
   const getMedalColor = (index: number) => {
@@ -160,6 +173,47 @@ export default function TypebotRanking() {
                 </Button>
               ))}
             </div>
+
+            {/* Custom Date Range Picker */}
+            {dateFilter === "custom" && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full md:w-auto justify-start text-left font-normal",
+                      !customRange && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {customRange?.from ? (
+                      customRange.to ? (
+                        <>
+                          {format(customRange.from, "dd/MM/yyyy", { locale: ptBR })} -{" "}
+                          {format(customRange.to, "dd/MM/yyyy", { locale: ptBR })}
+                        </>
+                      ) : (
+                        format(customRange.from, "dd/MM/yyyy", { locale: ptBR })
+                      )
+                    ) : (
+                      <span>Selecione o período</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 bg-background" align="start">
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={customRange?.from}
+                    selected={customRange}
+                    onSelect={setCustomRange}
+                    numberOfMonths={1}
+                    locale={ptBR}
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            )}
 
             <p className="text-sm text-muted-foreground mt-3">
               Período: {format(dateRange.from, "dd/MM/yyyy", { locale: ptBR })} -{" "}
