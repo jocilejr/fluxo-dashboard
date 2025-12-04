@@ -18,8 +18,18 @@ export function usePushNotifications() {
     }
   }, []);
 
-  const subscribe = useCallback(async () => {
-    if (!user || !isSupported) return false;
+  const subscribe = useCallback(async (): Promise<{ success: boolean; reason?: string }> => {
+    if (!user) return { success: false, reason: 'not_logged_in' };
+    if (!isSupported) return { success: false, reason: 'not_supported' };
+    
+    // Check if running as installed PWA on iOS
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                         (window.navigator as any).standalone === true;
+    
+    if (isIOS && !isStandalone) {
+      return { success: false, reason: 'ios_not_pwa' };
+    }
     
     setIsLoading(true);
     try {
@@ -29,14 +39,14 @@ export function usePushNotifications() {
       if (perm === 'granted') {
         setIsSubscribed(true);
         console.log('Notification permission granted');
-        return true;
+        return { success: true };
       }
       
-      console.log('Notification permission denied');
-      return false;
+      console.log('Notification permission denied:', perm);
+      return { success: false, reason: perm === 'denied' ? 'denied' : 'dismissed' };
     } catch (error) {
       console.error('Error requesting notification permission:', error);
-      return false;
+      return { success: false, reason: 'error' };
     } finally {
       setIsLoading(false);
     }

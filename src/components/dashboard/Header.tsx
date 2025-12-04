@@ -71,7 +71,7 @@ export function Header() {
       }
     } else {
       const result = await subscribe();
-      if (result) {
+      if (result.success) {
         toast({
           title: "Notificações ativadas!",
           description: "Você receberá notificações de novas transações.",
@@ -81,9 +81,19 @@ export function Header() {
           testNotification();
         }, 1000);
       } else {
+        let description = "Verifique se as notificações estão permitidas no navegador.";
+        
+        if (result.reason === 'ios_not_pwa') {
+          description = "No iPhone, instale o app primeiro (botão de download) e abra pelo ícone na tela inicial.";
+        } else if (result.reason === 'denied') {
+          description = "Permissão negada. Vá nas configurações do navegador para permitir notificações.";
+        } else if (result.reason === 'not_supported') {
+          description = "Seu navegador não suporta notificações push.";
+        }
+        
         toast({
-          title: "Erro ao ativar notificações",
-          description: "Verifique se as notificações estão permitidas no navegador.",
+          title: "Não foi possível ativar notificações",
+          description,
           variant: "destructive",
         });
       }
