@@ -20,7 +20,7 @@ export function PixCardQuickRecovery({ transaction }: PixCardQuickRecoveryProps)
   const [message, setMessage] = useState("");
   const [copied, setCopied] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  const { openChat, extensionStatus, fallbackOpenWhatsApp } = useWhatsAppExtension();
+  const { sendText, extensionStatus, fallbackOpenWhatsApp } = useWhatsAppExtension();
 
   useEffect(() => {
     const fetchMessage = async () => {
@@ -62,15 +62,15 @@ export function PixCardQuickRecovery({ transaction }: PixCardQuickRecoveryProps)
     const phone = transaction.customer_phone.replace(/\D/g, "");
     
     if (extensionStatus === "connected") {
-      const success = await openChat(phone);
+      const success = await sendText(phone, message);
       if (success) {
-        toast.success("Conversa aberta no WhatsApp");
+        toast.success("Mensagem enviada para o WhatsApp");
         setIsOpen(false);
       } else {
-        fallbackOpenWhatsApp(phone);
+        fallbackOpenWhatsApp(phone, message);
       }
     } else {
-      fallbackOpenWhatsApp(phone);
+      fallbackOpenWhatsApp(phone, message);
     }
   };
 
