@@ -89,9 +89,9 @@ export function BoletoRecoveryDashboard({ transactions, isLoading }: BoletoRecov
           <TabsTrigger value="today" className="gap-2">
             <Clock className="h-4 w-4" />
             Hoje
-            {stats.todayCount > 0 && (
+            {stats.remainingToContact > 0 && (
               <Badge variant="secondary" className="ml-1 h-5 px-1.5">
-                {stats.todayCount}
+                {stats.remainingToContact}
               </Badge>
             )}
           </TabsTrigger>
