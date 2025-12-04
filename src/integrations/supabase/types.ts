@@ -14,6 +14,90 @@ export type Database = {
   }
   public: {
     Tables: {
+      boleto_recovery_contacts: {
+        Row: {
+          contact_method: string
+          contacted_at: string
+          created_at: string
+          id: string
+          notes: string | null
+          rule_id: string | null
+          transaction_id: string
+          user_id: string
+        }
+        Insert: {
+          contact_method?: string
+          contacted_at?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          rule_id?: string | null
+          transaction_id: string
+          user_id: string
+        }
+        Update: {
+          contact_method?: string
+          contacted_at?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          rule_id?: string | null
+          transaction_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "boleto_recovery_contacts_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "boleto_recovery_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "boleto_recovery_contacts_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      boleto_recovery_rules: {
+        Row: {
+          created_at: string
+          days: number
+          id: string
+          is_active: boolean
+          message: string
+          name: string
+          priority: number
+          rule_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          days: number
+          id?: string
+          is_active?: boolean
+          message: string
+          name: string
+          priority?: number
+          rule_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          days?: number
+          id?: string
+          is_active?: boolean
+          message?: string
+          name?: string
+          priority?: number
+          rule_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       boleto_recovery_templates: {
         Row: {
           blocks: Json
@@ -37,6 +121,27 @@ export type Database = {
           id?: string
           is_default?: boolean
           name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      boleto_settings: {
+        Row: {
+          created_at: string
+          default_expiration_days: number
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          default_expiration_days?: number
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          default_expiration_days?: number
+          id?: string
           updated_at?: string
         }
         Relationships: []

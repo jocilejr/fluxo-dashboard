@@ -7,7 +7,7 @@ import { TransactionsTable } from "@/components/dashboard/TransactionsTable";
 import { PaymentMethodsChart } from "@/components/dashboard/PaymentMethodsChart";
 import { DateFilter, DateFilterValue, getDefaultDateFilter } from "@/components/dashboard/DateFilter";
 import { SaleNotification } from "@/components/dashboard/SaleNotification";
-import { BoletoRecoveryList } from "@/components/dashboard/BoletoRecoveryList";
+import { BoletoRecoveryDashboard } from "@/components/dashboard/BoletoRecoveryDashboard";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
 import { supabase } from "@/integrations/supabase/client";
@@ -307,7 +307,7 @@ const Index = () => {
           </TabsContent>
           
           <TabsContent value="recovery">
-            <BoletoRecoveryList 
+            <BoletoRecoveryDashboard 
               transactions={transactions}
               isLoading={isLoading}
             />
