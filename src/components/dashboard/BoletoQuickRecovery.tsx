@@ -200,42 +200,62 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
     if (block.type === "text") {
       const processedText = replaceVariables(block.content);
       return (
-        <div key={block.id} className="p-2 rounded-lg bg-secondary/30 border border-border/30 flex items-start gap-3">
-          <p className="text-xs whitespace-pre-wrap leading-relaxed flex-1">{processedText}</p>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="shrink-0 h-7 px-2 gap-1"
-            onClick={() => handleCopy(block.content, block.id)}
-          >
-            {copiedId === block.id ? (
-              <Check className="h-3 w-3 text-success" />
-            ) : (
-              <Copy className="h-3 w-3" />
-            )}
-          </Button>
+        <div key={block.id} className="group p-4 rounded-xl bg-card border border-border hover:border-primary/30 transition-colors">
+          <p className="text-sm whitespace-pre-wrap leading-relaxed text-foreground/90">{processedText}</p>
+          <div className="mt-3 pt-3 border-t border-border/50">
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full gap-2 h-9"
+              onClick={() => handleCopy(block.content, block.id)}
+            >
+              {copiedId === block.id ? (
+                <>
+                  <Check className="h-4 w-4 text-emerald-500" />
+                  <span className="text-emerald-500">Copiado!</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="h-4 w-4" />
+                  Copiar mensagem
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       );
     }
 
     if (block.type === "pdf") {
       return (
-        <div key={block.id} className="p-2 rounded-lg bg-primary/5 border border-primary/30 flex items-center gap-3">
-          <FileText className="h-4 w-4 text-primary shrink-0" />
-          <span className="text-xs font-medium flex-1">PDF do Boleto</span>
+        <div key={block.id} className="p-4 rounded-xl bg-primary/5 border border-primary/20">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <FileText className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm font-medium">PDF do Boleto</p>
+              <p className="text-xs text-muted-foreground">Arquivo para envio</p>
+            </div>
+          </div>
           {isLoadingPdf ? (
-            <Loader2 className="h-3 w-3 animate-spin text-primary" />
+            <div className="flex items-center justify-center py-3">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              <span className="text-sm ml-2 text-muted-foreground">Carregando...</span>
+            </div>
           ) : pdfBlobUrl ? (
-            <div className="flex gap-1">
-              <Button size="sm" variant="ghost" className="h-7 px-2" onClick={handleOpenPdfInNewTab}>
-                <ExternalLink className="h-3 w-3" />
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" className="flex-1 gap-2 h-9" onClick={handleOpenPdfInNewTab}>
+                <ExternalLink className="h-4 w-4" />
+                Visualizar
               </Button>
-              <Button size="sm" variant="ghost" className="h-7 px-2" onClick={handleDownloadPdf}>
-                <Download className="h-3 w-3" />
+              <Button size="sm" className="flex-1 gap-2 h-9" onClick={handleDownloadPdf}>
+                <Download className="h-4 w-4" />
+                Baixar
               </Button>
             </div>
           ) : (
-            <span className="text-[10px] text-muted-foreground">Indisponível</span>
+            <p className="text-sm text-muted-foreground text-center py-2">PDF não disponível</p>
           )}
         </div>
       );
@@ -243,16 +263,28 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
 
     if (block.type === "image") {
       return (
-        <div key={block.id} className="p-2 rounded-lg bg-success/5 border border-success/30 flex items-center gap-3">
-          <ImageIcon className="h-4 w-4 text-success shrink-0" />
-          <span className="text-xs font-medium flex-1">Imagem do Boleto</span>
+        <div key={block.id} className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-2 rounded-lg bg-emerald-500/10">
+              <ImageIcon className="h-5 w-5 text-emerald-500" />
+            </div>
+            <div>
+              <p className="text-sm font-medium">Imagem do Boleto</p>
+              <p className="text-xs text-muted-foreground">Captura de tela</p>
+            </div>
+          </div>
           {pdfBlobUrl ? (
-            <Button size="sm" variant="ghost" className="h-7 px-2 gap-1" onClick={handleOpenPdfInNewTab}>
-              <ExternalLink className="h-3 w-3" />
-              <span className="text-[10px]">Print</span>
-            </Button>
+            <div className="space-y-2">
+              <Button size="sm" variant="outline" className="w-full gap-2 h-9" onClick={handleOpenPdfInNewTab}>
+                <ExternalLink className="h-4 w-4" />
+                Abrir para captura
+              </Button>
+              <p className="text-xs text-muted-foreground text-center">
+                Use <kbd className="px-1.5 py-0.5 rounded bg-muted text-[10px]">Win+Shift+S</kbd> para capturar
+              </p>
+            </div>
           ) : (
-            <span className="text-[10px] text-muted-foreground">Aguardando...</span>
+            <p className="text-sm text-muted-foreground text-center py-2">Aguardando PDF...</p>
           )}
         </div>
       );
@@ -261,86 +293,128 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
     return null;
   };
 
-  const InfoItem = ({ 
-    icon: Icon, 
-    label, 
-    value, 
-    fieldId,
-    highlight = false,
-    mono = false
-  }: { 
-    icon: typeof User; 
-    label: string; 
-    value: string | null; 
-    fieldId: string;
-    highlight?: boolean;
-    mono?: boolean;
-  }) => (
-    <div className={`flex items-center justify-between gap-2 px-2 py-1.5 rounded border ${highlight ? 'bg-primary/10 border-primary/30' : 'bg-secondary/30 border-border/30'}`}>
-      <div className="flex items-center gap-1.5 min-w-0">
-        <Icon className="h-3 w-3 text-muted-foreground shrink-0" />
-        <span className="text-[10px] text-muted-foreground shrink-0">{label}</span>
-        <span className={`text-xs ${highlight ? 'font-bold text-primary' : 'font-medium'} ${mono ? 'font-mono text-[10px]' : ''} truncate`}>
-          {value || "-"}
-        </span>
-      </div>
-      {value && (
-        <Button
-          size="icon"
-          variant="ghost"
-          className="h-5 w-5 shrink-0"
-          onClick={() => handleCopyField(value, fieldId)}
-        >
-          {copiedId === fieldId ? (
-            <Check className="h-2.5 w-2.5 text-success" />
-          ) : (
-            <Copy className="h-2.5 w-2.5" />
-          )}
-        </Button>
-      )}
-    </div>
-  );
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl p-0">
-        <DialogHeader className="px-4 pt-4 pb-2 border-b border-border/30">
-          <DialogTitle className="flex items-center gap-2 text-sm">
-            <FileText className="h-4 w-4 text-primary" />
-            Recuperação de Boleto
+      <DialogContent className="max-w-5xl max-h-[85vh] p-0 gap-0">
+        <DialogHeader className="px-6 py-4 border-b bg-muted/30">
+          <DialogTitle className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <FileText className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <span className="text-lg">Recuperação de Boleto</span>
+              <p className="text-sm font-normal text-muted-foreground">Copie as mensagens para enviar ao cliente</p>
+            </div>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4 p-4">
+        <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] min-h-0">
           {/* Left side - Boleto Info */}
-          <div className="space-y-1.5">
-            <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-              Informações do Boleto
+          <div className="p-6 bg-muted/20 border-b lg:border-b-0 lg:border-r border-border/50">
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
+              Dados do Cliente
             </h4>
             
-            <InfoItem icon={User} label="Cliente" value={transaction.customer_name} fieldId="name" />
-            <InfoItem icon={Phone} label="Telefone" value={transaction.customer_phone} fieldId="phone" />
-            <InfoItem icon={DollarSign} label="Valor" value={formatCurrency(Number(transaction.amount))} fieldId="value" highlight />
-            {dueDate && <InfoItem icon={Calendar} label="Vencimento" value={dueDate} fieldId="dueDate" />}
-            <InfoItem icon={Barcode} label="Código" value={transaction.external_id} fieldId="barcode" mono />
+            <div className="space-y-3">
+              {/* Cliente */}
+              <div className="p-3 rounded-lg bg-card border border-border">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                  <User className="h-3.5 w-3.5" />
+                  <span>Nome do Cliente</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium">{transaction.customer_name || "-"}</p>
+                  {transaction.customer_name && (
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleCopyField(transaction.customer_name!, "name")}>
+                      {copiedId === "name" ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Telefone */}
+              <div className="p-3 rounded-lg bg-card border border-border">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                  <Phone className="h-3.5 w-3.5" />
+                  <span>Telefone</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium">{transaction.customer_phone || "-"}</p>
+                  {transaction.customer_phone && (
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleCopyField(transaction.customer_phone!, "phone")}>
+                      {copiedId === "phone" ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Valor - Destacado */}
+              <div className="p-3 rounded-lg bg-primary/10 border border-primary/30">
+                <div className="flex items-center gap-2 text-xs text-primary/70 mb-1">
+                  <DollarSign className="h-3.5 w-3.5" />
+                  <span>Valor do Boleto</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-lg font-bold text-primary">{formatCurrency(Number(transaction.amount))}</p>
+                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleCopyField(formatCurrency(Number(transaction.amount)), "value")}>
+                    {copiedId === "value" ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Vencimento */}
+              {dueDate && (
+                <div className="p-3 rounded-lg bg-card border border-border">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                    <Calendar className="h-3.5 w-3.5" />
+                    <span>Vencimento</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium">{dueDate}</p>
+                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleCopyField(dueDate, "dueDate")}>
+                      {copiedId === "dueDate" ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Código de Barras */}
+              <div className="p-3 rounded-lg bg-card border border-border">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                  <Barcode className="h-3.5 w-3.5" />
+                  <span>Código de Barras</span>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-mono text-xs text-foreground/80 break-all flex-1">{transaction.external_id || "-"}</p>
+                  {transaction.external_id && (
+                    <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={() => handleCopyField(transaction.external_id!, "barcode")}>
+                      {copiedId === "barcode" ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Right side - Recovery messages */}
-          <div className="space-y-1.5 border-t lg:border-t-0 lg:border-l border-border/30 pt-3 lg:pt-0 lg:pl-4">
-            <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+          <div className="p-6 overflow-y-auto max-h-[calc(85vh-80px)]">
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
               Mensagens de Recuperação
             </h4>
             
             {isLoading ? (
-              <div className="flex items-center justify-center py-4">
-                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                <span className="ml-3 text-muted-foreground">Carregando template...</span>
               </div>
             ) : !template || template.blocks.length === 0 ? (
-              <div className="text-center py-4 text-muted-foreground border border-dashed border-border/30 rounded">
-                <p className="text-xs">Nenhum template configurado</p>
+              <div className="flex flex-col items-center justify-center py-12 text-center border-2 border-dashed border-border rounded-xl">
+                <FileText className="h-10 w-10 text-muted-foreground/50 mb-3" />
+                <p className="text-sm font-medium text-muted-foreground">Nenhum template configurado</p>
+                <p className="text-xs text-muted-foreground/70 mt-1">Configure templates nas configurações</p>
               </div>
             ) : (
-              <div className="space-y-1.5">
+              <div className="space-y-3">
                 {template.blocks
                   .sort((a, b) => a.order - b.order)
                   .map((block) => renderBlock(block))}
