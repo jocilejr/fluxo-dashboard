@@ -247,8 +247,10 @@ function BoletoList({
                     </div>
                     <div className="min-w-0">
                       <p className="font-medium truncate">{boleto.customer_name || "Cliente"}</p>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
                         <span>{formatCurrency(boleto.amount)}</span>
+                        <span>•</span>
+                        <span>Gerado {format(new Date(boleto.created_at), "dd/MM", { locale: ptBR })}</span>
                         <span>•</span>
                         <span>
                           {boleto.isOverdue
