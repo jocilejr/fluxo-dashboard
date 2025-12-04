@@ -1,0 +1,261 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Transaction } from "./useTransactions";
+import { useMemo } from "react";
+import { addDays, differenceInDays, isToday, isBefore, startOfDay } from "date-fns";
+import { useAuth } from "./useAuth";
+import { getGreeting } from "@/lib/greeting";
+
+export interface BoletoSettings {
+  id: string;
+  default_expiration_days: number;
+}
+
+export interface RecoveryRule {
+  id: string;
+  name: string;
+  rule_type: "days_after_generation" | "days_before_due" | "days_after_due";
+  days: number;
+  message: string;
+  is_active: boolean;
+  priority: number;
+}
+
+export interface RecoveryContact {
+  id: string;
+  transaction_id: string;
+  rule_id: string | null;
+  contacted_at: string;
+  contact_method: string;
+  notes: string | null;
+  user_id: string;
+}
+
+export interface BoletoWithRecovery extends Transaction {
+  dueDate: Date;
+  daysUntilDue: number;
+  daysSinceGeneration: number;
+  isOverdue: boolean;
+  applicableRule: RecoveryRule | null;
+  formattedMessage: string | null;
+  contacts: RecoveryContact[];
+  shouldContactToday: boolean;
+}
+
+export function useBoletoRecovery(transactions: Transaction[]) {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  // Fetch boleto settings
+  const { data: settings } = useQuery({
+    queryKey: ["boleto-settings"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("boleto_settings")
+        .select("*")
+        .maybeSingle();
+      if (error) throw error;
+      return data as BoletoSettings | null;
+    },
+  });
+
+  // Fetch recovery rules
+  const { data: rules } = useQuery({
+    queryKey: ["boleto-recovery-rules"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("boleto_recovery_rules")
+        .select("*")
+        .eq("is_active", true)
+        .order("priority", { ascending: true });
+      if (error) throw error;
+      return data as RecoveryRule[];
+    },
+  });
+
+  // Fetch all recovery contacts
+  const { data: contacts } = useQuery({
+    queryKey: ["boleto-recovery-contacts"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("boleto_recovery_contacts")
+        .select("*")
+        .order("contacted_at", { ascending: false });
+      if (error) throw error;
+      return data as RecoveryContact[];
+    },
+  });
+
+  // Update settings mutation
+  const updateSettings = useMutation({
+    mutationFn: async (expirationDays: number) => {
+      if (!settings?.id) {
+        const { error } = await supabase
+          .from("boleto_settings")
+          .insert({ default_expiration_days: expirationDays });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("boleto_settings")
+          .update({ default_expiration_days: expirationDays })
+          .eq("id", settings.id);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["boleto-settings"] });
+    },
+  });
+
+  // Add contact mutation
+  const addContact = useMutation({
+    mutationFn: async ({ transactionId, ruleId, notes }: { transactionId: string; ruleId?: string; notes?: string }) => {
+      const { error } = await supabase
+        .from("boleto_recovery_contacts")
+        .insert({
+          transaction_id: transactionId,
+          rule_id: ruleId || null,
+          user_id: user?.id || "",
+          notes: notes || null,
+        });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["boleto-recovery-contacts"] });
+    },
+  });
+
+  // Process boletos with recovery info
+  const processedBoletos = useMemo(() => {
+    const unpaidBoletos = transactions.filter(
+      (t) => t.type === "boleto" && t.status === "gerado"
+    );
+
+    const expirationDays = settings?.default_expiration_days || 3;
+    const today = startOfDay(new Date());
+
+    return unpaidBoletos.map((boleto): BoletoWithRecovery => {
+      const createdAt = new Date(boleto.created_at);
+      const dueDate = addDays(createdAt, expirationDays);
+      const daysUntilDue = differenceInDays(dueDate, today);
+      const daysSinceGeneration = differenceInDays(today, startOfDay(createdAt));
+      const isOverdue = isBefore(dueDate, today);
+
+      // Get contacts for this boleto
+      const boletoContacts = contacts?.filter((c) => c.transaction_id === boleto.id) || [];
+
+      // Find applicable rule
+      let applicableRule: RecoveryRule | null = null;
+      let shouldContactToday = false;
+
+      if (rules && rules.length > 0) {
+        for (const rule of rules) {
+          let ruleMatches = false;
+
+          if (rule.rule_type === "days_after_generation" && daysSinceGeneration === rule.days) {
+            ruleMatches = true;
+          } else if (rule.rule_type === "days_before_due" && daysUntilDue === rule.days) {
+            ruleMatches = true;
+          } else if (rule.rule_type === "days_after_due" && isOverdue && Math.abs(daysUntilDue) === rule.days) {
+            ruleMatches = true;
+          }
+
+          if (ruleMatches) {
+            // Check if already contacted today for this rule
+            const contactedToday = boletoContacts.some(
+              (c) => c.rule_id === rule.id && isToday(new Date(c.contacted_at))
+            );
+
+            if (!contactedToday) {
+              applicableRule = rule;
+              shouldContactToday = true;
+              break;
+            }
+          }
+        }
+      }
+
+      // Format message with variables
+      let formattedMessage: string | null = null;
+      if (applicableRule) {
+        formattedMessage = formatRecoveryMessage(applicableRule.message, boleto, dueDate);
+      }
+
+      return {
+        ...boleto,
+        dueDate,
+        daysUntilDue,
+        daysSinceGeneration,
+        isOverdue,
+        applicableRule,
+        formattedMessage,
+        contacts: boletoContacts,
+        shouldContactToday,
+      };
+    });
+  }, [transactions, settings, rules, contacts]);
+
+  // Filter boletos by category
+  const todayBoletos = useMemo(
+    () => processedBoletos.filter((b) => b.shouldContactToday),
+    [processedBoletos]
+  );
+
+  const pendingBoletos = useMemo(
+    () => processedBoletos.filter((b) => !b.isOverdue),
+    [processedBoletos]
+  );
+
+  const overdueBoletos = useMemo(
+    () => processedBoletos.filter((b) => b.isOverdue),
+    [processedBoletos]
+  );
+
+  // Stats
+  const stats = useMemo(() => {
+    const totalValue = todayBoletos.reduce((sum, b) => sum + Number(b.amount), 0);
+    const contactedToday = todayBoletos.filter((b) => 
+      b.contacts.some((c) => isToday(new Date(c.contacted_at)))
+    ).length;
+
+    return {
+      todayCount: todayBoletos.length,
+      todayValue: totalValue,
+      contactedToday,
+      pendingCount: pendingBoletos.length,
+      overdueCount: overdueBoletos.length,
+      totalCount: processedBoletos.length,
+    };
+  }, [todayBoletos, pendingBoletos, overdueBoletos, processedBoletos]);
+
+  return {
+    settings,
+    rules,
+    contacts,
+    processedBoletos,
+    todayBoletos,
+    pendingBoletos,
+    overdueBoletos,
+    stats,
+    updateSettings,
+    addContact,
+  };
+}
+
+function formatRecoveryMessage(template: string, boleto: Transaction, dueDate: Date): string {
+  const firstName = boleto.customer_name?.split(" ")[0] || "Cliente";
+  const formattedAmount = Number(boleto.amount).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+  const formattedDueDate = dueDate.toLocaleDateString("pt-BR");
+  const barcode = boleto.external_id || "";
+
+  return template
+    .replace(/{saudação}/gi, getGreeting())
+    .replace(/{nome}/gi, boleto.customer_name || "Cliente")
+    .replace(/{primeiro_nome}/gi, firstName)
+    .replace(/{valor}/gi, formattedAmount)
+    .replace(/{vencimento}/gi, formattedDueDate)
+    .replace(/{codigo_barras}/gi, barcode);
+}
