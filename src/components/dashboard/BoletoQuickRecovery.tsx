@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Transaction } from "@/hooks/useTransactions";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -295,26 +294,26 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
     fieldId: string;
     highlight?: boolean;
   }) => (
-    <div className={`p-3 rounded-lg border ${highlight ? 'bg-primary/10 border-primary/30' : 'bg-secondary/30 border-border/30'}`}>
-      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+    <div className={`p-2.5 rounded-lg border ${highlight ? 'bg-primary/10 border-primary/30' : 'bg-secondary/30 border-border/30'}`}>
+      <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground mb-0.5">
         <Icon className="h-3 w-3" />
         <span>{label}</span>
       </div>
-      <div className="flex items-center justify-between gap-2">
-        <p className={`text-sm ${highlight ? 'font-bold text-primary' : 'font-medium'} truncate`}>
+      <div className="flex items-center justify-between gap-1">
+        <p className={`text-xs ${highlight ? 'font-bold text-primary' : 'font-medium'} truncate`}>
           {value || "-"}
         </p>
         {value && (
           <Button
             size="icon"
             variant="ghost"
-            className="h-6 w-6 shrink-0"
+            className="h-5 w-5 shrink-0"
             onClick={() => handleCopyField(value, fieldId)}
           >
             {copiedId === fieldId ? (
-              <Check className="h-3 w-3 text-success" />
+              <Check className="h-2.5 w-2.5 text-success" />
             ) : (
-              <Copy className="h-3 w-3" />
+              <Copy className="h-2.5 w-2.5" />
             )}
           </Button>
         )}
@@ -324,22 +323,23 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden p-0">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/30">
+      <DialogContent className="max-w-5xl max-h-[90vh] p-0">
+        <DialogHeader className="px-6 pt-6 pb-3 border-b border-border/30">
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-primary" />
             Recuperação de Boleto
           </DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-0 md:gap-6 p-6 overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-6 p-6">
           {/* Left side - Boleto Info */}
-          <div className="space-y-4">
-            <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+          <div className="space-y-3">
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
               Informações do Boleto
             </h4>
             
-            <div className="space-y-3">
+            {/* Grid 2x2 for compact info */}
+            <div className="grid grid-cols-2 gap-2">
               <InfoCard 
                 icon={User} 
                 label="Cliente" 
@@ -370,58 +370,57 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
                   fieldId="dueDate" 
                 />
               )}
-              
-              <div className="p-3 rounded-lg bg-secondary/30 border border-border/30">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                  <Barcode className="h-3 w-3" />
-                  <span>Código de Barras</span>
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <p className="font-mono text-xs break-all flex-1">
-                    {transaction.external_id || "-"}
-                  </p>
-                  {transaction.external_id && (
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-6 w-6 shrink-0"
-                      onClick={() => handleCopyField(transaction.external_id!, "barcode")}
-                    >
-                      {copiedId === "barcode" ? (
-                        <Check className="h-3 w-3 text-success" />
-                      ) : (
-                        <Copy className="h-3 w-3" />
-                      )}
-                    </Button>
-                  )}
-                </div>
+            </div>
+            
+            {/* Barcode - full width */}
+            <div className="p-2.5 rounded-lg bg-secondary/30 border border-border/30">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                <Barcode className="h-3 w-3" />
+                <span>Código de Barras</span>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <p className="font-mono text-xs break-all flex-1">
+                  {transaction.external_id || "-"}
+                </p>
+                {transaction.external_id && (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-6 w-6 shrink-0"
+                    onClick={() => handleCopyField(transaction.external_id!, "barcode")}
+                  >
+                    {copiedId === "barcode" ? (
+                      <Check className="h-3 w-3 text-success" />
+                    ) : (
+                      <Copy className="h-3 w-3" />
+                    )}
+                  </Button>
+                )}
               </div>
             </div>
           </div>
 
           {/* Right side - Recovery sequence */}
-          <div className="space-y-4 mt-6 md:mt-0 border-t md:border-t-0 md:border-l border-border/30 pt-6 md:pt-0 md:pl-6">
-            <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+          <div className="space-y-3 border-t lg:border-t-0 lg:border-l border-border/30 pt-4 lg:pt-0 lg:pl-6">
+            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
               Mensagens de Recuperação
             </h4>
             
             {isLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
               </div>
             ) : !template || template.blocks.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground border-2 border-dashed border-border/30 rounded-lg">
+              <div className="text-center py-6 text-muted-foreground border-2 border-dashed border-border/30 rounded-lg">
                 <p className="text-sm">Nenhum template configurado</p>
-                <p className="text-xs mt-1">Configure templates clicando na ⚙️ nas ações</p>
+                <p className="text-xs mt-1">Configure templates clicando na ⚙️</p>
               </div>
             ) : (
-              <ScrollArea className="h-[350px] pr-2">
-                <div className="space-y-3">
-                  {template.blocks
-                    .sort((a, b) => a.order - b.order)
-                    .map((block) => renderBlock(block))}
-                </div>
-              </ScrollArea>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[50vh] overflow-y-auto pr-1">
+                {template.blocks
+                  .sort((a, b) => a.order - b.order)
+                  .map((block) => renderBlock(block))}
+              </div>
             )}
           </div>
         </div>
