@@ -151,8 +151,12 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
       ? formatDate(String(metadata.due_date))
       : "-";
 
+    const fullName = transaction.customer_name || "Cliente";
+    const firstName = fullName.split(" ")[0];
+
     return text
-      .replace(/{nome}/g, transaction.customer_name || "Cliente")
+      .replace(/{nome}/g, fullName)
+      .replace(/{primeiro_nome}/g, firstName)
       .replace(/{valor}/g, formatCurrency(Number(transaction.amount)))
       .replace(/{vencimento}/g, dueDate)
       .replace(/{codigo_barras}/g, transaction.external_id || "-");
