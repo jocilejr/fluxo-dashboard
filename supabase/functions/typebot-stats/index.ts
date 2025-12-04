@@ -34,8 +34,8 @@ Deno.serve(async (req) => {
     
     while (hasMore) {
       const url: string = cursor 
-        ? `${TYPEBOT_BASE_URL}/api/v1/typebots/${TYPEBOT_ID}/results?limit=100&cursor=${cursor}`
-        : `${TYPEBOT_BASE_URL}/api/v1/typebots/${TYPEBOT_ID}/results?limit=100`
+        ? `${TYPEBOT_BASE_URL}/api/typebots/${TYPEBOT_ID}/results?limit=100&cursor=${cursor}`
+        : `${TYPEBOT_BASE_URL}/api/typebots/${TYPEBOT_ID}/results?limit=100`
       
       console.log('[typebot-stats] Fetching results from:', url)
 
