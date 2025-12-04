@@ -31,7 +31,7 @@ import { GroupHistoryChart } from "@/components/dashboard/GroupHistoryChart";
 
 const Index = () => {
   const navigate = useNavigate();
-  const { transactions, isLoading, refetch, hasNewTransaction, dismissNewTransaction } = useTransactions();
+  const { transactions, isLoading, refetch, hasNewTransaction, notifications, dismissAllNotifications } = useTransactions();
   const { user } = useAdminCheck();
   const [dateFilter, setDateFilter] = useState<DateFilterValue>(getDefaultDateFilter);
 
@@ -281,7 +281,8 @@ const Index = () => {
         {/* Sale Notification */}
         <SaleNotification 
           isVisible={hasNewTransaction}
-          onDismiss={dismissNewTransaction}
+          notifications={notifications}
+          onDismiss={dismissAllNotifications}
         />
 
         {/* Transactions / Boleto Recovery Tabs */}
