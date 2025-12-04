@@ -80,44 +80,61 @@ export function usePushNotifications() {
       }
 
       // Try to create push subscription if PushManager is available
-      if ('PushManager' in window && 'serviceWorker' in navigator) {
+      const hasPushManager = 'PushManager' in window;
+      const hasServiceWorker = 'serviceWorker' in navigator;
+      console.log('[Push] Creating subscription... PushManager:', hasPushManager, 'SW:', hasServiceWorker);
+      
+      if (hasPushManager && hasServiceWorker) {
         try {
           const registration = await navigator.serviceWorker.ready;
+          console.log('[Push] SW registration:', !!registration, 'pushManager:', !!registration.pushManager);
           
           if (registration.pushManager) {
+            // First, unsubscribe any existing subscription
+            const existingSub = await registration.pushManager.getSubscription();
+            if (existingSub) {
+              console.log('[Push] Unsubscribing existing subscription');
+              await existingSub.unsubscribe();
+            }
+            
+            console.log('[Push] Subscribing with VAPID key...');
             const subscription = await registration.pushManager.subscribe({
               userVisibleOnly: true,
               applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
             });
             
-            console.log('[Push] Subscription created:', subscription.endpoint);
+            console.log('[Push] Subscription created:', subscription.endpoint.substring(0, 50) + '...');
             
             const p256dhKey = subscription.getKey('p256dh');
             const authKey = subscription.getKey('auth');
+            console.log('[Push] Keys obtained:', !!p256dhKey, !!authKey);
             
             if (p256dhKey && authKey) {
               const p256dhArray = new Uint8Array(p256dhKey);
               const authArray = new Uint8Array(authKey);
+              
+              // Delete existing subscriptions for this user first
+              await supabase.from('push_subscriptions').delete().eq('user_id', user.id);
 
-              const { error } = await supabase.from('push_subscriptions').upsert({
+              const { data, error } = await supabase.from('push_subscriptions').insert({
                 user_id: user.id,
                 endpoint: subscription.endpoint,
                 p256dh: btoa(String.fromCharCode.apply(null, Array.from(p256dhArray))),
                 auth: btoa(String.fromCharCode.apply(null, Array.from(authArray))),
-              }, {
-                onConflict: 'user_id',
-              });
+              }).select();
 
               if (error) {
                 console.error('[Push] Error saving subscription:', error);
               } else {
-                console.log('[Push] Subscription saved to database');
+                console.log('[Push] Subscription saved to database:', data);
               }
             }
           }
         } catch (pushError) {
-          console.error('[Push] PushManager error (continuing with basic notifications):', pushError);
+          console.error('[Push] PushManager error:', pushError);
         }
+      } else {
+        console.log('[Push] PushManager not available - notifications will only work with page open');
       }
 
       setIsSubscribed(true);
