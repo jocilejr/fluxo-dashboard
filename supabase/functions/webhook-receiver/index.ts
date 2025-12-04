@@ -308,10 +308,11 @@ Deno.serve(async (req) => {
 
     if (error) throw error;
 
-    console.log('Transaction created:', data.id);
+    console.log('Transaction created:', data.id, 'amount from DB:', data.amount);
 
     const typeLabel = payload.type === 'boleto' ? 'Boleto' : payload.type === 'pix' ? 'PIX' : 'Cartão';
     const amount = `R$ ${Number(data.amount).toFixed(2).replace('.', ',')}`;
+    console.log('Notification amount formatted:', amount);
     
     await sendPushToAllSubscribers(
       supabase,
