@@ -4,7 +4,7 @@ const corsHeaders = {
 }
 
 const TYPEBOT_BASE_URL = 'https://typebot.origemdavida.online'
-const TYPEBOT_ID = 'cmghj8t790000o918ec7vgtt8'
+const WORKSPACE_ID = 'cmghj8t790000o918ec7vgtt8'
 
 Deno.serve(async (req) => {
   console.log('[typebot-stats] Request received')
@@ -24,7 +24,49 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Get results list with pagination (max 100 per request)
+    const body = await req.json().catch(() => ({}))
+    const action = body.action || 'stats'
+
+    // List all typebots in workspace
+    if (action === 'list') {
+      const listUrl = `${TYPEBOT_BASE_URL}/api/v1/typebots?workspaceId=${WORKSPACE_ID}`
+      console.log('[typebot-stats] Listing typebots from:', listUrl)
+
+      const listResponse = await fetch(listUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${typebotToken}`,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (!listResponse.ok) {
+        const errorText = await listResponse.text()
+        console.error('[typebot-stats] List API error:', listResponse.status, errorText)
+        return new Response(
+          JSON.stringify({ error: 'Failed to list typebots', details: errorText }),
+          { status: listResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      const listData = await listResponse.json()
+      console.log('[typebot-stats] Typebots found:', JSON.stringify(listData))
+
+      return new Response(
+        JSON.stringify({ typebots: listData.typebots || listData }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Get stats for a specific typebot
+    const typebotId = body.typebotId
+    if (!typebotId) {
+      return new Response(
+        JSON.stringify({ error: 'typebotId is required for stats action' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     
@@ -34,8 +76,8 @@ Deno.serve(async (req) => {
     
     while (hasMore) {
       const url: string = cursor 
-        ? `${TYPEBOT_BASE_URL}/api/typebots/${TYPEBOT_ID}/results?limit=100&cursor=${cursor}`
-        : `${TYPEBOT_BASE_URL}/api/typebots/${TYPEBOT_ID}/results?limit=100`
+        ? `${TYPEBOT_BASE_URL}/api/v1/typebots/${typebotId}/results?limit=100&cursor=${cursor}`
+        : `${TYPEBOT_BASE_URL}/api/v1/typebots/${typebotId}/results?limit=100`
       
       console.log('[typebot-stats] Fetching results from:', url)
 
@@ -60,14 +102,12 @@ Deno.serve(async (req) => {
       const results = data.results || []
       allResults = [...allResults, ...results]
       
-      // Check if there are more results
       if (data.nextCursor) {
         cursor = data.nextCursor
       } else {
         hasMore = false
       }
       
-      // Safety limit to prevent infinite loops
       if (allResults.length >= 10000) {
         hasMore = false
       }
@@ -75,19 +115,16 @@ Deno.serve(async (req) => {
     
     console.log('[typebot-stats] Total results fetched:', allResults.length)
 
-    // Count results from today
     const todayCount = allResults.filter((result: any) => {
       const createdAt = new Date(result.createdAt)
       return createdAt >= today
     }).length
 
-    // Count completed results
     const completedCount = allResults.filter((result: any) => result.isCompleted).length
 
     console.log('[typebot-stats] Today count:', todayCount)
     console.log('[typebot-stats] Completed count:', completedCount)
 
-    // Return stats based on results
     const responseData = {
       stats: {
         totalViews: allResults.length,
