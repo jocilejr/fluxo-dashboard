@@ -39,6 +39,7 @@ interface RecoveryTemplate {
 }
 
 const VARIABLE_PLACEHOLDERS: Record<string, { label: string; description: string }> = {
+  "{saudação}": { label: "Saudação", description: "Bom dia/Boa tarde/Boa noite" },
   "{nome}": { label: "Nome", description: "Nome completo do cliente" },
   "{primeiro_nome}": { label: "Primeiro Nome", description: "Apenas o primeiro nome" },
   "{valor}": { label: "Valor", description: "Valor do boleto formatado" },
