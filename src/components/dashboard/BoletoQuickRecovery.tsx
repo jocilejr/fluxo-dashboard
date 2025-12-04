@@ -18,6 +18,7 @@ import {
   Calendar
 } from "lucide-react";
 import { toast } from "sonner";
+import { pdfToImage } from "@/lib/pdfToImage";
 
 interface BoletoQuickRecoveryProps {
   open: boolean;
@@ -45,6 +46,9 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
   const [isLoading, setIsLoading] = useState(false);
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
   const [isLoadingPdf, setIsLoadingPdf] = useState(false);
+  const [imageBlobUrl, setImageBlobUrl] = useState<string | null>(null);
+  const [isLoadingImage, setIsLoadingImage] = useState(false);
+  const [pdfArrayBuffer, setPdfArrayBuffer] = useState<ArrayBuffer | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -54,7 +58,10 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
       }
     } else {
       if (pdfBlobUrl) URL.revokeObjectURL(pdfBlobUrl);
+      if (imageBlobUrl) URL.revokeObjectURL(imageBlobUrl);
       setPdfBlobUrl(null);
+      setImageBlobUrl(null);
+      setPdfArrayBuffer(null);
     }
   }, [open, transaction]);
 
@@ -122,11 +129,56 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
       const pdfBlob = new Blob([bytes], { type: "application/pdf" });
       const pdfUrl = URL.createObjectURL(pdfBlob);
       setPdfBlobUrl(pdfUrl);
+      setPdfArrayBuffer(bytes.buffer);
+      
+      // Generate image from PDF
+      generateImageFromPdf(bytes.buffer);
     } catch (error) {
       console.error("Error loading PDF:", error);
       toast.error("Erro ao carregar boleto");
     } finally {
       setIsLoadingPdf(false);
+    }
+  };
+
+  const generateImageFromPdf = async (arrayBuffer: ArrayBuffer) => {
+    setIsLoadingImage(true);
+    try {
+      const imageBlob = await pdfToImage(arrayBuffer, 2);
+      const imageUrl = URL.createObjectURL(imageBlob);
+      setImageBlobUrl(imageUrl);
+    } catch (error) {
+      console.error("Error generating image:", error);
+      toast.error("Erro ao gerar imagem do boleto");
+    } finally {
+      setIsLoadingImage(false);
+    }
+  };
+
+  const handleDownloadImage = () => {
+    if (imageBlobUrl) {
+      const a = document.createElement("a");
+      a.href = imageBlobUrl;
+      a.download = `boleto-${transaction?.customer_name || "cliente"}.jpg`;
+      a.click();
+    }
+  };
+
+  const handleCopyImage = async () => {
+    if (!imageBlobUrl) return;
+    
+    try {
+      const response = await fetch(imageBlobUrl);
+      const blob = await response.blob();
+      await navigator.clipboard.write([
+        new ClipboardItem({ [blob.type]: blob })
+      ]);
+      setCopiedId("image-copy");
+      toast.success("Imagem copiada!");
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (error) {
+      console.error("Error copying image:", error);
+      toast.error("Erro ao copiar imagem");
     }
   };
 
@@ -270,21 +322,56 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
             </div>
             <div>
               <p className="text-sm font-medium">Imagem do Boleto</p>
-              <p className="text-xs text-muted-foreground">Captura de tela</p>
+              <p className="text-xs text-muted-foreground">Gerada automaticamente</p>
             </div>
           </div>
-          {pdfBlobUrl ? (
-            <div className="space-y-2">
-              <Button size="sm" variant="outline" className="w-full gap-2 h-9" onClick={handleOpenPdfInNewTab}>
-                <ExternalLink className="h-4 w-4" />
-                Abrir para captura
-              </Button>
-              <p className="text-xs text-muted-foreground text-center">
-                Use <kbd className="px-1.5 py-0.5 rounded bg-muted text-[10px]">Win+Shift+S</kbd> para capturar
-              </p>
+          {isLoadingImage ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-5 w-5 animate-spin text-emerald-500" />
+              <span className="text-sm ml-2 text-muted-foreground">Gerando imagem...</span>
+            </div>
+          ) : imageBlobUrl ? (
+            <div className="space-y-3">
+              <div className="relative rounded-lg overflow-hidden border border-border bg-background">
+                <img 
+                  src={imageBlobUrl} 
+                  alt="Boleto" 
+                  className="w-full h-auto max-h-32 object-contain"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="flex-1 gap-2 h-9"
+                  onClick={handleCopyImage}
+                >
+                  {copiedId === "image-copy" ? (
+                    <>
+                      <Check className="h-4 w-4 text-emerald-500" />
+                      <span className="text-emerald-500">Copiado!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-4 w-4" />
+                      Copiar
+                    </>
+                  )}
+                </Button>
+                <Button 
+                  size="sm" 
+                  className="flex-1 gap-2 h-9 bg-emerald-600 hover:bg-emerald-700"
+                  onClick={handleDownloadImage}
+                >
+                  <Download className="h-4 w-4" />
+                  Baixar JPG
+                </Button>
+              </div>
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground text-center py-2">Aguardando PDF...</p>
+            <p className="text-sm text-muted-foreground text-center py-2">
+              {isLoadingPdf ? "Aguardando PDF..." : "Imagem não disponível"}
+            </p>
           )}
         </div>
       );
