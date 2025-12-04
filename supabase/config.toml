@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.webhook-groups]
 verify_jwt = false
+
+[functions.typebot-stats]
+verify_jwt = true

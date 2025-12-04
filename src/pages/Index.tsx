@@ -11,21 +11,25 @@ import { useAdminCheck } from "@/hooks/useAdminCheck";
 import { supabase } from "@/integrations/supabase/client";
 import { isWithinInterval } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
 import { 
   FileText, 
   QrCode, 
   CreditCard,
   DollarSign,
   Percent,
-  Wallet
+  Wallet,
+  Bot
 } from "lucide-react";
 import { GroupStatsCards } from "@/components/dashboard/GroupStatsCards";
 import { GroupHistoryChart } from "@/components/dashboard/GroupHistoryChart";
+import { TypebotStats } from "@/components/dashboard/TypebotStats";
 
 const Index = () => {
   const { transactions, isLoading, refetch, hasNewTransaction, dismissNewTransaction } = useTransactions();
   const { user } = useAdminCheck();
   const [dateFilter, setDateFilter] = useState<DateFilterValue>(getDefaultDateFilter);
+  const [showTypebotStats, setShowTypebotStats] = useState(false);
 
   // Check if current user has admin role (not just 'user' role)
   const [isRealAdmin, setIsRealAdmin] = useState<boolean | null>(null);
@@ -137,6 +141,26 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-3 sm:px-4 pb-8">
         <Header />
+        
+        {/* Typebot Stats Button - Admin only */}
+        {isRealAdmin && (
+          <div className="mb-4">
+            <Button
+              variant={showTypebotStats ? "default" : "outline"}
+              size="sm"
+              onClick={() => setShowTypebotStats(!showTypebotStats)}
+              className="gap-2"
+            >
+              <Bot className="h-4 w-4" />
+              {showTypebotStats ? "Ocultar Typebot" : "Ver Typebot Stats"}
+            </Button>
+          </div>
+        )}
+
+        {/* Typebot Stats Panel */}
+        {isRealAdmin && showTypebotStats && (
+          <TypebotStats onClose={() => setShowTypebotStats(false)} />
+        )}
         
         {/* Admin-only: Date Filter and Stats */}
         {isRealAdmin && (
