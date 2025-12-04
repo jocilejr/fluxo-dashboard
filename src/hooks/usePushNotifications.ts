@@ -58,24 +58,35 @@ export function usePushNotifications() {
     return true;
   }, []);
 
-  const showNotification = useCallback((title: string, options?: NotificationOptions) => {
+  const showNotification = useCallback(async (title: string, options?: NotificationOptions) => {
     if (!isSubscribed || Notification.permission !== 'granted') return;
     
     try {
-      new Notification(title, {
-        icon: '/logo-ov.png',
-        badge: '/favicon.png',
-        ...options,
-      });
+      // Use Service Worker for iOS PWA compatibility
+      const registration = await navigator.serviceWorker?.ready;
+      if (registration) {
+        await registration.showNotification(title, {
+          icon: '/logo-ov.png',
+          badge: '/favicon.png',
+          ...options,
+        });
+      } else {
+        // Fallback for browsers without SW
+        new Notification(title, {
+          icon: '/logo-ov.png',
+          badge: '/favicon.png',
+          ...options,
+        });
+      }
     } catch (error) {
       console.error('Error showing notification:', error);
     }
   }, [isSubscribed]);
 
-  const testNotification = useCallback(() => {
+  const testNotification = useCallback(async () => {
     if (!isSubscribed) return false;
     
-    showNotification('Teste de Notificação', {
+    await showNotification('Teste de Notificação', {
       body: 'As notificações estão funcionando!',
       tag: 'test',
     });

@@ -80,15 +80,19 @@ export function useTransactions() {
             // Notify tab title when in background
             notifyNewTransactionRef.current();
             
-            // Browser notification
+            // Browser notification via Service Worker (iOS PWA compatible)
             if (Notification.permission === 'granted') {
               const typeLabel = newData.type === 'boleto' ? 'Boleto' : newData.type === 'pix' ? 'PIX' : 'Cartão';
               const amount = (newData.amount / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-              new Notification(`🔔 Nova Transação - ${typeLabel}`, {
-                body: `${newData.customer_name || 'Cliente'} - ${amount}`,
-                icon: '/logo-ov.png',
-                tag: `transaction-${newData.id}`,
-              });
+              
+              navigator.serviceWorker?.ready.then((registration) => {
+                registration.showNotification(`🔔 Nova Transação - ${typeLabel}`, {
+                  body: `${newData.customer_name || 'Cliente'} - ${amount}`,
+                  icon: '/logo-ov.png',
+                  badge: '/favicon.png',
+                  tag: `transaction-${newData.id}`,
+                });
+              }).catch(console.error);
             }
           }
         }
