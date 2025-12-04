@@ -15,3 +15,59 @@ self.addEventListener("install", () => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());
 });
+
+// Push notification event
+self.addEventListener("push", (event) => {
+  console.log("[SW] Push received:", event);
+  
+  if (!event.data) {
+    console.log("[SW] No data in push event");
+    return;
+  }
+
+  try {
+    const data = event.data.json();
+    console.log("[SW] Push data:", data);
+
+    const title = data.title || "Nova Transação";
+    const options: NotificationOptions = {
+      body: data.body || "Uma nova transação foi recebida",
+      icon: "/logo-ov.png",
+      badge: "/favicon.png",
+      tag: data.tag || "transaction",
+      data: data.url || "/",
+      requireInteraction: true,
+    };
+
+    event.waitUntil(
+      self.registration.showNotification(title, options)
+    );
+  } catch (error) {
+    console.error("[SW] Error processing push:", error);
+  }
+});
+
+// Notification click event
+self.addEventListener("notificationclick", (event) => {
+  console.log("[SW] Notification clicked:", event);
+  event.notification.close();
+
+  const urlToOpen = event.notification.data || "/";
+
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      // Check if there's already a window/tab open
+      for (const client of clientList) {
+        if (client.url.includes(self.location.origin) && "focus" in client) {
+          client.focus();
+          client.postMessage({ type: "NOTIFICATION_CLICK", url: urlToOpen });
+          return;
+        }
+      }
+      // If no window is open, open one
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(urlToOpen);
+      }
+    })
+  );
+});
