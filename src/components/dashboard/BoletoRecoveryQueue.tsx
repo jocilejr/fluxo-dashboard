@@ -22,6 +22,7 @@ import {
   DollarSign,
   Barcode,
   AlertCircle,
+  FileText,
 } from "lucide-react";
 
 interface BoletoRecoveryQueueProps {
@@ -196,12 +197,12 @@ export function BoletoRecoveryQueue({
               <div className="flex items-center gap-2 text-sm">
                 <Barcode className="h-4 w-4 text-muted-foreground" />
                 <span className="text-muted-foreground">Código:</span>
-                <span className="font-mono text-xs truncate">{currentBoleto.external_id}</span>
+                <span className="font-mono text-xs truncate flex-1">{currentBoleto.external_id}</span>
               </div>
             )}
 
-            {/* Status badges */}
-            <div className="flex flex-wrap gap-2">
+            {/* Status badges and Boleto Link */}
+            <div className="flex flex-wrap items-center gap-2">
               {currentBoleto.applicableRule && (
                 <Badge variant="secondary">{currentBoleto.applicableRule.name}</Badge>
               )}
@@ -210,6 +211,17 @@ export function BoletoRecoveryQueue({
                   <AlertCircle className="h-3 w-3" />
                   Vencido
                 </Badge>
+              )}
+              {(currentBoleto.metadata as any)?.boleto_url && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1 ml-auto"
+                  onClick={() => window.open((currentBoleto.metadata as any).boleto_url, "_blank")}
+                >
+                  <FileText className="h-4 w-4" />
+                  Ver Boleto
+                </Button>
               )}
             </div>
           </CardContent>
