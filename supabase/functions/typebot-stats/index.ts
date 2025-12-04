@@ -125,14 +125,19 @@ function analyzeResults(results: any[], typebotDetails: any): any {
     }
   }
   
-  // Get block names from typebot details if available
-  const blocks = typebotDetails?.groups?.flatMap((g: any) => g.blocks || []) || []
+  // Map blockId to group name - groups have the human-readable names
   const blockNameMap: Record<string, string> = {}
-  for (const block of blocks) {
-    if (block.id && block.content?.plainText) {
-      blockNameMap[block.id] = block.content.plainText.substring(0, 50)
-    } else if (block.id && block.title) {
-      blockNameMap[block.id] = block.title
+  const groups = typebotDetails?.groups || []
+  
+  for (const group of groups) {
+    const groupName = group.title || group.name || 'Grupo'
+    const blocks = group.blocks || []
+    
+    for (const block of blocks) {
+      if (block.id) {
+        // Use the group name for this block
+        blockNameMap[block.id] = groupName
+      }
     }
   }
   
