@@ -84,27 +84,29 @@ const Index = () => {
   });
 
   // Filter transactions by date (use paid_at for paid transactions, created_at for others)
-  // Transaction dates are converted to Brazil timezone, filter dates are already in Brazil time
+  // Transaction timestamps are UTC and need conversion to Brazil timezone
+  // Filter dates from DateFilter are already in "Brazil local time" representation
   const filteredTransactions = useMemo(() => {
-    // Helper to get date string in Brazil timezone (YYYY-MM-DD) for transaction timestamps
-    const toBrazilDateString = (utcDateStr: string) => {
+    // Convert UTC transaction timestamp to Brazil date string (YYYY-MM-DD)
+    const transactionToBrazilDate = (utcDateStr: string) => {
       return new Date(utcDateStr).toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
     };
     
-    // Filter dates are already in Brazil time (from DateFilter), extract just the date part
-    const toLocalDateString = (date: Date) => {
+    // Extract date parts from filter dates (already represent Brazil dates via getBrazilNow)
+    // Do NOT convert again - just extract year/month/day as-is
+    const extractDateParts = (date: Date) => {
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
       return `${year}-${month}-${day}`;
     };
     
-    const startDateStr = toLocalDateString(dateFilter.startDate);
-    const endDateStr = toLocalDateString(dateFilter.endDate);
+    const startDateStr = extractDateParts(dateFilter.startDate);
+    const endDateStr = extractDateParts(dateFilter.endDate);
     
     return transactions.filter((t) => {
       const dateStr = t.status === "pago" && t.paid_at ? t.paid_at : t.created_at;
-      const transactionDateStr = toBrazilDateString(dateStr);
+      const transactionDateStr = transactionToBrazilDate(dateStr);
       
       return transactionDateStr >= startDateStr && transactionDateStr <= endDateStr;
     });
