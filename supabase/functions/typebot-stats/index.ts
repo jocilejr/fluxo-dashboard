@@ -166,12 +166,10 @@ Deno.serve(async (req) => {
 
     // RANKING: Get top 10 typebots by leads in date range
     if (action === 'ranking') {
+      // Use dates directly from frontend - they already include timezone adjustment
       const fromDate = body.fromDate ? new Date(body.fromDate) : new Date()
       const toDate = body.toDate ? new Date(body.toDate) : new Date()
       const specificTypebotId = body.typebotId
-      
-      fromDate.setHours(0, 0, 0, 0)
-      toDate.setHours(23, 59, 59, 999)
       
       console.log('[typebot-stats] Ranking for period:', fromDate.toISOString(), '-', toDate.toISOString())
       console.log('[typebot-stats] Specific typebot filter:', specificTypebotId || 'none')
