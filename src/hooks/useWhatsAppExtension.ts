@@ -35,12 +35,24 @@ export function useWhatsAppExtension(): UseWhatsAppExtensionReturn {
 
     window.addEventListener("message", handleMessage);
 
-    // Check if extension is already loaded
-    console.log("[WhatsApp Extension] Sending PING...");
-    window.postMessage({ type: "WHATSAPP_EXTENSION_PING" }, "*");
+    // Send PING immediately and retry a few times
+    const sendPing = () => {
+      console.log("[WhatsApp Extension] Sending PING...");
+      window.postMessage({ type: "WHATSAPP_EXTENSION_PING" }, "*");
+    };
+    
+    // Try immediately
+    sendPing();
+    
+    // Retry after short delays in case content script loads late
+    const retries = [500, 1000, 2000];
+    const timeouts = retries.map((delay) => 
+      setTimeout(sendPing, delay)
+    );
 
     return () => {
       window.removeEventListener("message", handleMessage);
+      timeouts.forEach(clearTimeout);
     };
   }, []);
 
