@@ -18,7 +18,8 @@ import {
   Calendar,
   MessageCircle,
   Wifi,
-  WifiOff
+  WifiOff,
+  GripVertical
 } from "lucide-react";
 import { toast } from "sonner";
 import { pdfToImage } from "@/lib/pdfToImage";
@@ -55,6 +56,9 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
   const [isLoadingImage, setIsLoadingImage] = useState(false);
   const [pdfArrayBuffer, setPdfArrayBuffer] = useState<ArrayBuffer | null>(null);
   const [sendingWhatsApp, setSendingWhatsApp] = useState<string | null>(null);
+  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
+  const [imageBlob, setImageBlob] = useState<Blob | null>(null);
+  const [isDragging, setIsDragging] = useState<string | null>(null);
 
   const { extensionAvailable, extensionStatus, sendText, sendImage, retryConnection } = useWhatsAppExtension();
 
@@ -134,9 +138,10 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
       for (let i = 0; i < binaryString.length; i++) {
         bytes[i] = binaryString.charCodeAt(i);
       }
-      const pdfBlob = new Blob([bytes], { type: "application/pdf" });
-      const pdfUrl = URL.createObjectURL(pdfBlob);
+      const blob = new Blob([bytes], { type: "application/pdf" });
+      const pdfUrl = URL.createObjectURL(blob);
       setPdfBlobUrl(pdfUrl);
+      setPdfBlob(blob);
       setPdfArrayBuffer(bytes.buffer);
       
       // Generate image from PDF
@@ -152,15 +157,33 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
   const generateImageFromPdf = async (arrayBuffer: ArrayBuffer) => {
     setIsLoadingImage(true);
     try {
-      const imageBlob = await pdfToImage(arrayBuffer, 2);
-      const imageUrl = URL.createObjectURL(imageBlob);
+      const blob = await pdfToImage(arrayBuffer, 2);
+      const imageUrl = URL.createObjectURL(blob);
       setImageBlobUrl(imageUrl);
+      setImageBlob(blob);
     } catch (error) {
       console.error("Error generating image:", error);
       toast.error("Erro ao gerar imagem do boleto");
     } finally {
       setIsLoadingImage(false);
     }
+  };
+
+  const handleDragStart = (e: React.DragEvent, type: "pdf" | "image") => {
+    const blob = type === "pdf" ? pdfBlob : imageBlob;
+    if (!blob) return;
+
+    const fileName = `boleto-${transaction?.customer_name || "cliente"}.${type === "pdf" ? "pdf" : "jpg"}`;
+    const file = new File([blob], fileName, { type: blob.type });
+    
+    e.dataTransfer.setData("application/octet-stream", fileName);
+    e.dataTransfer.items.add(file);
+    e.dataTransfer.effectAllowed = "copy";
+    setIsDragging(type);
+  };
+
+  const handleDragEnd = () => {
+    setIsDragging(null);
   };
 
   const handleDownloadImage = () => {
@@ -367,15 +390,28 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
 
     if (block.type === "pdf") {
       return (
-        <div key={block.id} className="p-4 rounded-xl bg-primary/5 border border-primary/20">
+        <div 
+          key={block.id} 
+          className={`p-4 rounded-xl bg-primary/5 border border-primary/20 transition-all ${
+            pdfBlob ? "cursor-grab active:cursor-grabbing" : ""
+          } ${isDragging === "pdf" ? "opacity-50 scale-95 ring-2 ring-primary" : ""}`}
+          draggable={!!pdfBlob}
+          onDragStart={(e) => handleDragStart(e, "pdf")}
+          onDragEnd={handleDragEnd}
+        >
           <div className="flex items-center gap-3 mb-3">
             <div className="p-2 rounded-lg bg-primary/10">
               <FileText className="h-5 w-5 text-primary" />
             </div>
-            <div>
+            <div className="flex-1">
               <p className="text-sm font-medium">PDF do Boleto</p>
-              <p className="text-xs text-muted-foreground">Arquivo para envio</p>
+              <p className="text-xs text-muted-foreground">
+                {pdfBlob ? "Arraste para o WhatsApp" : "Arquivo para envio"}
+              </p>
             </div>
+            {pdfBlob && (
+              <GripVertical className="h-5 w-5 text-muted-foreground" />
+            )}
           </div>
           {isLoadingPdf ? (
             <div className="flex items-center justify-center py-3">
@@ -388,7 +424,7 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
                 <ExternalLink className="h-4 w-4" />
                 Visualizar
               </Button>
-              <Button size="sm" className="flex-1 gap-2 h-9" onClick={handleDownloadPdf}>
+              <Button size="sm" variant="outline" className="flex-1 gap-2 h-9" onClick={handleDownloadPdf}>
                 <Download className="h-4 w-4" />
                 Baixar
               </Button>
@@ -402,15 +438,28 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
 
     if (block.type === "image") {
       return (
-        <div key={block.id} className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
+        <div 
+          key={block.id} 
+          className={`p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20 transition-all ${
+            imageBlob ? "cursor-grab active:cursor-grabbing" : ""
+          } ${isDragging === "image" ? "opacity-50 scale-95 ring-2 ring-emerald-500" : ""}`}
+          draggable={!!imageBlob}
+          onDragStart={(e) => handleDragStart(e, "image")}
+          onDragEnd={handleDragEnd}
+        >
           <div className="flex items-center gap-3 mb-3">
             <div className="p-2 rounded-lg bg-emerald-500/10">
               <ImageIcon className="h-5 w-5 text-emerald-500" />
             </div>
-            <div>
+            <div className="flex-1">
               <p className="text-sm font-medium">Imagem do Boleto</p>
-              <p className="text-xs text-muted-foreground">Gerada automaticamente</p>
+              <p className="text-xs text-muted-foreground">
+                {imageBlob ? "Arraste para o WhatsApp" : "Gerada automaticamente"}
+              </p>
             </div>
+            {imageBlob && (
+              <GripVertical className="h-5 w-5 text-muted-foreground" />
+            )}
           </div>
           {isLoadingImage ? (
             <div className="flex items-center justify-center py-4">
@@ -423,14 +472,14 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
                 <img 
                   src={imageBlobUrl} 
                   alt="Boleto" 
-                  className="w-full h-auto max-h-32 object-contain"
+                  className="w-full h-auto max-h-32 object-contain pointer-events-none"
                 />
               </div>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="flex gap-2">
                 <Button 
                   size="sm" 
                   variant="outline" 
-                  className="gap-2 h-9"
+                  className="flex-1 gap-2 h-9"
                   onClick={handleCopyImage}
                 >
                   {copiedId === "image-copy" ? (
@@ -448,24 +497,11 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
                 <Button 
                   size="sm" 
                   variant="outline"
-                  className="gap-2 h-9"
+                  className="flex-1 gap-2 h-9"
                   onClick={handleDownloadImage}
                 >
                   <Download className="h-4 w-4" />
                   Baixar
-                </Button>
-                <Button 
-                  size="sm" 
-                  className="gap-2 h-9 bg-[#25D366] hover:bg-[#20BD5A] text-white"
-                  onClick={() => handleSendImageWhatsApp(`whatsapp-image-${block.id}`)}
-                  disabled={sendingWhatsApp === `whatsapp-image-${block.id}` || !transaction?.customer_phone}
-                >
-                  {sendingWhatsApp === `whatsapp-image-${block.id}` ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <MessageCircle className="h-4 w-4" />
-                  )}
-                  WhatsApp
                 </Button>
               </div>
             </div>
