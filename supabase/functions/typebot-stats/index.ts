@@ -1,5 +1,3 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -26,59 +24,82 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Get results list to calculate today's count and totals
+    // Get results list with pagination (max 100 per request)
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     
-    const resultsUrl = `${TYPEBOT_BASE_URL}/api/v1/typebots/${TYPEBOT_ID}/results?limit=1000`
-    console.log('[typebot-stats] Fetching results from:', resultsUrl)
+    let allResults: any[] = []
+    let cursor: string | null = null
+    let hasMore = true
+    
+    while (hasMore) {
+      const url: string = cursor 
+        ? `${TYPEBOT_BASE_URL}/api/v1/typebots/${TYPEBOT_ID}/results?limit=100&cursor=${cursor}`
+        : `${TYPEBOT_BASE_URL}/api/v1/typebots/${TYPEBOT_ID}/results?limit=100`
+      
+      console.log('[typebot-stats] Fetching results from:', url)
 
-    const resultsResponse = await fetch(resultsUrl, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${typebotToken}`,
-        'Content-Type': 'application/json',
-      },
-    })
+      const response: Response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${typebotToken}`,
+          'Content-Type': 'application/json',
+        },
+      })
 
-    if (!resultsResponse.ok) {
-      const errorText = await resultsResponse.text()
-      console.error('[typebot-stats] Results API error:', resultsResponse.status, errorText)
-      return new Response(
-        JSON.stringify({ error: 'Failed to fetch Typebot results', details: errorText }),
-        { status: resultsResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('[typebot-stats] Results API error:', response.status, errorText)
+        return new Response(
+          JSON.stringify({ error: 'Failed to fetch Typebot results', details: errorText }),
+          { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      const data = await response.json()
+      const results = data.results || []
+      allResults = [...allResults, ...results]
+      
+      // Check if there are more results
+      if (data.nextCursor) {
+        cursor = data.nextCursor
+      } else {
+        hasMore = false
+      }
+      
+      // Safety limit to prevent infinite loops
+      if (allResults.length >= 10000) {
+        hasMore = false
+      }
     }
-
-    const resultsData = await resultsResponse.json()
-    const results = resultsData.results || []
-    console.log('[typebot-stats] Total results:', results.length)
+    
+    console.log('[typebot-stats] Total results fetched:', allResults.length)
 
     // Count results from today
-    const todayCount = results.filter((result: any) => {
+    const todayCount = allResults.filter((result: any) => {
       const createdAt = new Date(result.createdAt)
       return createdAt >= today
     }).length
 
-    // Count completed results (those with hasStarted and isCompleted)
-    const completedCount = results.filter((result: any) => result.isCompleted).length
+    // Count completed results
+    const completedCount = allResults.filter((result: any) => result.isCompleted).length
 
     console.log('[typebot-stats] Today count:', todayCount)
     console.log('[typebot-stats] Completed count:', completedCount)
 
     // Return stats based on results
-    const response = {
+    const responseData = {
       stats: {
-        totalViews: results.length,
-        totalStarts: results.length,
+        totalViews: allResults.length,
+        totalStarts: allResults.length,
         totalCompleted: completedCount,
       },
       todayCount,
-      totalResults: results.length,
+      totalResults: allResults.length,
     }
 
     return new Response(
-      JSON.stringify(response),
+      JSON.stringify(responseData),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
