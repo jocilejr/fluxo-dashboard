@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon } from "lucide-react";
-import { format, startOfDay, endOfDay, subDays, startOfWeek, startOfMonth, startOfYear } from "date-fns";
+import { format, startOfDay, endOfDay, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { DateRange } from "react-day-picker";
@@ -21,6 +21,13 @@ interface DateFilterProps {
   onChange: (value: DateFilterValue) => void;
 }
 
+// Get current date in Brazil timezone
+function getBrazilNow(): Date {
+  // Get current time in Brazil timezone as a string, then parse it back
+  const brazilDateStr = new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' });
+  return new Date(brazilDateStr);
+}
+
 export function DateFilter({ value, onChange }: DateFilterProps) {
   const [customRange, setCustomRange] = useState<DateRange | undefined>();
   const [isOpen, setIsOpen] = useState(false);
@@ -33,7 +40,7 @@ export function DateFilter({ value, onChange }: DateFilterProps) {
   ];
 
   const handlePresetClick = (type: DateFilterType) => {
-    const now = new Date();
+    const now = getBrazilNow();
     let startDate: Date;
     let endDate = endOfDay(now);
 
@@ -119,7 +126,7 @@ export function DateFilter({ value, onChange }: DateFilterProps) {
 }
 
 export function getDefaultDateFilter(): DateFilterValue {
-  const now = new Date();
+  const now = getBrazilNow();
   return {
     type: "today",
     startDate: startOfDay(now),

@@ -84,22 +84,20 @@ const Index = () => {
   });
 
   // Filter transactions by date (use paid_at for paid transactions, created_at for others)
-  // Convert to Brazil timezone (UTC-3) for accurate date comparison
+  // All dates compared in Brazil timezone (America/Sao_Paulo)
   const filteredTransactions = useMemo(() => {
     // Helper to get date string in Brazil timezone (YYYY-MM-DD)
-    const getBrazilDateString = (utcDateStr: string) => {
-      const date = new Date(utcDateStr);
-      // Format in Brazil timezone
+    const toBrazilDateString = (date: Date) => {
       return date.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
     };
     
-    // Get filter date strings (YYYY-MM-DD format)
-    const startDateStr = dateFilter.startDate.toLocaleDateString('en-CA');
-    const endDateStr = dateFilter.endDate.toLocaleDateString('en-CA');
+    // Get filter date strings in Brazil timezone (YYYY-MM-DD format)
+    const startDateStr = toBrazilDateString(dateFilter.startDate);
+    const endDateStr = toBrazilDateString(dateFilter.endDate);
     
     return transactions.filter((t) => {
       const dateStr = t.status === "pago" && t.paid_at ? t.paid_at : t.created_at;
-      const transactionDateStr = getBrazilDateString(dateStr);
+      const transactionDateStr = toBrazilDateString(new Date(dateStr));
       
       return transactionDateStr >= startDateStr && transactionDateStr <= endDateStr;
     });
