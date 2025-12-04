@@ -27,9 +27,9 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}))
     const action = body.action || 'stats'
 
-    // List all typebots in workspace (filtered by "Fluxos" folder)
+    // List all typebots in "Espiritualidade > Fluxos" folder
     if (action === 'list') {
-      // First, get all folders to find "Fluxos" folder ID
+      // First, get all folders to find the nested folder path
       const foldersUrl = `${TYPEBOT_BASE_URL}/api/v1/folders?workspaceId=${WORKSPACE_ID}`
       console.log('[typebot-stats] Fetching folders from:', foldersUrl)
 
@@ -45,21 +45,37 @@ Deno.serve(async (req) => {
 
       if (foldersResponse.ok) {
         const foldersData = await foldersResponse.json()
-        console.log('[typebot-stats] Folders found:', JSON.stringify(foldersData))
+        const folders = foldersData.folders || foldersData
+        console.log('[typebot-stats] Folders found:', JSON.stringify(folders))
         
-        const fluxosFolder = (foldersData.folders || foldersData)?.find(
-          (f: any) => f.name === 'Fluxos'
-        )
-        if (fluxosFolder) {
-          fluxosFolderId = fluxosFolder.id
-          console.log('[typebot-stats] Found Fluxos folder ID:', fluxosFolderId)
+        // Find "Espiritualidade" folder first
+        const espiritualidadeFolder = folders?.find((f: any) => f.name === 'Espiritualidade')
+        
+        if (espiritualidadeFolder) {
+          console.log('[typebot-stats] Found Espiritualidade folder ID:', espiritualidadeFolder.id)
+          
+          // Find "Fluxos" folder inside Espiritualidade (check parentFolderId)
+          const fluxosFolder = folders?.find(
+            (f: any) => f.name === 'Fluxos' && f.parentFolderId === espiritualidadeFolder.id
+          )
+          
+          if (fluxosFolder) {
+            fluxosFolderId = fluxosFolder.id
+            console.log('[typebot-stats] Found Fluxos folder ID:', fluxosFolderId)
+          }
         }
       }
 
+      if (!fluxosFolderId) {
+        console.log('[typebot-stats] Fluxos folder not found, returning empty list')
+        return new Response(
+          JSON.stringify({ typebots: [] }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
       // List typebots filtered by folder
-      const listUrl = fluxosFolderId 
-        ? `${TYPEBOT_BASE_URL}/api/v1/typebots?workspaceId=${WORKSPACE_ID}&folderId=${fluxosFolderId}`
-        : `${TYPEBOT_BASE_URL}/api/v1/typebots?workspaceId=${WORKSPACE_ID}`
+      const listUrl = `${TYPEBOT_BASE_URL}/api/v1/typebots?workspaceId=${WORKSPACE_ID}&folderId=${fluxosFolderId}`
       console.log('[typebot-stats] Listing typebots from:', listUrl)
 
       const listResponse = await fetch(listUrl, {
