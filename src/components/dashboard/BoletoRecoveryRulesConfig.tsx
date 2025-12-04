@@ -240,10 +240,10 @@ export function BoletoRecoveryRulesConfig() {
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Variable hints */}
-          <div className="flex flex-wrap gap-2 p-3 bg-muted/50 rounded-lg">
-            <span className="text-xs text-muted-foreground mr-2">Variáveis:</span>
+          <div className="flex flex-wrap gap-2 p-3 bg-muted/50 rounded-lg overflow-x-auto">
+            <span className="text-xs text-muted-foreground mr-2 shrink-0">Variáveis:</span>
             {VARIABLE_HINTS.map((v) => (
-              <Badge key={v.var} variant="secondary" className="text-xs font-mono">
+              <Badge key={v.var} variant="secondary" className="text-xs font-mono shrink-0">
                 {v.var}
               </Badge>
             ))}
@@ -326,13 +326,13 @@ export function BoletoRecoveryRulesConfig() {
               rules.map((rule) => (
                 <div
                   key={rule.id}
-                  className={`flex items-center gap-3 p-3 border rounded-lg transition-opacity ${
+                  className={`flex items-center gap-2 sm:gap-3 p-3 border rounded-lg transition-opacity ${
                     !rule.is_active ? "opacity-50" : ""
                   }`}
                 >
-                  <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                  <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab hidden sm:block shrink-0" />
+                  <div className="flex-1 min-w-0 overflow-hidden">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium truncate">{rule.name}</span>
                       <Badge variant="outline" className="text-xs shrink-0">
                         {rule.days} {RULE_TYPE_LABELS[rule.rule_type]?.split(" ").slice(1).join(" ")}
@@ -340,7 +340,7 @@ export function BoletoRecoveryRulesConfig() {
                     </div>
                     <p className="text-xs text-muted-foreground truncate mt-1">{rule.message}</p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                     <Switch
                       checked={rule.is_active}
                       onCheckedChange={(checked) => toggleRule.mutate({ id: rule.id, is_active: checked })}
@@ -348,6 +348,7 @@ export function BoletoRecoveryRulesConfig() {
                     <Button
                       variant="ghost"
                       size="icon"
+                      className="h-8 w-8"
                       onClick={() => setEditingRule(rule)}
                     >
                       <Settings className="h-4 w-4" />
@@ -355,6 +356,7 @@ export function BoletoRecoveryRulesConfig() {
                     <Button
                       variant="ghost"
                       size="icon"
+                      className="h-8 w-8 hidden sm:flex"
                       onClick={() => deleteRule.mutate(rule.id)}
                     >
                       <Trash2 className="h-4 w-4 text-destructive" />
