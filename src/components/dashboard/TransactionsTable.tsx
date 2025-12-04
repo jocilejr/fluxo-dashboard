@@ -645,25 +645,6 @@ export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin =
                   </td>
                   <td className="py-3.5 px-4">
                     <div className="flex items-center justify-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
-                      {transaction.type === 'boleto' && transaction.status === 'gerado' && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10"
-                                onClick={handleOpenTemplateSettings}
-                              >
-                                <Settings2 className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Configurar templates</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
                       {transaction.type === 'boleto' && transaction.metadata?.boleto_url && (
                         <TooltipProvider>
                           <Tooltip>
@@ -838,11 +819,32 @@ export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin =
       </div>
       
       <Tabs value={activeTab} onValueChange={handleTabChange} className="mb-4">
-        <TabsList className="grid w-full grid-cols-3 gap-1">
-          {renderTabTrigger("aprovados", "Aprovados")}
-          {renderTabTrigger("boletos-gerados", "Boletos Gerados")}
-          {renderTabTrigger("pix-cartao-pendentes", "PIX/Cartão Pend.")}
-        </TabsList>
+        <div className="flex items-center gap-2">
+          <TabsList className="grid flex-1 grid-cols-3 gap-1">
+            {renderTabTrigger("aprovados", "Aprovados")}
+            {renderTabTrigger("boletos-gerados", "Boletos Gerados")}
+            {renderTabTrigger("pix-cartao-pendentes", "PIX/Cartão Pend.")}
+          </TabsList>
+          {activeTab === "boletos-gerados" && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9 shrink-0"
+                    onClick={() => setTemplateSettingsOpen(true)}
+                  >
+                    <Settings2 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Configurar templates de recuperação</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+        </div>
       </Tabs>
 
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
