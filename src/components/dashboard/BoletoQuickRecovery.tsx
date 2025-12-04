@@ -56,7 +56,7 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
   const [pdfArrayBuffer, setPdfArrayBuffer] = useState<ArrayBuffer | null>(null);
   const [sendingWhatsApp, setSendingWhatsApp] = useState<string | null>(null);
 
-  const { extensionAvailable, sendText, sendImage } = useWhatsAppExtension();
+  const { extensionAvailable, extensionStatus, sendText, sendImage, retryConnection } = useWhatsAppExtension();
 
   useEffect(() => {
     if (open) {
@@ -495,22 +495,27 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
                 <p className="text-sm font-normal text-muted-foreground">Copie as mensagens para enviar ao cliente</p>
               </div>
             </DialogTitle>
-            <Badge 
-              variant={extensionAvailable ? "default" : "secondary"}
-              className={`gap-1.5 ${extensionAvailable ? "bg-[#25D366] hover:bg-[#25D366]" : ""}`}
-            >
-              {extensionAvailable ? (
-                <>
-                  <Wifi className="h-3 w-3" />
-                  Extensão conectada
-                </>
-              ) : (
-                <>
-                  <WifiOff className="h-3 w-3" />
-                  Modo manual
-                </>
-              )}
-            </Badge>
+            {extensionStatus === "connecting" ? (
+              <Badge variant="outline" className="gap-1.5 border-amber-500/50 text-amber-500">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Conectando...
+              </Badge>
+            ) : extensionStatus === "connected" ? (
+              <Badge className="gap-1.5 bg-[#25D366] hover:bg-[#25D366] text-white">
+                <Wifi className="h-3 w-3" />
+                Extensão conectada
+              </Badge>
+            ) : (
+              <Badge 
+                variant="secondary" 
+                className="gap-1.5 cursor-pointer hover:bg-muted"
+                onClick={retryConnection}
+              >
+                <WifiOff className="h-3 w-3" />
+                Desconectado
+                <span className="text-xs opacity-70">(clique para reconectar)</span>
+              </Badge>
+            )}
           </div>
         </DialogHeader>
 
