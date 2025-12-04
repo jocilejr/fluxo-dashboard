@@ -1,9 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Transaction } from "./useTransactions";
-import { useMemo } from "react";
+import { useMemo, useEffect, useState } from "react";
 import { addDays, differenceInDays, isToday, isBefore, startOfDay } from "date-fns";
-import { useAuth } from "./useAuth";
 import { getGreeting } from "@/lib/greeting";
 
 export interface BoletoSettings {
@@ -44,7 +43,14 @@ export interface BoletoWithRecovery extends Transaction {
 
 export function useBoletoRecovery(transactions: Transaction[]) {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const [userId, setUserId] = useState<string | null>(null);
+
+  // Get current user id
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setUserId(data.user?.id || null);
+    });
+  }, []);
 
   // Fetch boleto settings
   const { data: settings } = useQuery({
@@ -110,12 +116,15 @@ export function useBoletoRecovery(transactions: Transaction[]) {
   // Add contact mutation
   const addContact = useMutation({
     mutationFn: async ({ transactionId, ruleId, notes }: { transactionId: string; ruleId?: string; notes?: string }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+      
       const { error } = await supabase
         .from("boleto_recovery_contacts")
         .insert({
           transaction_id: transactionId,
           rule_id: ruleId || null,
-          user_id: user?.id || "",
+          user_id: user.id,
           notes: notes || null,
         });
       if (error) throw error;
