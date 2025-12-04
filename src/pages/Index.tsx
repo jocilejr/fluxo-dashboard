@@ -79,10 +79,11 @@ const Index = () => {
     enabled: isRealAdmin === true,
   });
 
-  // Filter transactions by date
+  // Filter transactions by date (use paid_at for paid transactions, created_at for others)
   const filteredTransactions = useMemo(() => {
     return transactions.filter((t) => {
-      const date = new Date(t.created_at);
+      const dateStr = t.status === "pago" && t.paid_at ? t.paid_at : t.created_at;
+      const date = new Date(dateStr);
       return isWithinInterval(date, { start: dateFilter.startDate, end: dateFilter.endDate });
     });
   }, [transactions, dateFilter]);
