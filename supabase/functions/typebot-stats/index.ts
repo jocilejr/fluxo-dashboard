@@ -7,6 +7,7 @@ const TYPEBOT_BASE_URL = 'https://typebot.origemdavida.online'
 const WORKSPACE_ID = 'cmghj8t790000o918ec7vgtt8'
 
 async function getFluxosFolderId(typebotToken: string): Promise<string | null> {
+  // First get root folders
   const foldersUrl = `${TYPEBOT_BASE_URL}/api/v1/folders?workspaceId=${WORKSPACE_ID}`
   console.log('[typebot-stats] Fetching folders from:', foldersUrl)
 
@@ -22,21 +23,53 @@ async function getFluxosFolderId(typebotToken: string): Promise<string | null> {
 
   const foldersData = await foldersResponse.json()
   const folders = foldersData.folders || foldersData
+  console.log('[typebot-stats] All folders:', JSON.stringify(folders))
   
   // Find "Espiritualidade" folder first
   const espiritualidadeFolder = folders?.find((f: any) => f.name === 'Espiritualidade')
   
   if (espiritualidadeFolder) {
-    // Find "Fluxos" folder inside Espiritualidade
+    console.log('[typebot-stats] Found Espiritualidade folder ID:', espiritualidadeFolder.id)
+    
+    // Now fetch subfolders inside Espiritualidade
+    const subFoldersUrl = `${TYPEBOT_BASE_URL}/api/v1/folders?workspaceId=${WORKSPACE_ID}&parentFolderId=${espiritualidadeFolder.id}`
+    console.log('[typebot-stats] Fetching subfolders from:', subFoldersUrl)
+    
+    const subFoldersResponse = await fetch(subFoldersUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${typebotToken}`,
+        'Content-Type': 'application/json',
+      },
+    })
+    
+    if (subFoldersResponse.ok) {
+      const subFoldersData = await subFoldersResponse.json()
+      const subFolders = subFoldersData.folders || subFoldersData
+      console.log('[typebot-stats] Subfolders in Espiritualidade:', JSON.stringify(subFolders))
+      
+      const fluxosFolder = subFolders?.find((f: any) => f.name === 'Fluxos')
+      if (fluxosFolder) {
+        console.log('[typebot-stats] Found Fluxos folder ID:', fluxosFolder.id)
+        return fluxosFolder.id
+      }
+    }
+    
+    // If no subfolder API, try finding Fluxos with parentFolderId matching Espiritualidade
     const fluxosFolder = folders?.find(
       (f: any) => f.name === 'Fluxos' && f.parentFolderId === espiritualidadeFolder.id
     )
     if (fluxosFolder) {
-      console.log('[typebot-stats] Found Fluxos folder ID:', fluxosFolder.id)
+      console.log('[typebot-stats] Found Fluxos folder ID (from main list):', fluxosFolder.id)
       return fluxosFolder.id
     }
+    
+    // Fallback: return Espiritualidade folder if Fluxos not found
+    console.log('[typebot-stats] Fluxos not found, using Espiritualidade folder')
+    return espiritualidadeFolder.id
   }
   
+  console.log('[typebot-stats] Espiritualidade folder not found')
   return null
 }
 
@@ -135,11 +168,39 @@ Deno.serve(async (req) => {
     if (action === 'ranking') {
       const fromDate = body.fromDate ? new Date(body.fromDate) : new Date()
       const toDate = body.toDate ? new Date(body.toDate) : new Date()
+      const specificTypebotId = body.typebotId
       
       fromDate.setHours(0, 0, 0, 0)
       toDate.setHours(23, 59, 59, 999)
       
       console.log('[typebot-stats] Ranking for period:', fromDate.toISOString(), '-', toDate.toISOString())
+      console.log('[typebot-stats] Specific typebot filter:', specificTypebotId || 'none')
+
+      // If specific typebot is selected, just get its count
+      if (specificTypebotId) {
+        const count = await getTypebotResultsCount(typebotToken, specificTypebotId, fromDate, toDate)
+        
+        // Get typebot details
+        const typebotUrl = `${TYPEBOT_BASE_URL}/api/v1/typebots/${specificTypebotId}`
+        const typebotResponse = await fetch(typebotUrl, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${typebotToken}`,
+            'Content-Type': 'application/json',
+          },
+        })
+        
+        let typebotName = 'Typebot'
+        if (typebotResponse.ok) {
+          const typebotData = await typebotResponse.json()
+          typebotName = typebotData.typebot?.name || typebotData.name || 'Typebot'
+        }
+
+        return new Response(
+          JSON.stringify({ ranking: [{ id: specificTypebotId, name: typebotName, count }] }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
 
       if (!fluxosFolderId) {
         return new Response(
