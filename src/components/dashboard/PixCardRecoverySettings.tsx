@@ -89,7 +89,7 @@ export function PixCardRecoverySettings() {
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
             Configure a mensagem para recuperar PIX/Cartão pendentes.
-            Variáveis: {"{nome}"}, {"{primeiro_nome}"}, {"{valor}"}
+            Variáveis: {"{saudação}"}, {"{nome}"}, {"{primeiro_nome}"}, {"{valor}"}
           </p>
           <div className="space-y-2">
             <Label>Mensagem</Label>

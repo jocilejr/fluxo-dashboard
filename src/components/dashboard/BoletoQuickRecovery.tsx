@@ -24,6 +24,7 @@ import {
 import { toast } from "sonner";
 import { pdfToImage } from "@/lib/pdfToImage";
 import { useWhatsAppExtension } from "@/hooks/useWhatsAppExtension";
+import { getGreeting } from "@/lib/greeting";
 import { Badge } from "@/components/ui/badge";
 
 interface BoletoQuickRecoveryProps {
@@ -237,6 +238,8 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
     const firstName = fullName.split(" ")[0];
 
     return text
+      .replace(/{saudação}/g, getGreeting())
+      .replace(/{saudacao}/g, getGreeting())
       .replace(/{nome}/g, fullName)
       .replace(/{primeiro_nome}/g, firstName)
       .replace(/{valor}/g, formatCurrency(Number(transaction.amount)))

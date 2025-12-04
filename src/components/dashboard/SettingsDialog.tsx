@@ -584,7 +584,7 @@ export const SettingsDialog = ({ trigger, asMobileItem }: SettingsDialogProps) =
               </h3>
               <p className="text-sm text-muted-foreground">
                 Configure a mensagem que será enviada para recuperar pagamentos pendentes de PIX e Cartão.
-                Use as variáveis: {"{nome}"}, {"{primeiro_nome}"}, {"{valor}"}
+                Use as variáveis: {"{saudação}"}, {"{nome}"}, {"{primeiro_nome}"}, {"{valor}"}
               </p>
               <div className="space-y-2">
                 <Label htmlFor="recoveryMsg">Mensagem</Label>
