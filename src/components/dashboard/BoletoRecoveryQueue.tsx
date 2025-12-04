@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -43,8 +43,18 @@ export function BoletoRecoveryQueue({
   const [notes, setNotes] = useState("");
   const { extensionStatus, openChat, sendText, fallbackOpenWhatsApp } = useWhatsAppExtension();
 
-  const currentBoleto = boletos[currentIndex];
-  const progress = boletos.length > 0 ? ((currentIndex) / boletos.length) * 100 : 0;
+  // Reset index when modal opens
+  useEffect(() => {
+    if (open) {
+      setCurrentIndex(0);
+      setNotes("");
+    }
+  }, [open]);
+
+  // Safe index to prevent out of bounds
+  const safeIndex = currentIndex >= boletos.length ? 0 : currentIndex;
+  const currentBoleto = boletos.length > 0 ? boletos[safeIndex] : null;
+  const progress = boletos.length > 0 ? ((safeIndex) / boletos.length) * 100 : 0;
 
   const formatCurrency = (value: number) =>
     value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -93,22 +103,22 @@ export function BoletoRecoveryQueue({
     
     setNotes("");
     
-    if (currentIndex < boletos.length - 1) {
-      setCurrentIndex(currentIndex + 1);
+    if (safeIndex < boletos.length - 1) {
+      setCurrentIndex(safeIndex + 1);
     } else {
       onOpenChange(false);
       toast({ title: "Parabéns!", description: "Você concluiu a recuperação de hoje! 🎉" });
     }
-  }, [currentBoleto, currentIndex, boletos.length, notes, onMarkContacted, onOpenChange, toast]);
+  }, [currentBoleto, safeIndex, boletos.length, notes, onMarkContacted, onOpenChange, toast]);
 
   const handleSkip = useCallback(() => {
-    if (currentIndex < boletos.length - 1) {
-      setCurrentIndex(currentIndex + 1);
+    if (safeIndex < boletos.length - 1) {
+      setCurrentIndex(safeIndex + 1);
       setNotes("");
     } else {
       onOpenChange(false);
     }
-  }, [currentIndex, boletos.length, onOpenChange]);
+  }, [safeIndex, boletos.length, onOpenChange]);
 
   const handleClose = () => {
     setCurrentIndex(0);
@@ -145,7 +155,7 @@ export function BoletoRecoveryQueue({
               Modo Recuperação
             </DialogTitle>
             <Badge variant="outline">
-              {currentIndex + 1} / {boletos.length}
+              {safeIndex + 1} / {boletos.length}
             </Badge>
           </div>
         </DialogHeader>
