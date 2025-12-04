@@ -390,47 +390,54 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
 
     if (block.type === "pdf") {
       return (
-        <div 
-          key={block.id} 
-          className={`p-4 rounded-xl bg-primary/5 border border-primary/20 transition-all ${
-            pdfBlob ? "cursor-grab active:cursor-grabbing" : ""
-          } ${isDragging === "pdf" ? "opacity-50 scale-95 ring-2 ring-primary" : ""}`}
-          draggable={!!pdfBlob}
-          onDragStart={(e) => handleDragStart(e, "pdf")}
-          onDragEnd={handleDragEnd}
-        >
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <FileText className="h-5 w-5 text-primary" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium">PDF do Boleto</p>
-              <p className="text-xs text-muted-foreground">
-                {pdfBlob ? "Arraste para o WhatsApp" : "Arquivo para envio"}
-              </p>
-            </div>
-            {pdfBlob && (
-              <GripVertical className="h-5 w-5 text-muted-foreground" />
-            )}
+        <div key={block.id} className="space-y-3">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <FileText className="h-4 w-4" />
+            <span>PDF do Boleto</span>
           </div>
           {isLoadingPdf ? (
-            <div className="flex items-center justify-center py-3">
+            <div className="flex items-center justify-center py-6">
               <Loader2 className="h-5 w-5 animate-spin text-primary" />
-              <span className="text-sm ml-2 text-muted-foreground">Carregando...</span>
             </div>
-          ) : pdfBlobUrl ? (
-            <div className="flex gap-2">
-              <Button size="sm" variant="outline" className="flex-1 gap-2 h-9" onClick={handleOpenPdfInNewTab}>
-                <ExternalLink className="h-4 w-4" />
-                Visualizar
-              </Button>
-              <Button size="sm" variant="outline" className="flex-1 gap-2 h-9" onClick={handleDownloadPdf}>
-                <Download className="h-4 w-4" />
-                Baixar
-              </Button>
+          ) : pdfBlob ? (
+            <div 
+              className={`relative group p-4 rounded-xl bg-gradient-to-br from-red-500/10 to-red-600/5 border-2 border-dashed border-red-500/30 hover:border-red-500/60 cursor-grab active:cursor-grabbing transition-all ${
+                isDragging === "pdf" ? "opacity-50 scale-95 border-red-500" : ""
+              }`}
+              draggable
+              onDragStart={(e) => handleDragStart(e, "pdf")}
+              onDragEnd={handleDragEnd}
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-20 bg-white rounded-lg shadow-md flex items-center justify-center border">
+                  <div className="text-center">
+                    <FileText className="h-8 w-8 text-red-500 mx-auto" />
+                    <span className="text-[10px] font-bold text-red-500">PDF</span>
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium truncate">
+                    boleto-{transaction?.customer_name?.split(" ")[0] || "cliente"}.pdf
+                  </p>
+                  <p className="text-xs text-muted-foreground">Arraste para o WhatsApp →</p>
+                </div>
+                <GripVertical className="h-6 w-6 text-muted-foreground/50 group-hover:text-muted-foreground" />
+              </div>
             </div>
           ) : (
             <p className="text-sm text-muted-foreground text-center py-2">PDF não disponível</p>
+          )}
+          {pdfBlobUrl && (
+            <div className="flex gap-2">
+              <Button size="sm" variant="ghost" className="flex-1 gap-2 h-8 text-xs" onClick={handleOpenPdfInNewTab}>
+                <ExternalLink className="h-3 w-3" />
+                Visualizar
+              </Button>
+              <Button size="sm" variant="ghost" className="flex-1 gap-2 h-8 text-xs" onClick={handleDownloadPdf}>
+                <Download className="h-3 w-3" />
+                Baixar
+              </Button>
+            </div>
           )}
         </div>
       );
@@ -438,77 +445,66 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
 
     if (block.type === "image") {
       return (
-        <div 
-          key={block.id} 
-          className={`p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20 transition-all ${
-            imageBlob ? "cursor-grab active:cursor-grabbing" : ""
-          } ${isDragging === "image" ? "opacity-50 scale-95 ring-2 ring-emerald-500" : ""}`}
-          draggable={!!imageBlob}
-          onDragStart={(e) => handleDragStart(e, "image")}
-          onDragEnd={handleDragEnd}
-        >
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 rounded-lg bg-emerald-500/10">
-              <ImageIcon className="h-5 w-5 text-emerald-500" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium">Imagem do Boleto</p>
-              <p className="text-xs text-muted-foreground">
-                {imageBlob ? "Arraste para o WhatsApp" : "Gerada automaticamente"}
-              </p>
-            </div>
-            {imageBlob && (
-              <GripVertical className="h-5 w-5 text-muted-foreground" />
-            )}
+        <div key={block.id} className="space-y-3">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <ImageIcon className="h-4 w-4" />
+            <span>Imagem do Boleto</span>
           </div>
           {isLoadingImage ? (
-            <div className="flex items-center justify-center py-4">
+            <div className="flex items-center justify-center py-6">
               <Loader2 className="h-5 w-5 animate-spin text-emerald-500" />
-              <span className="text-sm ml-2 text-muted-foreground">Gerando imagem...</span>
             </div>
-          ) : imageBlobUrl ? (
-            <div className="space-y-3">
-              <div className="relative rounded-lg overflow-hidden border border-border bg-background">
-                <img 
-                  src={imageBlobUrl} 
-                  alt="Boleto" 
-                  className="w-full h-auto max-h-32 object-contain pointer-events-none"
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  className="flex-1 gap-2 h-9"
-                  onClick={handleCopyImage}
-                >
-                  {copiedId === "image-copy" ? (
-                    <>
-                      <Check className="h-4 w-4 text-emerald-500" />
-                      <span className="text-emerald-500">Copiado!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="h-4 w-4" />
-                      Copiar
-                    </>
-                  )}
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  className="flex-1 gap-2 h-9"
-                  onClick={handleDownloadImage}
-                >
-                  <Download className="h-4 w-4" />
-                  Baixar
-                </Button>
+          ) : imageBlob && imageBlobUrl ? (
+            <div 
+              className={`relative group rounded-xl border-2 border-dashed border-emerald-500/30 hover:border-emerald-500/60 cursor-grab active:cursor-grabbing transition-all overflow-hidden ${
+                isDragging === "image" ? "opacity-50 scale-95 border-emerald-500" : ""
+              }`}
+              draggable
+              onDragStart={(e) => handleDragStart(e, "image")}
+              onDragEnd={handleDragEnd}
+            >
+              <img 
+                src={imageBlobUrl} 
+                alt="Boleto" 
+                className="w-full h-auto max-h-48 object-contain bg-white pointer-events-none"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-3">
+                <span className="text-white text-sm font-medium flex items-center gap-2">
+                  <GripVertical className="h-4 w-4" />
+                  Arraste para o WhatsApp
+                </span>
               </div>
             </div>
           ) : (
             <p className="text-sm text-muted-foreground text-center py-2">
               {isLoadingPdf ? "Aguardando PDF..." : "Imagem não disponível"}
             </p>
+          )}
+          {imageBlobUrl && (
+            <div className="flex gap-2">
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                className="flex-1 gap-2 h-8 text-xs"
+                onClick={handleCopyImage}
+              >
+                {copiedId === "image-copy" ? (
+                  <Check className="h-3 w-3 text-emerald-500" />
+                ) : (
+                  <Copy className="h-3 w-3" />
+                )}
+                Copiar
+              </Button>
+              <Button 
+                size="sm" 
+                variant="ghost"
+                className="flex-1 gap-2 h-8 text-xs"
+                onClick={handleDownloadImage}
+              >
+                <Download className="h-3 w-3" />
+                Baixar
+              </Button>
+            </div>
           )}
         </div>
       );
