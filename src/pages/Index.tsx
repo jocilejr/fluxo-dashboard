@@ -84,20 +84,27 @@ const Index = () => {
   });
 
   // Filter transactions by date (use paid_at for paid transactions, created_at for others)
-  // All dates compared in Brazil timezone (America/Sao_Paulo)
+  // Transaction dates are converted to Brazil timezone, filter dates are already in Brazil time
   const filteredTransactions = useMemo(() => {
-    // Helper to get date string in Brazil timezone (YYYY-MM-DD)
-    const toBrazilDateString = (date: Date) => {
-      return date.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+    // Helper to get date string in Brazil timezone (YYYY-MM-DD) for transaction timestamps
+    const toBrazilDateString = (utcDateStr: string) => {
+      return new Date(utcDateStr).toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
     };
     
-    // Get filter date strings in Brazil timezone (YYYY-MM-DD format)
-    const startDateStr = toBrazilDateString(dateFilter.startDate);
-    const endDateStr = toBrazilDateString(dateFilter.endDate);
+    // Filter dates are already in Brazil time (from DateFilter), extract just the date part
+    const toLocalDateString = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+    
+    const startDateStr = toLocalDateString(dateFilter.startDate);
+    const endDateStr = toLocalDateString(dateFilter.endDate);
     
     return transactions.filter((t) => {
       const dateStr = t.status === "pago" && t.paid_at ? t.paid_at : t.created_at;
-      const transactionDateStr = toBrazilDateString(new Date(dateStr));
+      const transactionDateStr = toBrazilDateString(dateStr);
       
       return transactionDateStr >= startDateStr && transactionDateStr <= endDateStr;
     });
