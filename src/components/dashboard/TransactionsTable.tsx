@@ -148,9 +148,12 @@ export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin =
   };
 
   // Filter transactions by date first
+  // For paid transactions, use paid_at date; for others, use created_at
   const dateFilteredTransactions = useMemo(() => {
     return transactions.filter((t) => {
-      const date = new Date(t.created_at);
+      // For paid transactions, use paid_at if available, otherwise use created_at
+      const dateStr = t.status === "pago" && t.paid_at ? t.paid_at : t.created_at;
+      const date = new Date(dateStr);
       return isWithinInterval(date, { start: dateFilter.startDate, end: dateFilter.endDate });
     });
   }, [transactions, dateFilter]);
