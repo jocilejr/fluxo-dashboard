@@ -55,7 +55,7 @@ export function useTransactions() {
         .from("transactions")
         .select("*")
         .order("created_at", { ascending: false })
-        .limit(100);
+        .limit(500);
 
       if (error) throw error;
       return data as Transaction[];
