@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useTabNotification } from "./useTabNotification";
 
 export interface Transaction {
@@ -27,10 +27,19 @@ export interface TransactionStats {
   volumeCartao: number;
 }
 
+export interface TransactionNotification {
+  id: string;
+  type: "boleto" | "pix" | "cartao";
+  status: "gerado" | "pago" | "pendente";
+  customerName: string;
+  amount: number;
+  timestamp: Date;
+}
+
 export function useTransactions() {
   const { notifyNewTransaction } = useTabNotification();
   const initialLoadRef = useRef(true);
-  const [hasNewTransaction, setHasNewTransaction] = useState(false);
+  const [notifications, setNotifications] = useState<TransactionNotification[]>([]);
   
   // Store callback in ref to avoid re-subscriptions
   const notifyNewTransactionRef = useRef(notifyNewTransaction);
@@ -69,30 +78,58 @@ export function useTransactions() {
           console.log("initialLoadRef.current:", initialLoadRef.current);
           refetch();
 
-          // Send notification for new/updated transactions (INSERT only)
-          if (payload.eventType !== "INSERT") return;
+          // Handle notifications for INSERT and UPDATE events
+          if (payload.eventType !== "INSERT" && payload.eventType !== "UPDATE") return;
           
           const newData = payload.new as Transaction;
-          if (newData && newData.type && newData.status && !initialLoadRef.current) {
-            // Show alert in transactions section
-            setHasNewTransaction(true);
+          const oldData = payload.old as Transaction | null;
+          
+          if (!newData || !newData.type || !newData.status || initialLoadRef.current) return;
+
+          // Determine notification type
+          let shouldNotify = false;
+          let notificationStatus: "gerado" | "pago" | "pendente" = "gerado";
+
+          if (payload.eventType === "INSERT") {
+            shouldNotify = true;
+            notificationStatus = newData.status === "pago" ? "pago" : 
+                                 newData.status === "pendente" ? "pendente" : "gerado";
+          } else if (payload.eventType === "UPDATE") {
+            // Only notify if status changed to "pago"
+            if (oldData && oldData.status !== "pago" && newData.status === "pago") {
+              shouldNotify = true;
+              notificationStatus = "pago";
+            }
+          }
+
+          if (shouldNotify) {
+            const notification: TransactionNotification = {
+              id: newData.id,
+              type: newData.type,
+              status: notificationStatus,
+              customerName: newData.customer_name || "Cliente",
+              amount: newData.amount,
+              timestamp: new Date(),
+            };
+
+            setNotifications(prev => [notification, ...prev.slice(0, 9)]);
 
             // Notify tab title when in background
             notifyNewTransactionRef.current();
             
             // Browser notification via Service Worker
             if (Notification.permission === 'granted' && navigator.serviceWorker) {
-              const typeLabel = newData.type === 'boleto' ? 'Boleto' : newData.type === 'pix' ? 'PIX' : 'Cartão';
+              const typeLabel = getNotificationTitle(newData.type, notificationStatus);
               const amount = newData.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
               console.log('[Notification] Raw amount:', newData.amount, 'Formatted:', amount);
               
               navigator.serviceWorker.ready
                 .then((registration) => {
-                  return registration.showNotification(`🔔 Nova Transação - ${typeLabel}`, {
+                  return registration.showNotification(typeLabel, {
                     body: `${newData.customer_name || 'Cliente'} - ${amount}`,
                     icon: '/logo-ov.png',
                     badge: '/favicon.png',
-                    tag: `transaction-${newData.id}`,
+                    tag: `transaction-${newData.id}-${notificationStatus}`,
                   });
                 })
                 .catch(() => {});
@@ -124,7 +161,15 @@ export function useTransactions() {
       .reduce((sum, t) => sum + Number(t.amount), 0) || 0,
   };
 
-  const dismissNewTransaction = () => setHasNewTransaction(false);
+  const dismissNotification = useCallback((id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  }, []);
+
+  const dismissAllNotifications = useCallback(() => {
+    setNotifications([]);
+  }, []);
+
+  const hasNewTransaction = notifications.length > 0;
 
   return {
     transactions: transactions || [],
@@ -132,6 +177,29 @@ export function useTransactions() {
     isLoading,
     refetch,
     hasNewTransaction,
-    dismissNewTransaction,
+    notifications,
+    dismissNotification,
+    dismissAllNotifications,
   };
+}
+
+function getNotificationTitle(type: Transaction["type"], status: "gerado" | "pago" | "pendente"): string {
+  const titles: Record<string, Record<string, string>> = {
+    boleto: {
+      gerado: "📄 Boleto Gerado",
+      pago: "✅ Boleto Pago",
+      pendente: "⏳ Boleto Pendente",
+    },
+    pix: {
+      gerado: "📱 PIX Gerado",
+      pago: "✅ PIX Pago",
+      pendente: "⏳ PIX Pendente",
+    },
+    cartao: {
+      gerado: "💳 Cartão - Pedido",
+      pago: "✅ Cartão Pago",
+      pendente: "⏳ Cartão Pendente",
+    },
+  };
+  return titles[type]?.[status] || "🔔 Nova Transação";
 }
