@@ -83,7 +83,7 @@ export function useTransactions() {
             // Browser notification via Service Worker
             if (Notification.permission === 'granted' && navigator.serviceWorker) {
               const typeLabel = newData.type === 'boleto' ? 'Boleto' : newData.type === 'pix' ? 'PIX' : 'Cartão';
-              const amount = (newData.amount / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+              const amount = newData.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
               
               navigator.serviceWorker.ready
                 .then((registration) => {
