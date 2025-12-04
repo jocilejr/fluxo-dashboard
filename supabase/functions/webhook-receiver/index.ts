@@ -21,6 +21,12 @@ interface WebhookPayload {
   paid_at?: string;
 }
 
+interface PushSubscription {
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+}
+
 function normalizePhone(phone?: string): string | undefined {
   if (!phone) return undefined;
   return phone.replace(/^\+/, '');
@@ -29,6 +35,80 @@ function normalizePhone(phone?: string): string | undefined {
 function normalizeExternalId(externalId?: string): string | undefined {
   if (!externalId) return undefined;
   return externalId.replace(/[\s.\-\/]/g, '');
+}
+
+async function sendPushNotification(
+  subscription: PushSubscription,
+  payload: { title: string; body: string; tag?: string },
+  vapidPrivateKey: string,
+  vapidPublicKey: string
+): Promise<boolean> {
+  try {
+    // Import web-push compatible library for Deno
+    const { default: webpush } = await import('https://esm.sh/web-push@3.6.7');
+    
+    webpush.setVapidDetails(
+      'mailto:admin@origemviva.com',
+      vapidPublicKey,
+      vapidPrivateKey
+    );
+
+    const pushSubscription = {
+      endpoint: subscription.endpoint,
+      keys: {
+        p256dh: subscription.p256dh,
+        auth: subscription.auth,
+      },
+    };
+
+    await webpush.sendNotification(
+      pushSubscription,
+      JSON.stringify(payload)
+    );
+    
+    console.log('[Push] Notification sent to:', subscription.endpoint.substring(0, 50));
+    return true;
+  } catch (error) {
+    console.error('[Push] Failed to send:', error);
+    return false;
+  }
+}
+
+async function sendPushToAllSubscribers(
+  supabase: any,
+  title: string,
+  body: string,
+  tag: string
+): Promise<void> {
+  const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY');
+  const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY');
+
+  if (!vapidPrivateKey || !vapidPublicKey) {
+    console.log('[Push] VAPID keys not configured, skipping push');
+    return;
+  }
+
+  const { data: subscriptions, error } = await supabase
+    .from('push_subscriptions')
+    .select('endpoint, p256dh, auth');
+
+  if (error) {
+    console.error('[Push] Error fetching subscriptions:', error);
+    return;
+  }
+
+  if (!subscriptions || subscriptions.length === 0) {
+    console.log('[Push] No push subscriptions found');
+    return;
+  }
+
+  console.log(`[Push] Sending to ${subscriptions.length} subscriber(s)`);
+
+  const payload = { title, body, tag };
+
+  for (const sub of subscriptions) {
+    await sendPushNotification(sub, payload, vapidPrivateKey, vapidPublicKey);
+  }
 }
 
 Deno.serve(async (req) => {
@@ -69,6 +149,9 @@ Deno.serve(async (req) => {
 
     const normalizedIncomingId = normalizeExternalId(payload.external_id);
     console.log('Normalized incoming external_id:', normalizedIncomingId);
+
+    let action = 'created';
+    let transactionId = '';
 
     if (normalizedIncomingId) {
       const { data: transactions, error: fetchError } = await supabase
@@ -111,6 +194,19 @@ Deno.serve(async (req) => {
         }
 
         console.log('Transaction updated:', data.id);
+        action = 'updated';
+        transactionId = data.id;
+
+        // Send push notification for updates (e.g., boleto paid)
+        const typeLabel = payload.type === 'boleto' ? 'Boleto' : payload.type === 'pix' ? 'PIX' : 'Cartão';
+        const amount = (payload.amount / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        
+        await sendPushToAllSubscribers(
+          supabase,
+          `🔔 ${typeLabel} Atualizado`,
+          `${payload.customer_name || 'Cliente'} - ${amount} - ${status}`,
+          `transaction-${data.id}`
+        );
 
         return new Response(
           JSON.stringify({ success: true, action: 'updated', transaction_id: data.id }),
@@ -144,6 +240,17 @@ Deno.serve(async (req) => {
     }
 
     console.log('Transaction created:', data.id);
+
+    // Send push notification for new transactions
+    const typeLabel = payload.type === 'boleto' ? 'Boleto' : payload.type === 'pix' ? 'PIX' : 'Cartão';
+    const amount = (payload.amount / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    
+    await sendPushToAllSubscribers(
+      supabase,
+      `🔔 Nova Transação - ${typeLabel}`,
+      `${payload.customer_name || 'Cliente'} - ${amount}`,
+      `transaction-${data.id}`
+    );
 
     return new Response(
       JSON.stringify({ success: true, action: 'created', transaction_id: data.id }),
