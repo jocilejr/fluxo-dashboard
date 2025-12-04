@@ -178,6 +178,13 @@ export function BoletoRecoveryQueue({
               </div>
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
+                <span className="text-muted-foreground">Gerado em:</span>
+                <span className="font-medium">
+                  {format(new Date(currentBoleto.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 col-span-2 sm:col-span-1">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
                 <span className="text-muted-foreground">Vencimento:</span>
                 <span className="font-medium">
                   {format(currentBoleto.dueDate, "dd/MM/yyyy", { locale: ptBR })}
