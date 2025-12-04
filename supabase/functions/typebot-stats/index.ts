@@ -27,9 +27,39 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}))
     const action = body.action || 'stats'
 
-    // List all typebots in workspace
+    // List all typebots in workspace (filtered by "Fluxos" folder)
     if (action === 'list') {
-      const listUrl = `${TYPEBOT_BASE_URL}/api/v1/typebots?workspaceId=${WORKSPACE_ID}`
+      // First, get all folders to find "Fluxos" folder ID
+      const foldersUrl = `${TYPEBOT_BASE_URL}/api/v1/folders?workspaceId=${WORKSPACE_ID}`
+      console.log('[typebot-stats] Fetching folders from:', foldersUrl)
+
+      const foldersResponse = await fetch(foldersUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${typebotToken}`,
+          'Content-Type': 'application/json',
+        },
+      })
+
+      let fluxosFolderId: string | null = null
+
+      if (foldersResponse.ok) {
+        const foldersData = await foldersResponse.json()
+        console.log('[typebot-stats] Folders found:', JSON.stringify(foldersData))
+        
+        const fluxosFolder = (foldersData.folders || foldersData)?.find(
+          (f: any) => f.name === 'Fluxos'
+        )
+        if (fluxosFolder) {
+          fluxosFolderId = fluxosFolder.id
+          console.log('[typebot-stats] Found Fluxos folder ID:', fluxosFolderId)
+        }
+      }
+
+      // List typebots filtered by folder
+      const listUrl = fluxosFolderId 
+        ? `${TYPEBOT_BASE_URL}/api/v1/typebots?workspaceId=${WORKSPACE_ID}&folderId=${fluxosFolderId}`
+        : `${TYPEBOT_BASE_URL}/api/v1/typebots?workspaceId=${WORKSPACE_ID}`
       console.log('[typebot-stats] Listing typebots from:', listUrl)
 
       const listResponse = await fetch(listUrl, {
