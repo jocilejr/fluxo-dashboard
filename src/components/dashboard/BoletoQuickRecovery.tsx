@@ -56,7 +56,7 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
   const [pdfArrayBuffer, setPdfArrayBuffer] = useState<ArrayBuffer | null>(null);
   const [sendingWhatsApp, setSendingWhatsApp] = useState<string | null>(null);
 
-  const { extensionAvailable, sendText, sendImage, fallbackOpenWhatsApp } = useWhatsAppExtension();
+  const { extensionAvailable, sendText, sendImage } = useWhatsAppExtension();
 
   useEffect(() => {
     if (open) {
@@ -257,21 +257,19 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
       return;
     }
 
+    if (!extensionAvailable) {
+      toast.error("Extensão WhatsApp não detectada. Instale a extensão para enviar mensagens.");
+      return;
+    }
+
     const processedText = replaceVariables(text);
     setSendingWhatsApp(blockId);
 
-    if (extensionAvailable) {
-      const success = await sendText(transaction.customer_phone, processedText);
-      if (success) {
-        toast.success("Mensagem enviada via WhatsApp!");
-      } else {
-        toast.error("Erro ao enviar. Abrindo WhatsApp...");
-        fallbackOpenWhatsApp(transaction.customer_phone, processedText);
-      }
+    const success = await sendText(transaction.customer_phone, processedText);
+    if (success) {
+      toast.success("Mensagem enviada via WhatsApp!");
     } else {
-      await navigator.clipboard.writeText(processedText);
-      toast.success("Mensagem copiada! Abrindo WhatsApp...");
-      fallbackOpenWhatsApp(transaction.customer_phone, processedText);
+      toast.error("Erro ao enviar mensagem via extensão");
     }
 
     setSendingWhatsApp(null);
@@ -288,36 +286,32 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
       return;
     }
 
+    if (!extensionAvailable) {
+      toast.error("Extensão WhatsApp não detectada. Instale a extensão para enviar imagens.");
+      return;
+    }
+
     setSendingWhatsApp(blockId);
 
-    if (extensionAvailable) {
-      try {
-        // Convert blob URL to data URL
-        const response = await fetch(imageBlobUrl);
-        const blob = await response.blob();
-        const reader = new FileReader();
-        
-        const dataUrl = await new Promise<string>((resolve) => {
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.readAsDataURL(blob);
-        });
+    try {
+      // Convert blob URL to data URL
+      const response = await fetch(imageBlobUrl);
+      const blob = await response.blob();
+      const reader = new FileReader();
+      
+      const dataUrl = await new Promise<string>((resolve) => {
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(blob);
+      });
 
-        const success = await sendImage(transaction.customer_phone, dataUrl);
-        if (success) {
-          toast.success("Imagem enviada via WhatsApp!");
-        } else {
-          toast.error("Erro ao enviar imagem. Copiando...");
-          await handleCopyImage();
-          fallbackOpenWhatsApp(transaction.customer_phone);
-        }
-      } catch (error) {
-        toast.error("Erro ao processar imagem");
-        fallbackOpenWhatsApp(transaction.customer_phone);
+      const success = await sendImage(transaction.customer_phone, dataUrl);
+      if (success) {
+        toast.success("Imagem enviada via WhatsApp!");
+      } else {
+        toast.error("Erro ao enviar imagem via extensão");
       }
-    } else {
-      await handleCopyImage();
-      toast.success("Imagem copiada! Abrindo WhatsApp...");
-      fallbackOpenWhatsApp(transaction.customer_phone);
+    } catch (error) {
+      toast.error("Erro ao processar imagem");
     }
 
     setSendingWhatsApp(null);
