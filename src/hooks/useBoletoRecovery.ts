@@ -204,7 +204,35 @@ export function useBoletoRecovery(transactions: Transaction[]) {
     });
   }, [transactions, settings, rules, contacts]);
 
-  // Filter boletos by category
+  // Filter boletos that match any rule today (for total count including contacted)
+  const boletosMatchingRulesToday = useMemo(() => {
+    if (!rules || rules.length === 0) return [];
+    
+    const today = startOfDay(new Date());
+    const expirationDays = settings?.default_expiration_days || 3;
+    
+    return processedBoletos.filter((boleto) => {
+      const createdAt = new Date(boleto.created_at);
+      const dueDate = addDays(createdAt, expirationDays);
+      const daysUntilDue = differenceInDays(dueDate, today);
+      const daysSinceGeneration = differenceInDays(today, startOfDay(createdAt));
+      const isOverdue = isBefore(dueDate, today);
+      
+      // Check if any rule matches this boleto today
+      return rules.some((rule) => {
+        if (rule.rule_type === "days_after_generation" && daysSinceGeneration === rule.days) {
+          return true;
+        } else if (rule.rule_type === "days_before_due" && daysUntilDue === rule.days) {
+          return true;
+        } else if (rule.rule_type === "days_after_due" && isOverdue && Math.abs(daysUntilDue) === rule.days) {
+          return true;
+        }
+        return false;
+      });
+    });
+  }, [processedBoletos, rules, settings]);
+
+  // Boletos that need to be contacted today (not yet contacted)
   const todayBoletos = useMemo(
     () => processedBoletos.filter((b) => b.shouldContactToday),
     [processedBoletos]
@@ -222,20 +250,28 @@ export function useBoletoRecovery(transactions: Transaction[]) {
 
   // Stats
   const stats = useMemo(() => {
-    const totalValue = todayBoletos.reduce((sum, b) => sum + Number(b.amount), 0);
-    const contactedToday = todayBoletos.filter((b) => 
+    // Total that match rules today (including already contacted)
+    const totalMatchingToday = boletosMatchingRulesToday.length;
+    const totalValue = boletosMatchingRulesToday.reduce((sum, b) => sum + Number(b.amount), 0);
+    
+    // Already contacted today
+    const contactedToday = boletosMatchingRulesToday.filter((b) => 
       b.contacts.some((c) => isToday(new Date(c.contacted_at)))
     ).length;
+    
+    // Remaining to contact
+    const remainingToContact = todayBoletos.length;
 
     return {
-      todayCount: todayBoletos.length,
+      todayCount: totalMatchingToday,
       todayValue: totalValue,
       contactedToday,
+      remainingToContact,
       pendingCount: pendingBoletos.length,
       overdueCount: overdueBoletos.length,
       totalCount: processedBoletos.length,
     };
-  }, [todayBoletos, pendingBoletos, overdueBoletos, processedBoletos]);
+  }, [boletosMatchingRulesToday, todayBoletos, pendingBoletos, overdueBoletos, processedBoletos]);
 
   return {
     settings,
