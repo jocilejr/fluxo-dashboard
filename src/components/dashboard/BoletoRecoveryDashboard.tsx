@@ -80,6 +80,7 @@ export function BoletoRecoveryDashboard({ transactions, isLoading }: BoletoRecov
         todayCount={stats.todayCount}
         todayValue={stats.todayValue}
         contactedToday={stats.contactedToday}
+        remainingToContact={stats.remainingToContact}
         onStartRecovery={() => setQueueOpen(true)}
         onOpenSettings={() => setSettingsOpen(true)}
       />

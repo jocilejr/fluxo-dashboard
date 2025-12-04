@@ -7,6 +7,7 @@ interface BoletoRecoveryHeroCardProps {
   todayCount: number;
   todayValue: number;
   contactedToday: number;
+  remainingToContact: number;
   onStartRecovery: () => void;
   onOpenSettings: () => void;
 }
@@ -15,11 +16,11 @@ export function BoletoRecoveryHeroCard({
   todayCount,
   todayValue,
   contactedToday,
+  remainingToContact,
   onStartRecovery,
   onOpenSettings,
 }: BoletoRecoveryHeroCardProps) {
   const progress = todayCount > 0 ? (contactedToday / todayCount) * 100 : 0;
-  const remaining = todayCount - contactedToday;
 
   const formatCurrency = (value: number) =>
     value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -40,8 +41,8 @@ export function BoletoRecoveryHeroCard({
               <div>
                 <h2 className="text-xl font-bold text-foreground">Recuperação de Hoje</h2>
                 <p className="text-sm text-muted-foreground">
-                  {remaining > 0 
-                    ? `${remaining} boleto${remaining > 1 ? "s" : ""} aguardando contato`
+                  {remainingToContact > 0 
+                    ? `${remainingToContact} boleto${remainingToContact > 1 ? "s" : ""} aguardando contato`
                     : "Todos os contatos realizados! 🎉"}
                 </p>
               </div>
@@ -81,7 +82,7 @@ export function BoletoRecoveryHeroCard({
           <div className="flex flex-col sm:flex-row gap-3">
             <Button
               onClick={onStartRecovery}
-              disabled={remaining === 0}
+              disabled={remainingToContact === 0}
               size="lg"
               className="gap-2 bg-primary hover:bg-primary/90"
             >
