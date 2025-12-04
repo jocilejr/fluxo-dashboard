@@ -138,51 +138,52 @@ const Index = () => {
       <div className="container mx-auto px-3 sm:px-4 pb-8">
         <Header />
         
-        {/* Date Filter */}
-        <div className="mb-4 sm:mb-6">
-          <DateFilter value={dateFilter} onChange={setDateFilter} />
-        </div>
-        
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
-          <StatCard
-            title="Boletos Gerados"
-            value={stats.boletosGerados.toLocaleString('pt-BR')}
-            subtitle="No período"
-            icon={FileText}
-            variant="info"
-            delay={0}
-            isLoading={isLoading}
-          />
-          <StatCard
-            title="Boletos Pagos"
-            value={stats.boletosPagos.toLocaleString('pt-BR')}
-            subtitle={calculateConversionRate(stats.boletosPagos, stats.boletosGerados)}
-            icon={FileText}
-            variant="success"
-            delay={50}
-            isLoading={isLoading}
-          />
-          <StatCard
-            title="PIX Gerado"
-            value={stats.pixGerado.toLocaleString('pt-BR')}
-            subtitle={calculateConversionRate(stats.pixPago, stats.pixGerado)}
-            icon={QrCode}
-            variant="success"
-            delay={100}
-            isLoading={isLoading}
-          />
-          <StatCard
-            title="Pedidos Cartão"
-            value={stats.pedidosCartao.toLocaleString('pt-BR')}
-            subtitle={calculateConversionRate(stats.cartaoPago, stats.pedidosCartao)}
-            icon={CreditCard}
-            variant="warning"
-            delay={150}
-            isLoading={isLoading}
-          />
-          {isRealAdmin && (
-            <>
+        {/* Admin-only: Date Filter and Stats */}
+        {isRealAdmin && (
+          <>
+            {/* Date Filter */}
+            <div className="mb-4 sm:mb-6">
+              <DateFilter value={dateFilter} onChange={setDateFilter} />
+            </div>
+            
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
+              <StatCard
+                title="Boletos Gerados"
+                value={stats.boletosGerados.toLocaleString('pt-BR')}
+                subtitle="No período"
+                icon={FileText}
+                variant="info"
+                delay={0}
+                isLoading={isLoading}
+              />
+              <StatCard
+                title="Boletos Pagos"
+                value={stats.boletosPagos.toLocaleString('pt-BR')}
+                subtitle={calculateConversionRate(stats.boletosPagos, stats.boletosGerados)}
+                icon={FileText}
+                variant="success"
+                delay={50}
+                isLoading={isLoading}
+              />
+              <StatCard
+                title="PIX Gerado"
+                value={stats.pixGerado.toLocaleString('pt-BR')}
+                subtitle={calculateConversionRate(stats.pixPago, stats.pixGerado)}
+                icon={QrCode}
+                variant="success"
+                delay={100}
+                isLoading={isLoading}
+              />
+              <StatCard
+                title="Pedidos Cartão"
+                value={stats.pedidosCartao.toLocaleString('pt-BR')}
+                subtitle={calculateConversionRate(stats.cartaoPago, stats.pedidosCartao)}
+                icon={CreditCard}
+                variant="warning"
+                delay={150}
+                isLoading={isLoading}
+              />
               <StatCard
                 title="Faturamento Bruto"
                 value={formatCurrency(stats.totalRevenue)}
@@ -212,9 +213,9 @@ const Index = () => {
                 delay={300}
                 isLoading={isLoading}
               />
-            </>
-          )}
-        </div>
+            </div>
+          </>
+        )}
 
         {/* Charts Row - Only visible for admins */}
         {isRealAdmin && (
@@ -228,17 +229,17 @@ const Index = () => {
           </div>
         )}
 
-        {/* Group Stats Cards */}
-        <div className="mb-6">
-          <GroupStatsCards />
-        </div>
-
-        {/* Group History Chart - Admin only */}
+        {/* Group Stats Cards - Admin only */}
         {isRealAdmin && (
           <div className="mb-6">
-            <GroupHistoryChart />
+            <GroupStatsCards />
           </div>
         )}
+
+        {/* Group History Chart - Visible to all users */}
+        <div className="mb-6">
+          <GroupHistoryChart />
+        </div>
 
         {/* Sale Notification */}
         <SaleNotification 
