@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Transaction } from "@/hooks/useTransactions";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trash2, Download, Search, ChevronDown, ChevronUp, Users, Clock, CheckCircle2, AlertCircle, RefreshCw, CalendarIcon, MessageSquare } from "lucide-react";
+import { Trash2, Download, Search, ChevronDown, ChevronUp, Users, Clock, CheckCircle2, AlertCircle, RefreshCw, CalendarIcon, MessageSquare, Settings2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -32,6 +32,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { BoletoRecoveryModal } from "./BoletoRecoveryModal";
+import { BoletoQuickRecovery } from "./BoletoQuickRecovery";
 
 interface TransactionsTableProps {
   transactions: Transaction[];
@@ -90,7 +91,8 @@ export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin =
   const [visibleCount, setVisibleCount] = useState(15);
   const [customRange, setCustomRange] = useState<DateRange | undefined>();
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const [recoveryModalOpen, setRecoveryModalOpen] = useState(false);
+  const [quickRecoveryOpen, setQuickRecoveryOpen] = useState(false);
+  const [templateSettingsOpen, setTemplateSettingsOpen] = useState(false);
   const [selectedBoleto, setSelectedBoleto] = useState<Transaction | null>(null);
   
   // Transaction date filter state
@@ -338,8 +340,13 @@ export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin =
   const handleBoletoClick = (transaction: Transaction) => {
     if (transaction.type === "boleto" && transaction.status === "gerado") {
       setSelectedBoleto(transaction);
-      setRecoveryModalOpen(true);
+      setQuickRecoveryOpen(true);
     }
+  };
+
+  const handleOpenTemplateSettings = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setTemplateSettingsOpen(true);
   };
 
   const SortIcon = ({ field }: { field: SortField }) => {
@@ -638,6 +645,25 @@ export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin =
                   </td>
                   <td className="py-3.5 px-4">
                     <div className="flex items-center justify-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                      {transaction.type === 'boleto' && transaction.status === 'gerado' && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                                onClick={handleOpenTemplateSettings}
+                              >
+                                <Settings2 className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Configurar templates</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
                       {transaction.type === 'boleto' && transaction.metadata?.boleto_url && (
                         <TooltipProvider>
                           <Tooltip>
@@ -646,7 +672,10 @@ export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin =
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10"
-                                onClick={() => window.open(transaction.metadata!.boleto_url, '_blank')}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  window.open(transaction.metadata!.boleto_url, '_blank');
+                                }}
                               >
                                 <Download className="h-4 w-4" />
                               </Button>
@@ -831,10 +860,15 @@ export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin =
       {renderMobileView()}
       {renderDesktopView()}
 
-      <BoletoRecoveryModal
-        open={recoveryModalOpen}
-        onOpenChange={setRecoveryModalOpen}
+      <BoletoQuickRecovery
+        open={quickRecoveryOpen}
+        onOpenChange={setQuickRecoveryOpen}
         transaction={selectedBoleto}
+      />
+
+      <BoletoRecoveryModal
+        open={templateSettingsOpen}
+        onOpenChange={setTemplateSettingsOpen}
       />
     </div>
   );

@@ -1,16 +1,12 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Transaction } from "@/hooks/useTransactions";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { 
-  Copy, 
-  Check, 
   FileText, 
   Image as ImageIcon, 
   Type, 
@@ -18,14 +14,14 @@ import {
   Plus,
   Trash2,
   Save,
-  Settings2
+  Settings2,
+  Star
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface BoletoRecoveryModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  transaction: Transaction | null;
 }
 
 interface RecoveryBlock {
@@ -49,13 +45,11 @@ const VARIABLE_PLACEHOLDERS: Record<string, { label: string; description: string
   "{codigo_barras}": { label: "Código", description: "Código de barras" },
 };
 
-export function BoletoRecoveryModal({ open, onOpenChange, transaction }: BoletoRecoveryModalProps) {
-  const [activeTab, setActiveTab] = useState<"info" | "recovery">("info");
+export function BoletoRecoveryModal({ open, onOpenChange }: BoletoRecoveryModalProps) {
   const [templates, setTemplates] = useState<RecoveryTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<RecoveryTemplate | null>(null);
   const [blocks, setBlocks] = useState<RecoveryBlock[]>([]);
   const [templateName, setTemplateName] = useState("");
-  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [draggedBlockId, setDraggedBlockId] = useState<string | null>(null);
 
@@ -89,45 +83,14 @@ export function BoletoRecoveryModal({ open, onOpenChange, transaction }: BoletoR
         setSelectedTemplate(defaultTemplate);
         setBlocks(defaultTemplate.blocks);
         setTemplateName(defaultTemplate.name);
+      } else if (parsedTemplates.length > 0) {
+        setSelectedTemplate(parsedTemplates[0]);
+        setBlocks(parsedTemplates[0].blocks);
+        setTemplateName(parsedTemplates[0].name);
       }
     } catch (error) {
       console.error("Error fetching templates:", error);
     }
-  };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
-
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("pt-BR");
-  };
-
-  const replaceVariables = (text: string): string => {
-    if (!transaction) return text;
-
-    const metadata = transaction.metadata as Record<string, unknown> | null;
-    const dueDate = metadata?.due_date
-      ? formatDate(String(metadata.due_date))
-      : "-";
-
-    return text
-      .replace(/{nome}/g, transaction.customer_name || "Cliente")
-      .replace(/{valor}/g, formatCurrency(Number(transaction.amount)))
-      .replace(/{vencimento}/g, dueDate)
-      .replace(/{codigo_barras}/g, transaction.external_id || "-");
-  };
-
-  const handleCopy = async (text: string, blockId: string) => {
-    const processedText = replaceVariables(text);
-    await navigator.clipboard.writeText(processedText);
-    setCopiedId(blockId);
-    toast.success("Copiado!");
-    setTimeout(() => setCopiedId(null), 2000);
   };
 
   const addBlock = (type: "text" | "pdf" | "image") => {
@@ -218,6 +181,52 @@ export function BoletoRecoveryModal({ open, onOpenChange, transaction }: BoletoR
     }
   };
 
+  const setAsDefault = async (templateId: string) => {
+    try {
+      // Remove default from all templates
+      await supabase
+        .from("boleto_recovery_templates")
+        .update({ is_default: false })
+        .neq("id", templateId);
+
+      // Set new default
+      const { error } = await supabase
+        .from("boleto_recovery_templates")
+        .update({ is_default: true })
+        .eq("id", templateId);
+
+      if (error) throw error;
+      toast.success("Template padrão atualizado!");
+      fetchTemplates();
+    } catch (error) {
+      toast.error("Erro ao definir template padrão");
+      console.error(error);
+    }
+  };
+
+  const deleteTemplate = async (templateId: string) => {
+    try {
+      const { error } = await supabase
+        .from("boleto_recovery_templates")
+        .delete()
+        .eq("id", templateId);
+
+      if (error) throw error;
+      toast.success("Template removido!");
+      
+      if (selectedTemplate?.id === templateId) {
+        setSelectedTemplate(null);
+        setBlocks([]);
+        setTemplateName("");
+      }
+      
+      fetchTemplates();
+    } catch (error) {
+      toast.error("Erro ao remover template");
+      console.error(error);
+    }
+  };
+
   const selectTemplate = (template: RecoveryTemplate) => {
     setSelectedTemplate(template);
     setBlocks(template.blocks);
@@ -262,18 +271,11 @@ export function BoletoRecoveryModal({ open, onOpenChange, transaction }: BoletoR
         <div className="flex-1 p-4 rounded-md bg-secondary/30 border border-dashed border-border/50 text-center">
           <FileText className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">
-            Arraste o PDF do boleto para o WhatsApp
+            Marcador: PDF do boleto
           </p>
-          {transaction?.metadata?.boleto_url && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-2"
-              onClick={() => window.open(transaction.metadata!.boleto_url, "_blank")}
-            >
-              Abrir PDF
-            </Button>
-          )}
+          <p className="text-xs text-muted-foreground mt-1">
+            O usuário verá um botão para abrir/baixar o PDF
+          </p>
         </div>
       );
     }
@@ -283,10 +285,10 @@ export function BoletoRecoveryModal({ open, onOpenChange, transaction }: BoletoR
         <div className="flex-1 p-4 rounded-md bg-secondary/30 border border-dashed border-border/50 text-center">
           <ImageIcon className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">
-            Imagem do boleto para arrastar ao WhatsApp
+            Marcador: Imagem do boleto
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            (Screenshot ou print do boleto)
+            Screenshot para arrastar ao WhatsApp
           </p>
         </div>
       );
@@ -295,199 +297,143 @@ export function BoletoRecoveryModal({ open, onOpenChange, transaction }: BoletoR
     return null;
   };
 
-  if (!transaction) return null;
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5 text-primary" />
-            Recuperação de Boleto
+            <Settings2 className="h-5 w-5 text-primary" />
+            Configurar Templates de Recuperação
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "info" | "recovery")}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="info">Informações do Boleto</TabsTrigger>
-            <TabsTrigger value="recovery">Mensagens de Recuperação</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="info" className="mt-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-3">
-                <div className="p-3 rounded-lg bg-secondary/30 border border-border/30">
-                  <p className="text-xs text-muted-foreground mb-1">Cliente</p>
-                  <p className="font-medium">{transaction.customer_name || "-"}</p>
-                </div>
-                <div className="p-3 rounded-lg bg-secondary/30 border border-border/30">
-                  <p className="text-xs text-muted-foreground mb-1">Telefone</p>
-                  <div className="flex items-center justify-between">
-                    <p className="font-medium">{transaction.customer_phone || "-"}</p>
-                    {transaction.customer_phone && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => handleCopy(transaction.customer_phone!, "phone")}
-                      >
-                        {copiedId === "phone" ? (
-                          <Check className="h-3.5 w-3.5 text-success" />
-                        ) : (
-                          <Copy className="h-3.5 w-3.5" />
-                        )}
-                      </Button>
-                    )}
-                  </div>
-                </div>
-                <div className="p-3 rounded-lg bg-secondary/30 border border-border/30">
-                  <p className="text-xs text-muted-foreground mb-1">Email</p>
-                  <p className="font-medium text-sm truncate">{transaction.customer_email || "-"}</p>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <div className="p-3 rounded-lg bg-secondary/30 border border-border/30">
-                  <p className="text-xs text-muted-foreground mb-1">Valor</p>
-                  <p className="font-bold text-lg">{formatCurrency(Number(transaction.amount))}</p>
-                </div>
-                <div className="p-3 rounded-lg bg-secondary/30 border border-border/30">
-                  <p className="text-xs text-muted-foreground mb-1">Código de Barras</p>
-                  <div className="flex items-center justify-between">
-                    <p className="font-mono text-xs truncate max-w-[200px]">
-                      {transaction.external_id || "-"}
-                    </p>
-                    {transaction.external_id && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => handleCopy(transaction.external_id!, "barcode")}
-                      >
-                        {copiedId === "barcode" ? (
-                          <Check className="h-3.5 w-3.5 text-success" />
-                        ) : (
-                          <Copy className="h-3.5 w-3.5" />
-                        )}
-                      </Button>
-                    )}
-                  </div>
-                </div>
-                <div className="p-3 rounded-lg bg-secondary/30 border border-border/30">
-                  <p className="text-xs text-muted-foreground mb-1">Data de Criação</p>
-                  <p className="font-medium">{formatDate(transaction.created_at)}</p>
-                </div>
-              </div>
+        <div className="flex gap-4 h-[500px]">
+          {/* Templates sidebar */}
+          <div className="w-52 border-r border-border/30 pr-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-medium">Templates</p>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={createNewTemplate}>
+                <Plus className="h-4 w-4" />
+              </Button>
             </div>
+            <ScrollArea className="h-[calc(100%-40px)]">
+              <div className="space-y-2">
+                {templates.map((template) => (
+                  <div
+                    key={template.id}
+                    className={cn(
+                      "p-2 rounded-md text-sm transition-colors group",
+                      selectedTemplate?.id === template.id
+                        ? "bg-primary/10 text-primary border border-primary/30"
+                        : "hover:bg-secondary/50"
+                    )}
+                  >
+                    <button
+                      onClick={() => selectTemplate(template)}
+                      className="w-full text-left"
+                    >
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium truncate flex-1">{template.name}</p>
+                        {template.is_default && (
+                          <Star className="h-3 w-3 text-warning fill-warning" />
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {template.blocks.length} blocos
+                      </p>
+                    </button>
+                    <div className="flex items-center gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {!template.is_default && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => setAsDefault(template.id)}
+                        >
+                          <Star className="h-3 w-3" />
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-destructive hover:text-destructive"
+                        onClick={() => deleteTemplate(template.id)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                {templates.length === 0 && (
+                  <p className="text-xs text-muted-foreground text-center py-4">
+                    Nenhum template criado
+                  </p>
+                )}
+              </div>
+            </ScrollArea>
+          </div>
 
-            {transaction.metadata?.boleto_url && (
-              <div className="mt-4 p-4 rounded-lg bg-primary/5 border border-primary/20">
-                <p className="text-sm font-medium mb-2">Arquivo do Boleto</p>
+          {/* Block editor */}
+          <div className="flex-1 flex flex-col">
+            <div className="flex items-center gap-3 mb-4">
+              <Input
+                placeholder="Nome do template"
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+                className="max-w-[200px]"
+              />
+              <div className="flex gap-1">
                 <Button
                   variant="outline"
-                  onClick={() => window.open(transaction.metadata!.boleto_url, "_blank")}
+                  size="sm"
+                  onClick={() => addBlock("text")}
+                  className="gap-1"
                 >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Abrir PDF do Boleto
+                  <Type className="h-3.5 w-3.5" />
+                  Texto
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => addBlock("pdf")}
+                  className="gap-1"
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  PDF
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => addBlock("image")}
+                  className="gap-1"
+                >
+                  <ImageIcon className="h-3.5 w-3.5" />
+                  Imagem
                 </Button>
               </div>
-            )}
-          </TabsContent>
+              <Button
+                size="sm"
+                onClick={saveTemplate}
+                disabled={isLoading}
+                className="ml-auto gap-1"
+              >
+                <Save className="h-3.5 w-3.5" />
+                Salvar
+              </Button>
+            </div>
 
-          <TabsContent value="recovery" className="mt-4">
-            <div className="flex gap-4 h-[500px]">
-              {/* Templates sidebar */}
-              <div className="w-48 border-r border-border/30 pr-4">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-medium">Templates</p>
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={createNewTemplate}>
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                <ScrollArea className="h-[calc(100%-40px)]">
-                  <div className="space-y-2">
-                    {templates.map((template) => (
-                      <button
-                        key={template.id}
-                        onClick={() => selectTemplate(template)}
-                        className={cn(
-                          "w-full p-2 rounded-md text-left text-sm transition-colors",
-                          selectedTemplate?.id === template.id
-                            ? "bg-primary/10 text-primary border border-primary/30"
-                            : "hover:bg-secondary/50"
-                        )}
-                      >
-                        <p className="font-medium truncate">{template.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {template.blocks.length} blocos
-                        </p>
-                        {template.is_default && (
-                          <Badge variant="outline" className="text-[10px] mt-1">
-                            Padrão
-                          </Badge>
-                        )}
-                      </button>
-                    ))}
-                    {templates.length === 0 && (
-                      <p className="text-xs text-muted-foreground text-center py-4">
-                        Nenhum template
-                      </p>
-                    )}
+            <ScrollArea className="flex-1 pr-2">
+              <div className="space-y-3">
+                {blocks.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-[300px] text-muted-foreground">
+                    <Settings2 className="h-12 w-12 mb-4 opacity-30" />
+                    <p className="text-sm font-medium">Nenhum bloco ainda</p>
+                    <p className="text-xs">Adicione blocos de texto, PDF ou imagem acima</p>
                   </div>
-                </ScrollArea>
-              </div>
-
-              {/* Block editor */}
-              <div className="flex-1 flex flex-col">
-                <div className="flex items-center gap-3 mb-4">
-                  <Input
-                    placeholder="Nome do template"
-                    value={templateName}
-                    onChange={(e) => setTemplateName(e.target.value)}
-                    className="max-w-[200px]"
-                  />
-                  <div className="flex gap-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => addBlock("text")}
-                      className="gap-1"
-                    >
-                      <Type className="h-3.5 w-3.5" />
-                      Texto
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => addBlock("pdf")}
-                      className="gap-1"
-                    >
-                      <FileText className="h-3.5 w-3.5" />
-                      PDF
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => addBlock("image")}
-                      className="gap-1"
-                    >
-                      <ImageIcon className="h-3.5 w-3.5" />
-                      Imagem
-                    </Button>
-                  </div>
-                  <Button
-                    size="sm"
-                    onClick={saveTemplate}
-                    disabled={isLoading}
-                    className="ml-auto gap-1"
-                  >
-                    <Save className="h-3.5 w-3.5" />
-                    Salvar
-                  </Button>
-                </div>
-
-                <ScrollArea className="flex-1 pr-2">
-                  <div className="space-y-3">
-                    {blocks.map((block) => (
+                ) : (
+                  blocks
+                    .sort((a, b) => a.order - b.order)
+                    .map((block) => (
                       <div
                         key={block.id}
                         draggable
@@ -495,74 +441,57 @@ export function BoletoRecoveryModal({ open, onOpenChange, transaction }: BoletoR
                         onDragOver={(e) => handleDragOver(e, block.id)}
                         onDragEnd={handleDragEnd}
                         className={cn(
-                          "flex items-start gap-2 p-3 rounded-lg border border-border/30 bg-card transition-all",
-                          draggedBlockId === block.id && "opacity-50 border-primary"
+                          "flex gap-3 p-3 rounded-lg border border-border/30 bg-card transition-all",
+                          draggedBlockId === block.id && "opacity-50 scale-[0.98]"
                         )}
                       >
-                        <div className="cursor-grab active:cursor-grabbing pt-1">
-                          <GripVertical className="h-4 w-4 text-muted-foreground" />
+                        <div className="flex flex-col items-center gap-2">
+                          <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab active:cursor-grabbing" />
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "text-[10px]",
+                              block.type === "text" && "bg-info/10 text-info border-info/30",
+                              block.type === "pdf" && "bg-warning/10 text-warning border-warning/30",
+                              block.type === "image" && "bg-success/10 text-success border-success/30"
+                            )}
+                          >
+                            {block.type === "text" ? "TXT" : block.type === "pdf" ? "PDF" : "IMG"}
+                          </Badge>
                         </div>
 
                         {renderBlockContent(block)}
 
-                        <div className="flex flex-col gap-1">
-                          {block.type === "text" && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              onClick={() => handleCopy(block.content, block.id)}
-                            >
-                              {copiedId === block.id ? (
-                                <Check className="h-3.5 w-3.5 text-success" />
-                              ) : (
-                                <Copy className="h-3.5 w-3.5" />
-                              )}
-                            </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                            onClick={() => removeBlock(block.id)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
+                          onClick={() => removeBlock(block.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
-                    ))}
-
-                    {blocks.length === 0 && (
-                      <div className="flex flex-col items-center justify-center py-12 text-center">
-                        <Settings2 className="h-10 w-10 text-muted-foreground/50 mb-3" />
-                        <p className="text-sm font-medium">Nenhum bloco adicionado</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Adicione blocos de texto, PDF ou imagem para criar seu template
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </ScrollArea>
-
-                {/* Preview section */}
-                {blocks.some((b) => b.type === "text") && (
-                  <div className="mt-4 pt-4 border-t border-border/30">
-                    <p className="text-xs text-muted-foreground mb-2">Pré-visualização</p>
-                    <div className="p-3 rounded-lg bg-success/5 border border-success/20">
-                      {blocks
-                        .filter((b) => b.type === "text")
-                        .map((block) => (
-                          <p key={block.id} className="text-sm whitespace-pre-wrap mb-2 last:mb-0">
-                            {replaceVariables(block.content)}
-                          </p>
-                        ))}
-                    </div>
-                  </div>
+                    ))
                 )}
               </div>
+            </ScrollArea>
+
+            {/* Variables hint */}
+            <div className="mt-4 p-3 rounded-lg bg-secondary/30 border border-border/20">
+              <p className="text-xs font-medium mb-2">Variáveis disponíveis:</p>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(VARIABLE_PLACEHOLDERS).map(([variable, { description }]) => (
+                  <div key={variable} className="text-xs">
+                    <code className="px-1.5 py-0.5 rounded bg-primary/10 text-primary font-mono">
+                      {variable}
+                    </code>
+                    <span className="text-muted-foreground ml-1">{description}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </TabsContent>
-        </Tabs>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
