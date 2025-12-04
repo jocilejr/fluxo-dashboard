@@ -75,6 +75,41 @@ Deno.serve(async (req) => {
         )
       }
 
+      // Log daily statistics history
+      const today = new Date().toISOString().split('T')[0]
+      const dailyEntries = entries !== undefined ? entries : (event_type === 'entry' ? 1 : 0)
+      const dailyExits = exits !== undefined ? exits : (event_type === 'exit' ? 1 : 0)
+      const finalMembers = updateData.current_members ?? existingGroup.current_members
+
+      // Upsert daily history - accumulate entries/exits for the day
+      const { data: existingHistory } = await supabase
+        .from('group_statistics_history')
+        .select('*')
+        .eq('group_id', existingGroup.id)
+        .eq('date', today)
+        .single()
+
+      if (existingHistory) {
+        await supabase
+          .from('group_statistics_history')
+          .update({
+            entries: existingHistory.entries + (event_type === 'entry' ? 1 : 0),
+            exits: existingHistory.exits + (event_type === 'exit' ? 1 : 0),
+            current_members: finalMembers,
+          })
+          .eq('id', existingHistory.id)
+      } else {
+        await supabase
+          .from('group_statistics_history')
+          .insert({
+            group_id: existingGroup.id,
+            date: today,
+            entries: dailyEntries,
+            exits: dailyExits,
+            current_members: finalMembers,
+          })
+      }
+
       console.log('Group updated successfully:', group_name)
     } else {
       // Create new group

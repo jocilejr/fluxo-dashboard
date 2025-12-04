@@ -20,6 +20,7 @@ import {
   Wallet
 } from "lucide-react";
 import { GroupStatsCards } from "@/components/dashboard/GroupStatsCards";
+import { GroupHistoryChart } from "@/components/dashboard/GroupHistoryChart";
 
 const Index = () => {
   const { transactions, isLoading, refetch, hasNewTransaction, dismissNewTransaction } = useTransactions();
@@ -219,6 +220,13 @@ const Index = () => {
         <div className="mb-6">
           <GroupStatsCards />
         </div>
+
+        {/* Group History Chart - Admin only */}
+        {isRealAdmin && (
+          <div className="mb-6">
+            <GroupHistoryChart />
+          </div>
+        )}
 
         {/* Charts Row - Only visible for admins */}
         {isRealAdmin && (
