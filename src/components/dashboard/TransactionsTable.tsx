@@ -34,6 +34,7 @@ import {
 import { BoletoRecoveryModal } from "./BoletoRecoveryModal";
 import { BoletoQuickRecovery } from "./BoletoQuickRecovery";
 import { PixCardQuickRecovery } from "./PixCardQuickRecovery";
+import { PixCardRecoverySettings } from "./PixCardRecoverySettings";
 
 interface TransactionsTableProps {
   transactions: Transaction[];
@@ -858,6 +859,9 @@ export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin =
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
+          )}
+          {activeTab === "pix-cartao-pendentes" && (
+            <PixCardRecoverySettings />
           )}
         </div>
       </Tabs>
