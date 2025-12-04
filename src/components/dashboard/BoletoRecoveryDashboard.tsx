@@ -24,6 +24,7 @@ import {
   User,
   DollarSign,
   Barcode,
+  FileText,
 } from "lucide-react";
 
 interface BoletoRecoveryDashboardProps {
@@ -277,6 +278,19 @@ function BoletoList({
                       </Badge>
                     )}
                     <div className="flex gap-1">
+                      {(boleto.metadata as any)?.boleto_url && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.open((boleto.metadata as any).boleto_url, "_blank");
+                          }}
+                        >
+                          <FileText className="h-4 w-4" />
+                        </Button>
+                      )}
                       {boleto.external_id && (
                         <Button
                           variant="ghost"
