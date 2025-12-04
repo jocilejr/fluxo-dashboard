@@ -221,22 +221,22 @@ const Index = () => {
           <GroupStatsCards />
         </div>
 
-        {/* Group History Chart - Admin only */}
-        {isRealAdmin && (
-          <div className="mb-6">
-            <GroupHistoryChart />
-          </div>
-        )}
-
         {/* Charts Row - Only visible for admins */}
         {isRealAdmin && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             <div className="lg:col-span-2">
               <RevenueChart transactions={transactions} dateFilter={dateFilter} />
             </div>
             <div>
               <PaymentMethodsChart transactions={filteredTransactions} />
             </div>
+          </div>
+        )}
+
+        {/* Group History Chart - Admin only */}
+        {isRealAdmin && (
+          <div className="mb-6">
+            <GroupHistoryChart />
           </div>
         )}
 
