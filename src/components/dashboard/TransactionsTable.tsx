@@ -36,6 +36,7 @@ interface TransactionsTableProps {
   transactions: Transaction[];
   isLoading?: boolean;
   onDelete?: () => void;
+  isAdmin?: boolean;
 }
 
 type TransactionDateFilterType = "today" | "yesterday" | "7days" | "30days" | "custom";
@@ -80,7 +81,7 @@ type TabKey = "aprovados" | "boletos-gerados" | "pix-cartao-pendentes";
 type SortField = "created_at" | "amount" | "customer_name";
 type SortDirection = "asc" | "desc";
 
-export function TransactionsTable({ transactions, isLoading, onDelete }: TransactionsTableProps) {
+export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin = false }: TransactionsTableProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<TabKey>("aprovados");
   const [sortField, setSortField] = useState<SortField>("created_at");
@@ -422,45 +423,47 @@ export function TransactionsTable({ transactions, isLoading, onDelete }: Transac
 
   const renderDesktopView = () => (
     <div className="hidden sm:block">
-      {/* Quick Stats Bar */}
-      <div className="grid grid-cols-4 gap-3 mb-5 p-4 bg-secondary/20 rounded-lg border border-border/30">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-primary/10">
-            <CheckCircle2 className="h-4 w-4 text-primary" />
+      {/* Quick Stats Bar - Admin only */}
+      {isAdmin && (
+        <div className="grid grid-cols-4 gap-3 mb-5 p-4 bg-secondary/20 rounded-lg border border-border/30">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <CheckCircle2 className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Total</p>
+              <p className="text-sm font-semibold">{tabStats.total}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Total</p>
-            <p className="text-sm font-semibold">{tabStats.total}</p>
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-success/10">
+              <AlertCircle className="h-4 w-4 text-success" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Valor Total</p>
+              <p className="text-sm font-semibold">{formatCurrency(tabStats.totalAmount)}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-info/10">
+              <Users className="h-4 w-4 text-info" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Clientes</p>
+              <p className="text-sm font-semibold">{tabStats.uniqueCustomers}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-warning/10">
+              <Clock className="h-4 w-4 text-warning" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Hoje</p>
+              <p className="text-sm font-semibold">{tabStats.todayCount}</p>
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-success/10">
-            <AlertCircle className="h-4 w-4 text-success" />
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Valor Total</p>
-            <p className="text-sm font-semibold">{formatCurrency(tabStats.totalAmount)}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-info/10">
-            <Users className="h-4 w-4 text-info" />
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Clientes</p>
-            <p className="text-sm font-semibold">{tabStats.uniqueCustomers}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-warning/10">
-            <Clock className="h-4 w-4 text-warning" />
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Hoje</p>
-            <p className="text-sm font-semibold">{tabStats.todayCount}</p>
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* Table */}
       <div className="overflow-hidden rounded-lg border border-border/30">

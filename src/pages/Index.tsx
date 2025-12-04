@@ -252,6 +252,7 @@ const Index = () => {
           transactions={transactions} 
           isLoading={isLoading} 
           onDelete={refetch}
+          isAdmin={isRealAdmin === true}
         />
       </div>
     </div>
