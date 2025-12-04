@@ -80,8 +80,16 @@ export function useTransactions() {
             // Notify tab title when in background
             notifyNewTransactionRef.current();
             
-            // Push notifications are handled by the service worker
-            // No need for browser notifications here as they come from the server
+            // Browser notification
+            if (Notification.permission === 'granted') {
+              const typeLabel = newData.type === 'boleto' ? 'Boleto' : newData.type === 'pix' ? 'PIX' : 'Cartão';
+              const amount = (newData.amount / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+              new Notification(`🔔 Nova Transação - ${typeLabel}`, {
+                body: `${newData.customer_name || 'Cliente'} - ${amount}`,
+                icon: '/logo-ov.png',
+                tag: `transaction-${newData.id}`,
+              });
+            }
           }
         }
       )

@@ -1,9 +1,11 @@
-import { LogOut, Download, Check, Share, MoreVertical } from "lucide-react";
+import { LogOut, Download, Check, Share, MoreVertical, Bell, BellOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { SettingsDialog } from "./SettingsDialog";
 import { usePWA } from "@/hooks/usePWA";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { toast } from "@/hooks/use-toast";
 import {
   Tooltip,
   TooltipContent,
@@ -29,6 +31,7 @@ export function Header() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { isInstallable, isInstalled, installApp } = usePWA();
+  const { isSupported, isSubscribed, isLoading, subscribe, unsubscribe, testNotification } = usePushNotifications();
   const [showInstallDialog, setShowInstallDialog] = useState(false);
   const [installDialogType, setInstallDialogType] = useState<"ios" | "android">("ios");
 
@@ -55,6 +58,38 @@ export function Header() {
     }
   };
 
+  const handleToggleNotifications = async () => {
+    if (isLoading) return;
+
+    if (isSubscribed) {
+      const result = await unsubscribe();
+      if (result) {
+        toast({
+          title: "Notificações desativadas",
+          description: "Você não receberá mais notificações push.",
+        });
+      }
+    } else {
+      const result = await subscribe();
+      if (result) {
+        toast({
+          title: "Notificações ativadas!",
+          description: "Você receberá notificações de novas transações.",
+        });
+        // Send test notification
+        setTimeout(() => {
+          testNotification();
+        }, 1000);
+      } else {
+        toast({
+          title: "Erro ao ativar notificações",
+          description: "Verifique se as notificações estão permitidas no navegador.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
   const userInitials = user?.email?.slice(0, 2).toUpperCase() || "US";
 
   return (
@@ -77,6 +112,31 @@ export function Header() {
         
         {/* Desktop Actions */}
         <div className="hidden sm:flex items-center gap-2">
+          {isSupported && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-9 w-9"
+                  onClick={handleToggleNotifications}
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : isSubscribed ? (
+                    <Bell className="h-4 w-4 text-primary" />
+                  ) : (
+                    <BellOff className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{isSubscribed ? "Desativar notificações" : "Ativar notificações"}</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+
           {(isInstallable || isInstalled) && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -112,6 +172,24 @@ export function Header() {
 
         {/* Mobile Actions */}
         <div className="flex sm:hidden items-center gap-1">
+          {isSupported && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-9 w-9"
+              onClick={handleToggleNotifications}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : isSubscribed ? (
+                <Bell className="h-4 w-4 text-primary" />
+              ) : (
+                <BellOff className="h-4 w-4 text-muted-foreground" />
+              )}
+            </Button>
+          )}
+
           {(isInstallable && !isInstalled) && (
             <Button 
               variant="ghost" 
