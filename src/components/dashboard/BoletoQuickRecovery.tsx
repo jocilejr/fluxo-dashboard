@@ -276,17 +276,19 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
     highlight?: boolean;
     mono?: boolean;
   }) => (
-    <div className={`flex items-center gap-2 px-3 py-1.5 rounded border ${highlight ? 'bg-primary/10 border-primary/30' : 'bg-secondary/30 border-border/30'}`}>
-      <Icon className="h-3 w-3 text-muted-foreground shrink-0" />
-      <span className="text-[10px] text-muted-foreground">{label}:</span>
-      <span className={`text-xs ${highlight ? 'font-bold text-primary' : 'font-medium'} ${mono ? 'font-mono' : ''} truncate`}>
-        {value || "-"}
-      </span>
+    <div className={`flex items-center justify-between gap-2 px-2 py-1.5 rounded border ${highlight ? 'bg-primary/10 border-primary/30' : 'bg-secondary/30 border-border/30'}`}>
+      <div className="flex items-center gap-1.5 min-w-0">
+        <Icon className="h-3 w-3 text-muted-foreground shrink-0" />
+        <span className="text-[10px] text-muted-foreground shrink-0">{label}</span>
+        <span className={`text-xs ${highlight ? 'font-bold text-primary' : 'font-medium'} ${mono ? 'font-mono text-[10px]' : ''} truncate`}>
+          {value || "-"}
+        </span>
+      </div>
       {value && (
         <Button
           size="icon"
           variant="ghost"
-          className="h-5 w-5 shrink-0 ml-auto"
+          className="h-5 w-5 shrink-0"
           onClick={() => handleCopyField(value, fieldId)}
         >
           {copiedId === fieldId ? (
@@ -301,7 +303,7 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl p-0">
+      <DialogContent className="max-w-4xl p-0">
         <DialogHeader className="px-4 pt-4 pb-2 border-b border-border/30">
           <DialogTitle className="flex items-center gap-2 text-sm">
             <FileText className="h-4 w-4 text-primary" />
@@ -309,67 +311,23 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
           </DialogTitle>
         </DialogHeader>
 
-        <div className="p-4 space-y-3">
-          {/* Top - Boleto Info in horizontal row */}
-          <div className="flex flex-wrap gap-2">
-            <InfoItem 
-              icon={User} 
-              label="Cliente" 
-              value={transaction.customer_name} 
-              fieldId="name" 
-            />
-            <InfoItem 
-              icon={Phone} 
-              label="Tel" 
-              value={transaction.customer_phone} 
-              fieldId="phone" 
-            />
-            <InfoItem 
-              icon={DollarSign} 
-              label="Valor" 
-              value={formatCurrency(Number(transaction.amount))} 
-              fieldId="value"
-              highlight 
-            />
-            {dueDate && (
-              <InfoItem 
-                icon={Calendar} 
-                label="Venc" 
-                value={dueDate} 
-                fieldId="dueDate" 
-              />
-            )}
-          </div>
-          
-          {/* Barcode - full width compact */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded bg-secondary/30 border border-border/30">
-            <Barcode className="h-3 w-3 text-muted-foreground shrink-0" />
-            <span className="text-[10px] text-muted-foreground">Código:</span>
-            <span className="font-mono text-[10px] truncate flex-1">
-              {transaction.external_id || "-"}
-            </span>
-            {transaction.external_id && (
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-5 w-5 shrink-0"
-                onClick={() => handleCopyField(transaction.external_id!, "barcode")}
-              >
-                {copiedId === "barcode" ? (
-                  <Check className="h-2.5 w-2.5 text-success" />
-                ) : (
-                  <Copy className="h-2.5 w-2.5" />
-                )}
-              </Button>
-            )}
+        <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4 p-4">
+          {/* Left side - Boleto Info */}
+          <div className="space-y-1.5">
+            <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+              Informações do Boleto
+            </h4>
+            
+            <InfoItem icon={User} label="Cliente" value={transaction.customer_name} fieldId="name" />
+            <InfoItem icon={Phone} label="Telefone" value={transaction.customer_phone} fieldId="phone" />
+            <InfoItem icon={DollarSign} label="Valor" value={formatCurrency(Number(transaction.amount))} fieldId="value" highlight />
+            {dueDate && <InfoItem icon={Calendar} label="Vencimento" value={dueDate} fieldId="dueDate" />}
+            <InfoItem icon={Barcode} label="Código" value={transaction.external_id} fieldId="barcode" mono />
           </div>
 
-          {/* Divider */}
-          <div className="border-t border-border/30" />
-
-          {/* Bottom - Recovery messages stacked */}
-          <div className="space-y-2">
-            <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+          {/* Right side - Recovery messages */}
+          <div className="space-y-1.5 border-t lg:border-t-0 lg:border-l border-border/30 pt-3 lg:pt-0 lg:pl-4">
+            <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">
               Mensagens de Recuperação
             </h4>
             
