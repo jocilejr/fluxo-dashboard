@@ -182,6 +182,7 @@ async function sendPushToAllSubscribers(
   console.log(`[Push] Sending to ${subscriptions.length} subscriber(s)`);
 
   const payload = { title, body, tag };
+  console.log(`[Push] Exact payload being sent:`, JSON.stringify(payload));
   const invalidSubscriptions: string[] = [];
 
   for (const sub of subscriptions) {
@@ -276,7 +277,7 @@ Deno.serve(async (req) => {
         await sendPushToAllSubscribers(
           supabase,
           `🔔 ${typeLabel} Atualizado`,
-          `${payload.customer_name || 'Cliente'} - ${amount}`,
+          `[v2] ${payload.customer_name || 'Cliente'} - ${amount}`,
           `transaction-${data.id}`
         );
 
@@ -317,7 +318,7 @@ Deno.serve(async (req) => {
     await sendPushToAllSubscribers(
       supabase,
       `🔔 Nova Transação - ${typeLabel}`,
-      `${payload.customer_name || 'Cliente'} - ${amount}`,
+      `[v2] ${payload.customer_name || 'Cliente'} - ${amount}`,
       `transaction-${data.id}`
     );
 
