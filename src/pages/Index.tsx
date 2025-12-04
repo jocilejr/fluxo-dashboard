@@ -11,11 +11,11 @@ import { BoletoRecoveryDashboard } from "@/components/dashboard/BoletoRecoveryDa
 import { useTransactions } from "@/hooks/useTransactions";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
 import { supabase } from "@/integrations/supabase/client";
-import { isWithinInterval } from "date-fns";
+import { startOfDay, endOfDay } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
+import {
   FileText, 
   QrCode, 
   CreditCard,
@@ -84,11 +84,23 @@ const Index = () => {
   });
 
   // Filter transactions by date (use paid_at for paid transactions, created_at for others)
+  // Convert transaction date to Brazil timezone for accurate date comparison
   const filteredTransactions = useMemo(() => {
     return transactions.filter((t) => {
       const dateStr = t.status === "pago" && t.paid_at ? t.paid_at : t.created_at;
-      const date = new Date(dateStr);
-      return isWithinInterval(date, { start: dateFilter.startDate, end: dateFilter.endDate });
+      const transactionDate = new Date(dateStr);
+      
+      // Get the date in Brazil timezone (UTC-3)
+      // brDate represents the transaction time as it would appear in Brazil
+      const brOffset = -3 * 60; // Brazil is UTC-3 (minutes)
+      const localOffset = transactionDate.getTimezoneOffset();
+      const brDate = new Date(transactionDate.getTime() + (localOffset - brOffset) * 60 * 1000);
+      
+      // Compare with filter dates
+      const filterStart = startOfDay(dateFilter.startDate);
+      const filterEnd = endOfDay(dateFilter.endDate);
+      
+      return brDate >= filterStart && brDate <= filterEnd;
     });
   }, [transactions, dateFilter]);
 
