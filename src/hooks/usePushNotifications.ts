@@ -28,9 +28,6 @@ export function usePushNotifications() {
     const hasPushManager = 'PushManager' in window;
     const hasServiceWorker = 'serviceWorker' in navigator;
     
-    console.log('[Push] Notification:', hasNotification, 'PushManager:', hasPushManager, 'SW:', hasServiceWorker);
-    
-    // Support basic notifications even without PushManager
     setIsSupported(hasNotification);
     
     if (hasNotification) {
@@ -40,24 +37,18 @@ export function usePushNotifications() {
 
     if (hasServiceWorker) {
       navigator.serviceWorker.ready.then((registration) => {
-        console.log('[Push] Service Worker ready');
         setSwReady(true);
         
-        // Check existing push subscription if PushManager available
         if (hasPushManager && registration.pushManager) {
           registration.pushManager.getSubscription().then((sub) => {
-            console.log('[Push] Push subscription:', !!sub);
-            // If we have push subscription, we're fully subscribed
             if (sub) setIsSubscribed(true);
-          }).catch(err => console.error('[Push] Error checking subscription:', err));
+          }).catch(() => {});
         }
       });
     }
   }, []);
 
   const subscribe = useCallback(async (): Promise<{ success: boolean; reason?: string }> => {
-    console.log('[Push] subscribe() called');
-    
     if (!user) return { success: false, reason: 'not_logged_in' };
     if (!isSupported) return { success: false, reason: 'not_supported' };
     
@@ -72,75 +63,55 @@ export function usePushNotifications() {
     setIsLoading(true);
     try {
       const perm = await Notification.requestPermission();
-      console.log('[Push] Permission:', perm);
       setPermission(perm);
       
       if (perm !== 'granted') {
         return { success: false, reason: perm === 'denied' ? 'denied' : 'dismissed' };
       }
 
-      // Try to create push subscription if PushManager is available
       const hasPushManager = 'PushManager' in window;
       const hasServiceWorker = 'serviceWorker' in navigator;
-      console.log('[Push] Creating subscription... PushManager:', hasPushManager, 'SW:', hasServiceWorker);
       
       if (hasPushManager && hasServiceWorker) {
         try {
           const registration = await navigator.serviceWorker.ready;
-          console.log('[Push] SW registration:', !!registration, 'pushManager:', !!registration.pushManager);
           
           if (registration.pushManager) {
-            // First, unsubscribe any existing subscription
             const existingSub = await registration.pushManager.getSubscription();
             if (existingSub) {
-              console.log('[Push] Unsubscribing existing subscription');
               await existingSub.unsubscribe();
             }
             
-            console.log('[Push] Subscribing with VAPID key...');
             const subscription = await registration.pushManager.subscribe({
               userVisibleOnly: true,
               applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
             });
             
-            console.log('[Push] Subscription created:', subscription.endpoint.substring(0, 50) + '...');
-            
             const p256dhKey = subscription.getKey('p256dh');
             const authKey = subscription.getKey('auth');
-            console.log('[Push] Keys obtained:', !!p256dhKey, !!authKey);
             
             if (p256dhKey && authKey) {
               const p256dhArray = new Uint8Array(p256dhKey);
               const authArray = new Uint8Array(authKey);
               
-              // Delete existing subscriptions for this user first
               await supabase.from('push_subscriptions').delete().eq('user_id', user.id);
 
-              const { data, error } = await supabase.from('push_subscriptions').insert({
+              await supabase.from('push_subscriptions').insert({
                 user_id: user.id,
                 endpoint: subscription.endpoint,
                 p256dh: btoa(String.fromCharCode.apply(null, Array.from(p256dhArray))),
                 auth: btoa(String.fromCharCode.apply(null, Array.from(authArray))),
-              }).select();
-
-              if (error) {
-                console.error('[Push] Error saving subscription:', error);
-              } else {
-                console.log('[Push] Subscription saved to database:', data);
-              }
+              });
             }
           }
         } catch (pushError) {
-          console.error('[Push] PushManager error:', pushError);
+          // Continue with basic notifications
         }
-      } else {
-        console.log('[Push] PushManager not available - notifications will only work with page open');
       }
 
       setIsSubscribed(true);
       return { success: true };
     } catch (error) {
-      console.error('[Push] Error:', error);
       return { success: false, reason: 'error' };
     } finally {
       setIsLoading(false);

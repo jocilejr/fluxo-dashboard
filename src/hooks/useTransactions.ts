@@ -81,18 +81,12 @@ export function useTransactions() {
             notifyNewTransactionRef.current();
             
             // Browser notification via Service Worker
-            console.log('[TX-Notify] New transaction detected:', newData.id);
-            console.log('[TX-Notify] Permission:', Notification.permission, 'SW:', !!navigator.serviceWorker);
-            
             if (Notification.permission === 'granted' && navigator.serviceWorker) {
               const typeLabel = newData.type === 'boleto' ? 'Boleto' : newData.type === 'pix' ? 'PIX' : 'Cartão';
               const amount = (newData.amount / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
               
-              console.log('[TX-Notify] Sending notification for:', typeLabel, amount);
-              
               navigator.serviceWorker.ready
                 .then((registration) => {
-                  console.log('[TX-Notify] SW ready, calling showNotification...');
                   return registration.showNotification(`🔔 Nova Transação - ${typeLabel}`, {
                     body: `${newData.customer_name || 'Cliente'} - ${amount}`,
                     icon: '/logo-ov.png',
@@ -100,10 +94,7 @@ export function useTransactions() {
                     tag: `transaction-${newData.id}`,
                   });
                 })
-                .then(() => console.log('[TX-Notify] showNotification completed'))
-                .catch((err) => console.error('[TX-Notify] Error:', err));
-            } else {
-              console.log('[TX-Notify] Skipped - conditions not met');
+                .catch(() => {});
             }
           }
         }
