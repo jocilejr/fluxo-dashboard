@@ -143,18 +143,18 @@ export function MobileDashboard() {
         {/* PIX */}
         <div className="bg-[hsl(222,44%,14%)] border border-[hsl(40,50%,55%)]/10 rounded-2xl p-4 space-y-3">
           <div className="flex items-center gap-2">
-            <div className="h-10 w-10 rounded-xl bg-[hsl(40,50%,55%)]/10 flex items-center justify-center">
-              <QrCode className="h-5 w-5 text-[hsl(40,50%,55%)]" />
+            <div className="h-10 w-10 rounded-xl bg-cyan-500/10 flex items-center justify-center">
+              <QrCode className="h-5 w-5 text-cyan-400" />
             </div>
             <span className="text-sm font-semibold text-[hsl(45,20%,95%)]">PIX</span>
           </div>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-2xl font-bold text-[hsl(45,20%,95%)]">{stats.pixPago}</p>
+              <p className="text-2xl font-bold text-emerald-400">{stats.pixPago}</p>
               <p className="text-[10px] text-[hsl(220,15%,55%)] uppercase tracking-wide">Pagos</p>
             </div>
             <div className="text-right">
-              <p className="text-lg font-semibold text-[hsl(220,15%,55%)]">{stats.pixGerado}</p>
+              <p className="text-lg font-semibold text-amber-400">{stats.pixGerado}</p>
               <p className="text-[10px] text-[hsl(220,15%,55%)] uppercase tracking-wide">Pendentes</p>
             </div>
           </div>
@@ -163,18 +163,18 @@ export function MobileDashboard() {
         {/* Boleto */}
         <div className="bg-[hsl(222,44%,14%)] border border-[hsl(40,50%,55%)]/10 rounded-2xl p-4 space-y-3">
           <div className="flex items-center gap-2">
-            <div className="h-10 w-10 rounded-xl bg-[hsl(40,55%,70%)]/10 flex items-center justify-center">
-              <FileText className="h-5 w-5 text-[hsl(40,55%,70%)]" />
+            <div className="h-10 w-10 rounded-xl bg-[hsl(40,50%,55%)]/10 flex items-center justify-center">
+              <FileText className="h-5 w-5 text-[hsl(40,50%,55%)]" />
             </div>
             <span className="text-sm font-semibold text-[hsl(45,20%,95%)]">Boleto</span>
           </div>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-2xl font-bold text-[hsl(45,20%,95%)]">{stats.boletosPagos}</p>
+              <p className="text-2xl font-bold text-emerald-400">{stats.boletosPagos}</p>
               <p className="text-[10px] text-[hsl(220,15%,55%)] uppercase tracking-wide">Pagos</p>
             </div>
             <div className="text-right">
-              <p className="text-lg font-semibold text-[hsl(220,15%,55%)]">{stats.boletosGerados}</p>
+              <p className="text-lg font-semibold text-amber-400">{stats.boletosGerados}</p>
               <p className="text-[10px] text-[hsl(220,15%,55%)] uppercase tracking-wide">Gerados</p>
             </div>
           </div>
@@ -183,19 +183,19 @@ export function MobileDashboard() {
         {/* Cartão */}
         <div className="bg-[hsl(222,44%,14%)] border border-[hsl(40,50%,55%)]/10 rounded-2xl p-4 space-y-3 col-span-2">
           <div className="flex items-center gap-2">
-            <div className="h-10 w-10 rounded-xl bg-[hsl(40,45%,45%)]/10 flex items-center justify-center">
-              <CreditCard className="h-5 w-5 text-[hsl(40,45%,45%)]" />
+            <div className="h-10 w-10 rounded-xl bg-violet-500/10 flex items-center justify-center">
+              <CreditCard className="h-5 w-5 text-violet-400" />
             </div>
             <span className="text-sm font-semibold text-[hsl(45,20%,95%)]">Cartão</span>
           </div>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-6">
               <div>
-                <p className="text-2xl font-bold text-[hsl(45,20%,95%)]">{stats.cartaoPago}</p>
+                <p className="text-2xl font-bold text-emerald-400">{stats.cartaoPago}</p>
                 <p className="text-[10px] text-[hsl(220,15%,55%)] uppercase tracking-wide">Aprovados</p>
               </div>
               <div>
-                <p className="text-lg font-semibold text-[hsl(220,15%,55%)]">{stats.cartaoGerado}</p>
+                <p className="text-lg font-semibold text-amber-400">{stats.cartaoGerado}</p>
                 <p className="text-[10px] text-[hsl(220,15%,55%)] uppercase tracking-wide">Pendentes</p>
               </div>
             </div>
@@ -210,17 +210,20 @@ export function MobileDashboard() {
           {todayTransactions.slice(0, 5).map((t) => (
             <div 
               key={t.id}
-              className="flex items-center justify-between p-3 bg-[hsl(222,44%,14%)] border border-[hsl(40,50%,55%)]/10 rounded-xl"
+              className={cn(
+                "flex items-center justify-between p-3 bg-[hsl(222,44%,14%)] border-l-2 rounded-xl",
+                t.status === "pago" ? "border-l-emerald-500" : "border-l-amber-500"
+              )}
             >
               <div className="flex items-center gap-3">
                 <div className={cn(
                   "h-10 w-10 rounded-xl flex items-center justify-center",
-                  t.status === "pago" ? "bg-[hsl(40,50%,55%)]/15" : "bg-[hsl(38,92%,50%)]/10"
+                  t.status === "pago" ? "bg-emerald-500/10" : "bg-amber-500/10"
                 )}>
                   {t.status === "pago" ? (
-                    <ArrowUpRight className="h-5 w-5 text-[hsl(40,50%,55%)]" />
+                    <ArrowUpRight className="h-5 w-5 text-emerald-400" />
                   ) : (
-                    <ArrowDownRight className="h-5 w-5 text-[hsl(38,92%,50%)]" />
+                    <ArrowDownRight className="h-5 w-5 text-amber-400" />
                   )}
                 </div>
                 <div>
@@ -234,7 +237,7 @@ export function MobileDashboard() {
               </div>
               <p className={cn(
                 "text-sm font-bold",
-                t.status === "pago" ? "text-[hsl(40,50%,55%)]" : "text-[hsl(45,20%,95%)]"
+                t.status === "pago" ? "text-emerald-400" : "text-amber-400"
               )}>
                 {formatCurrency(Number(t.amount))}
               </p>
