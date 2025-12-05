@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { WebhookInfo } from "@/components/dashboard/WebhookInfo";
 import { GroupWebhookInfo } from "@/components/dashboard/GroupWebhookInfo";
+import { AbandonedWebhookInfo } from "@/components/dashboard/AbandonedWebhookInfo";
 import { Trash2, Plus, Loader2, Key } from "lucide-react";
 
 interface UserWithPermissions {
@@ -544,6 +545,7 @@ const Configuracoes = () => {
           <div className="space-y-4">
             <WebhookInfo />
             <GroupWebhookInfo />
+            <AbandonedWebhookInfo />
           </div>
         </TabsContent>
       </Tabs>

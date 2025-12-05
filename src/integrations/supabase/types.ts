@@ -14,6 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
+      abandoned_events: {
+        Row: {
+          amount: number | null
+          created_at: string
+          customer_document: string | null
+          customer_email: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          error_message: string | null
+          event_type: string
+          funnel_stage: string | null
+          id: string
+          metadata: Json | null
+          product_name: string | null
+          updated_at: string
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string
+          customer_document?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          error_message?: string | null
+          event_type?: string
+          funnel_stage?: string | null
+          id?: string
+          metadata?: Json | null
+          product_name?: string | null
+          updated_at?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string
+          customer_document?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          error_message?: string | null
+          event_type?: string
+          funnel_stage?: string | null
+          id?: string
+          metadata?: Json | null
+          product_name?: string | null
+          updated_at?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Relationships: []
+      }
       boleto_recovery_contacts: {
         Row: {
           contact_method: string
