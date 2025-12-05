@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { RevenueChart } from "@/components/dashboard/RevenueChart";
 import { PaymentMethodsChart } from "@/components/dashboard/PaymentMethodsChart";
@@ -6,6 +6,7 @@ import { DateFilter, DateFilterValue, getDefaultDateFilter } from "@/components/
 import { useTransactions } from "@/hooks/useTransactions";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
   FileText, 
   QrCode, 
@@ -13,14 +14,56 @@ import {
   DollarSign,
   Percent,
   Wallet,
+  CheckCircle2,
+  Clock,
 } from "lucide-react";
 import { GroupStatsCards } from "@/components/dashboard/GroupStatsCards";
 import { GroupHistoryChart } from "@/components/dashboard/GroupHistoryChart";
 
 const Dashboard = () => {
-  const { transactions, isLoading } = useTransactions();
+  const { transactions, isLoading, notifications } = useTransactions();
   const [dateFilter, setDateFilter] = useState<DateFilterValue>(getDefaultDateFilter);
   const [isRealAdmin, setIsRealAdmin] = useState<boolean | null>(null);
+  const shownNotificationsRef = useRef<Set<string>>(new Set());
+
+  // Show toast notifications for new transactions
+  useEffect(() => {
+    notifications.forEach((notification) => {
+      const notificationKey = `${notification.id}-${notification.status}`;
+      if (shownNotificationsRef.current.has(notificationKey)) return;
+      shownNotificationsRef.current.add(notificationKey);
+
+      const amount = notification.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+      
+      const getTypeLabel = () => {
+        const labels: Record<string, Record<string, string>> = {
+          boleto: { gerado: "Boleto Gerado", pago: "Boleto Pago", pendente: "Boleto Pendente" },
+          pix: { gerado: "PIX Gerado", pago: "PIX Pago", pendente: "PIX Pendente" },
+          cartao: { gerado: "Cartão - Pedido", pago: "Cartão Pago", pendente: "Cartão Pendente" },
+        };
+        return labels[notification.type]?.[notification.status] || "Nova Transação";
+      };
+
+      const Icon = notification.status === "pago" ? CheckCircle2 : 
+                   notification.status === "pendente" ? Clock :
+                   notification.type === "boleto" ? FileText :
+                   notification.type === "pix" ? QrCode : CreditCard;
+
+      if (notification.status === "pago") {
+        toast.success(getTypeLabel(), {
+          description: `${notification.customerName} - ${amount}`,
+          position: "top-center",
+          duration: 5000,
+        });
+      } else {
+        toast(getTypeLabel(), {
+          description: `${notification.customerName} - ${amount}`,
+          position: "top-center",
+          duration: 5000,
+        });
+      }
+    });
+  }, [notifications]);
 
   useEffect(() => {
     const checkRole = async () => {
