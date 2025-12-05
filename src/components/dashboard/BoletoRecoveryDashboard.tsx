@@ -52,11 +52,11 @@ export function BoletoRecoveryDashboard({ transactions, isLoading }: BoletoRecov
     addContact,
   } = useBoletoRecovery(transactions);
 
-  // Filter all boletos by search
-  const filteredAllBoletos = useMemo(() => {
-    if (!searchQuery.trim()) return processedBoletos;
+  // Filter boletos by search
+  const filterBoletos = (boletos: BoletoWithRecovery[]) => {
+    if (!searchQuery.trim()) return boletos;
     const query = searchQuery.toLowerCase().trim();
-    return processedBoletos.filter((boleto) => {
+    return boletos.filter((boleto) => {
       const name = boleto.customer_name?.toLowerCase() || "";
       const phone = boleto.customer_phone?.toLowerCase() || "";
       const email = boleto.customer_email?.toLowerCase() || "";
@@ -68,7 +68,12 @@ export function BoletoRecoveryDashboard({ transactions, isLoading }: BoletoRecov
         barcode.includes(query)
       );
     });
-  }, [processedBoletos, searchQuery]);
+  };
+
+  const filteredTodayBoletos = useMemo(() => filterBoletos(todayBoletos), [todayBoletos, searchQuery]);
+  const filteredPendingBoletos = useMemo(() => filterBoletos(pendingBoletos), [pendingBoletos, searchQuery]);
+  const filteredOverdueBoletos = useMemo(() => filterBoletos(overdueBoletos), [overdueBoletos, searchQuery]);
+  const filteredAllBoletos = useMemo(() => filterBoletos(processedBoletos), [processedBoletos, searchQuery]);
 
   const handleMarkContacted = (transactionId: string, ruleId?: string, notes?: string) => {
     addContact.mutate(
@@ -150,10 +155,21 @@ export function BoletoRecoveryDashboard({ transactions, isLoading }: BoletoRecov
           </TabsTrigger>
         </TabsList>
 
+        {/* Search Bar - visible in all tabs */}
+        <div className="relative mt-4">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nome, telefone, email ou código de barras..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+
         <TabsContent value="today" className="mt-4">
           <BoletoList
-            boletos={todayBoletos}
-            emptyMessage="Nenhum boleto para contatar hoje"
+            boletos={filteredTodayBoletos}
+            emptyMessage={searchQuery ? "Nenhum boleto encontrado" : "Nenhum boleto para contatar hoje"}
             emptyIcon={<CheckCircle2 className="h-12 w-12 text-success" />}
             onSelect={setSelectedBoleto}
             onMarkContacted={handleMarkContacted}
@@ -162,8 +178,8 @@ export function BoletoRecoveryDashboard({ transactions, isLoading }: BoletoRecov
 
         <TabsContent value="pending" className="mt-4">
           <BoletoList
-            boletos={pendingBoletos}
-            emptyMessage="Nenhum boleto pendente"
+            boletos={filteredPendingBoletos}
+            emptyMessage={searchQuery ? "Nenhum boleto encontrado" : "Nenhum boleto pendente"}
             emptyIcon={<CalendarClock className="h-12 w-12 text-muted-foreground" />}
             onSelect={setSelectedBoleto}
             onMarkContacted={handleMarkContacted}
@@ -172,8 +188,8 @@ export function BoletoRecoveryDashboard({ transactions, isLoading }: BoletoRecov
 
         <TabsContent value="overdue" className="mt-4">
           <BoletoList
-            boletos={overdueBoletos}
-            emptyMessage="Nenhum boleto vencido"
+            boletos={filteredOverdueBoletos}
+            emptyMessage={searchQuery ? "Nenhum boleto encontrado" : "Nenhum boleto vencido"}
             emptyIcon={<AlertTriangle className="h-12 w-12 text-muted-foreground" />}
             onSelect={setSelectedBoleto}
             onMarkContacted={handleMarkContacted}
@@ -181,16 +197,7 @@ export function BoletoRecoveryDashboard({ transactions, isLoading }: BoletoRecov
           />
         </TabsContent>
 
-        <TabsContent value="all" className="mt-4 space-y-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por nome, telefone, email ou código de barras..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
-            />
-          </div>
+        <TabsContent value="all" className="mt-4">
           <BoletoList
             boletos={filteredAllBoletos}
             emptyMessage={searchQuery ? "Nenhum boleto encontrado" : "Nenhum boleto no sistema"}
