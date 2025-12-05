@@ -63,15 +63,21 @@ export function useTransactions() {
 
   // Track seen transaction IDs to avoid duplicate notifications
   const seenTransactionIdsRef = useRef<Set<string>>(new Set());
+  const hasInitializedRef = useRef(false);
 
-  // Subscribe to realtime updates with notifications
+  // Pre-populate seen IDs with existing transactions (separate effect)
   useEffect(() => {
-    // Pre-populate seen IDs with existing transactions
-    if (transactions && transactions.length > 0 && seenTransactionIdsRef.current.size === 0) {
+    if (transactions && transactions.length > 0 && !hasInitializedRef.current) {
       transactions.forEach(t => seenTransactionIdsRef.current.add(`${t.id}-${t.status}`));
+      hasInitializedRef.current = true;
       console.log("[Realtime] Pre-populated seen IDs:", seenTransactionIdsRef.current.size);
     }
+  }, [transactions]);
 
+  // Subscribe to realtime updates with notifications (separate effect, no transactions dependency)
+  useEffect(() => {
+    console.log("[Realtime] Setting up subscription...");
+    
     const channel = supabase
       .channel("transactions-changes")
       .on(
@@ -167,9 +173,10 @@ export function useTransactions() {
       });
 
     return () => {
+      console.log("[Realtime] Cleaning up subscription...");
       supabase.removeChannel(channel);
     };
-  }, [refetch, transactions]);
+  }, [refetch]);
 
   // Calculate stats
   const stats: TransactionStats = {
