@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Settings, Users, Webhook, Plus, Trash2, Loader2, KeyRound, DollarSign, Percent, MessageSquare } from "lucide-react";
+import { Settings, Users, Webhook, Plus, Trash2, Loader2, KeyRound, DollarSign, Percent, MessageSquare, FileText } from "lucide-react";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { WebhookInfo } from "./WebhookInfo";
 import { GroupWebhookInfo } from "./GroupWebhookInfo";
@@ -31,6 +31,7 @@ export const SettingsDialog = ({ trigger, asMobileItem }: SettingsDialogProps) =
   const [manualDescription, setManualDescription] = useState("");
   const [manualAmount, setManualAmount] = useState("");
   const [recoveryMessage, setRecoveryMessage] = useState("");
+  const [boletoWebhookUrl, setBoletoWebhookUrl] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -94,6 +95,42 @@ export const SettingsDialog = ({ trigger, asMobileItem }: SettingsDialogProps) =
       return data;
     },
     enabled: open,
+  });
+
+  // Fetch manual boleto settings
+  const { data: manualBoletoSettings } = useQuery({
+    queryKey: ["manual-boleto-settings"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("manual_boleto_settings")
+        .select("*")
+        .single();
+      
+      if (error) throw error;
+      if (data) setBoletoWebhookUrl(data.webhook_url);
+      return data;
+    },
+    enabled: open,
+  });
+
+  // Update manual boleto webhook mutation
+  const updateBoletoWebhook = useMutation({
+    mutationFn: async (webhookUrl: string) => {
+      if (manualBoletoSettings?.id) {
+        const { error } = await supabase
+          .from("manual_boleto_settings")
+          .update({ webhook_url: webhookUrl })
+          .eq("id", manualBoletoSettings.id);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      toast({ title: "Sucesso", description: "Webhook atualizado" });
+      queryClient.invalidateQueries({ queryKey: ["manual-boleto-settings"] });
+    },
+    onError: () => {
+      toast({ title: "Erro", description: "Não foi possível atualizar", variant: "destructive" });
+    },
   });
 
   // Update recovery message mutation
@@ -608,6 +645,37 @@ export const SettingsDialog = ({ trigger, asMobileItem }: SettingsDialogProps) =
               >
                 {updateRecoveryMessage.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                 Salvar Mensagem
+              </Button>
+            </div>
+
+            {/* Manual Boleto Webhook */}
+            <div className="space-y-4 p-4 border rounded-lg">
+              <h3 className="font-semibold flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Webhook para Geração Manual de Boleto
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Configure a URL do webhook que receberá os dados para gerar boletos manualmente.
+                O webhook receberá: nome, telefone, valor e cpf (opcional).
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="boletoWebhook">URL do Webhook</Label>
+                <Input
+                  id="boletoWebhook"
+                  type="url"
+                  placeholder="https://n8n.seudominio.com/webhook/..."
+                  value={boletoWebhookUrl}
+                  onChange={(e) => setBoletoWebhookUrl(e.target.value)}
+                />
+              </div>
+              <Button 
+                onClick={() => {
+                  updateBoletoWebhook.mutate(boletoWebhookUrl.trim());
+                }}
+                disabled={updateBoletoWebhook.isPending}
+              >
+                {updateBoletoWebhook.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Salvar Webhook
               </Button>
             </div>
           </TabsContent>
