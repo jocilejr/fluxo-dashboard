@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useUnviewedTransactions } from "@/hooks/useUnviewedTransactions";
-import { NotificationPopup } from "./layout/NotificationPopup";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -29,7 +28,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userName, setUserName] = useState<string>("");
   const location = useLocation();
-  const { transactions, notifications, dismissAllNotifications } = useTransactions();
+  const { transactions, notifications } = useTransactions();
   const unviewedCount = useUnviewedTransactions(transactions);
 
   const currentPage = pageConfig[location.pathname] || { title: "Página", subtitle: "" };
@@ -92,12 +91,6 @@ export function AppLayout({ children }: AppLayoutProps) {
 
           {/* Right Actions */}
           <div className="flex items-center gap-2">
-            {/* Notification Popup */}
-            <NotificationPopup 
-              notifications={notifications}
-              onDismiss={dismissAllNotifications}
-            />
-
             {/* New Transaction Alert Indicator */}
             {notifications.length > 0 && (
               <div className="flex items-center gap-2 px-3 py-1.5 bg-success/10 border border-success/30 rounded-full animate-pulse">
