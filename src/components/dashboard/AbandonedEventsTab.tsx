@@ -101,14 +101,12 @@ export function AbandonedEventsTab({ isAdmin = false }: AbandonedEventsTabProps)
       const name = e.customer_name?.toLowerCase() || "";
       const phone = e.customer_phone?.toLowerCase() || "";
       const email = e.customer_email?.toLowerCase() || "";
-      const product = e.product_name?.toLowerCase() || "";
-      const funnel = e.funnel_stage?.toLowerCase() || "";
+      const errorMsg = e.error_message?.toLowerCase() || "";
       return (
         name.includes(query) ||
         phone.includes(query) ||
         email.includes(query) ||
-        product.includes(query) ||
-        funnel.includes(query)
+        errorMsg.includes(query)
       );
     });
   }, [events, searchQuery]);
@@ -239,7 +237,7 @@ export function AbandonedEventsTab({ isAdmin = false }: AbandonedEventsTabProps)
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Buscar por nome, telefone, email, produto..."
+          placeholder="Buscar por nome, telefone, email, motivo..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-9 text-sm"
@@ -257,9 +255,6 @@ export function AbandonedEventsTab({ isAdmin = false }: AbandonedEventsTabProps)
                   <Icon className="h-3 w-3 mr-1" />
                   {eventTypeLabels[event.event_type as keyof typeof eventTypeLabels] || event.event_type}
                 </Badge>
-                {event.funnel_stage && (
-                  <span className="text-xs text-muted-foreground">{event.funnel_stage}</span>
-                )}
               </div>
               <div className="flex items-center justify-between mb-1">
                 <span className="text-sm font-medium truncate max-w-[60%]">
@@ -267,8 +262,8 @@ export function AbandonedEventsTab({ isAdmin = false }: AbandonedEventsTabProps)
                 </span>
                 <span className="text-sm font-bold">{formatCurrency(event.amount)}</span>
               </div>
-              {event.product_name && (
-                <p className="text-xs text-muted-foreground mb-1 truncate">{event.product_name}</p>
+              {event.error_message && (
+                <p className="text-xs text-destructive/80 mb-1 truncate">{event.error_message}</p>
               )}
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span>{formatRelativeTime(event.created_at)}</span>
@@ -318,8 +313,7 @@ export function AbandonedEventsTab({ isAdmin = false }: AbandonedEventsTabProps)
             <tr>
               <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Tipo</th>
               <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Cliente</th>
-              <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden xl:table-cell">Produto</th>
-              <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Etapa</th>
+              <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Motivo da Recusa</th>
               <th className="text-left py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Data</th>
               <th className="text-right py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Valor</th>
               <th className="text-center py-3 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Ações</th>
@@ -328,7 +322,7 @@ export function AbandonedEventsTab({ isAdmin = false }: AbandonedEventsTabProps)
           <tbody className="divide-y divide-border/20">
             {filteredEvents.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-12 text-center text-muted-foreground">
+                <td colSpan={6} className="py-12 text-center text-muted-foreground">
                   {searchQuery ? (
                     <div>
                       <Search className="h-8 w-8 mx-auto mb-2 opacity-30" />
@@ -370,11 +364,8 @@ export function AbandonedEventsTab({ isAdmin = false }: AbandonedEventsTabProps)
                         )}
                       </div>
                     </td>
-                    <td className="py-3.5 px-4 hidden xl:table-cell">
-                      <span className="text-sm text-muted-foreground truncate max-w-[150px] block">{event.product_name || '-'}</span>
-                    </td>
                     <td className="py-3.5 px-4 hidden lg:table-cell">
-                      <span className="text-sm text-muted-foreground">{event.funnel_stage || '-'}</span>
+                      <span className="text-sm text-destructive/80 truncate max-w-[200px] block">{event.error_message || '-'}</span>
                     </td>
                     <td className="py-3.5 px-4">
                       <TooltipProvider>
