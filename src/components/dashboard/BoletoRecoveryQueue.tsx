@@ -133,20 +133,20 @@ export function BoletoRecoveryQueue({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl border-0 bg-gradient-to-b from-card to-background p-0 overflow-hidden max-h-[90vh]">
+      <DialogContent className="w-[95vw] max-w-2xl border-0 bg-gradient-to-b from-card to-background p-0 overflow-hidden max-h-[90vh]">
         {/* Header */}
-        <div className="p-6 pb-4 border-b border-border/50">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <MessageSquare className="h-5 w-5 text-primary" />
+        <div className="p-4 sm:p-6 pb-4 border-b border-border/50">
+          <div className="flex items-center justify-between mb-4 gap-2">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               </div>
-              <div>
-                <h2 className="text-lg font-semibold tracking-tight">Modo Recuperação</h2>
-                <p className="text-xs text-muted-foreground">Fila de contatos pendentes</p>
+              <div className="min-w-0">
+                <h2 className="text-base sm:text-lg font-semibold tracking-tight truncate">Modo Recuperação</h2>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Fila de contatos pendentes</p>
               </div>
             </div>
-            <Badge variant="outline" className="font-mono text-xs px-3 py-1">
+            <Badge variant="outline" className="font-mono text-[10px] sm:text-xs px-2 sm:px-3 py-1 shrink-0">
               {safeIndex + 1} de {boletos.length}
             </Badge>
           </div>
@@ -165,71 +165,71 @@ export function BoletoRecoveryQueue({
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-5 overflow-y-auto">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto">
           {/* Customer Card */}
           <div className="rounded-xl border border-border/50 bg-muted/20 overflow-hidden">
-            <div className="p-4 border-b border-border/30 flex items-center gap-4">
-              <div className="h-12 w-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center ring-2 ring-primary/10">
-                <User className="h-6 w-6 text-primary" />
+            <div className="p-3 sm:p-4 border-b border-border/30 flex items-center gap-3 sm:gap-4">
+              <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center ring-2 ring-primary/10 shrink-0">
+                <User className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
               </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-base truncate">
+              <div className="flex-1 min-w-0 overflow-hidden">
+                <h3 className="font-semibold text-sm sm:text-base truncate">
                   {currentBoleto.customer_name || "Cliente não identificado"}
                 </h3>
-                <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-                  <Phone className="h-3.5 w-3.5" />
-                  {currentBoleto.customer_phone || "Sem telefone"}
+                <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1.5 truncate">
+                  <Phone className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0" />
+                  <span className="truncate">{currentBoleto.customer_phone || "Sem telefone"}</span>
                 </p>
               </div>
               {currentBoleto.isOverdue && (
-                <Badge variant="destructive" className="gap-1 shrink-0">
+                <Badge variant="destructive" className="gap-1 shrink-0 text-[10px] sm:text-xs">
                   <AlertTriangle className="h-3 w-3" />
-                  Vencido
+                  <span className="hidden sm:inline">Vencido</span>
                 </Badge>
               )}
             </div>
 
-            <div className="p-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="space-y-1">
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">Valor</p>
-                <p className="font-semibold text-primary">{formatCurrency(currentBoleto.amount)}</p>
+            <div className="p-3 sm:p-4 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+              <div className="space-y-0.5 sm:space-y-1 min-w-0">
+                <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider">Valor</p>
+                <p className="font-semibold text-sm sm:text-base text-primary truncate">{formatCurrency(currentBoleto.amount)}</p>
               </div>
-              <div className="space-y-1">
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">Gerado em</p>
-                <p className="font-medium text-sm">
+              <div className="space-y-0.5 sm:space-y-1 min-w-0">
+                <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider">Gerado em</p>
+                <p className="font-medium text-xs sm:text-sm truncate">
                   {format(new Date(currentBoleto.created_at), "dd/MM/yyyy", { locale: ptBR })}
                 </p>
               </div>
-              <div className="space-y-1">
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">Vencimento</p>
-                <p className="font-medium text-sm">
+              <div className="space-y-0.5 sm:space-y-1 min-w-0">
+                <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider">Vencimento</p>
+                <p className="font-medium text-xs sm:text-sm truncate">
                   {format(currentBoleto.dueDate, "dd/MM/yyyy", { locale: ptBR })}
                 </p>
               </div>
-              <div className="space-y-1">
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">Regra</p>
-                <p className="font-medium text-sm truncate">
+              <div className="space-y-0.5 sm:space-y-1 min-w-0">
+                <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider">Regra</p>
+                <p className="font-medium text-xs sm:text-sm truncate">
                   {currentBoleto.applicableRule?.name || "—"}
                 </p>
               </div>
             </div>
 
             {currentBoleto.external_id && (
-              <div className="px-4 pb-4">
-                <div className="flex items-center gap-2 p-2.5 rounded-lg bg-background/50 border border-border/30">
-                  <Barcode className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span className="font-mono text-xs truncate text-muted-foreground">
+              <div className="px-3 sm:px-4 pb-3 sm:pb-4">
+                <div className="flex items-center gap-2 p-2 sm:p-2.5 rounded-lg bg-background/50 border border-border/30 min-w-0 overflow-hidden">
+                  <Barcode className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
+                  <span className="font-mono text-[10px] sm:text-xs truncate text-muted-foreground flex-1 min-w-0">
                     {currentBoleto.external_id}
                   </span>
                   {(currentBoleto.metadata as any)?.boleto_url && (
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
-                      className="ml-auto h-7 text-xs gap-1.5 shrink-0"
+                      className="h-6 sm:h-7 text-[10px] sm:text-xs gap-1 sm:gap-1.5 shrink-0 px-2 sm:px-3"
                       onClick={() => window.open((currentBoleto.metadata as any).boleto_url, "_blank")}
                     >
-                      <FileText className="h-3.5 w-3.5" />
-                      Ver Boleto
+                      <FileText className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                      <span className="hidden sm:inline">Ver</span> Boleto
                     </Button>
                   )}
                 </div>
@@ -264,11 +264,11 @@ export function BoletoRecoveryQueue({
         </div>
 
         {/* Footer Actions */}
-        <div className="p-6 pt-4 border-t border-border/50 bg-muted/10">
-          <div className="flex flex-col sm:flex-row gap-3">
+        <div className="p-4 sm:p-6 pt-4 border-t border-border/50 bg-muted/10">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
             <Button 
               onClick={handleSendWhatsApp} 
-              className="flex-1 gap-2 h-11 font-medium" 
+              className="flex-1 gap-2 h-10 sm:h-11 font-medium text-sm" 
               disabled={!currentBoleto.customer_phone}
             >
               <Phone className="h-4 w-4" />
@@ -277,7 +277,7 @@ export function BoletoRecoveryQueue({
             <Button 
               onClick={handleMarkContacted} 
               variant="secondary" 
-              className="flex-1 gap-2 h-11 font-medium"
+              className="flex-1 gap-2 h-10 sm:h-11 font-medium text-sm"
             >
               <CheckCircle2 className="h-4 w-4" />
               Marcar Contactado
@@ -285,7 +285,7 @@ export function BoletoRecoveryQueue({
             <Button 
               onClick={handleSkip} 
               variant="ghost" 
-              className="sm:w-auto gap-2 h-11"
+              className="sm:w-auto gap-2 h-10 sm:h-11 text-sm"
             >
               <SkipForward className="h-4 w-4" />
               Pular
