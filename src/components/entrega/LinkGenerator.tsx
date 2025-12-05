@@ -28,8 +28,9 @@ const LinkGenerator = ({ open, onClose, product }: LinkGeneratorProps) => {
   const [copied, setCopied] = useState(false);
 
   const baseUrl = window.location.origin;
-  const generatedUrl = phone
-    ? `${baseUrl}/e/${product?.slug}?telefone=${phone.replace(/\D/g, "")}`
+  const cleanPhone = phone.replace(/\D/g, "");
+  const generatedUrl = cleanPhone
+    ? `${baseUrl}/e/${product?.slug}?telefone=${cleanPhone}`
     : "";
 
   const handleCopy = async () => {
@@ -68,11 +69,13 @@ const LinkGenerator = ({ open, onClose, product }: LinkGeneratorProps) => {
           <div className="space-y-2">
             <Label>Produto</Label>
             <p className="text-sm font-medium">{product?.name}</p>
-            <code className="text-xs text-muted-foreground">/e/{product?.slug}</code>
+            <code className="text-xs text-muted-foreground block bg-muted p-2 rounded">
+              /e/{product?.slug}?telefone=XXXXX
+            </code>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="phone">Telefone do Lead *</Label>
+            <Label htmlFor="phone">WhatsApp do Lead *</Label>
             <Input
               id="phone"
               value={phone}
@@ -81,7 +84,7 @@ const LinkGenerator = ({ open, onClose, product }: LinkGeneratorProps) => {
               autoFocus
             />
             <p className="text-xs text-muted-foreground">
-              Digite o telefone com código do país
+              Número com código do país (será o destino do redirecionamento)
             </p>
           </div>
 

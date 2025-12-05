@@ -54,8 +54,8 @@ serve(async (req) => {
       .eq("phone", normalizedPhone)
       .maybeSingle();
 
-    // Build WhatsApp redirect URL
-    let whatsappUrl = `https://api.whatsapp.com/send?phone=${product.whatsapp_number}`;
+    // Build WhatsApp redirect URL (phone from URL is the destination)
+    let whatsappUrl = `https://api.whatsapp.com/send?phone=${normalizedPhone}`;
     if (product.whatsapp_message) {
       whatsappUrl += `&text=${encodeURIComponent(product.whatsapp_message)}`;
     }
