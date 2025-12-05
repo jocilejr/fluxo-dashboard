@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Transaction } from "@/hooks/useTransactions";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -19,7 +20,9 @@ import {
   MessageCircle,
   Wifi,
   WifiOff,
-  GripVertical
+  GripVertical,
+  Pencil,
+  X
 } from "lucide-react";
 import { toast } from "sonner";
 import { pdfToImage } from "@/lib/pdfToImage";
@@ -31,6 +34,7 @@ interface BoletoQuickRecoveryProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   transaction: Transaction | null;
+  onTransactionUpdate?: () => void;
 }
 
 interface RecoveryBlock {
@@ -47,7 +51,7 @@ interface RecoveryTemplate {
   is_default: boolean;
 }
 
-export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQuickRecoveryProps) {
+export function BoletoQuickRecovery({ open, onOpenChange, transaction, onTransactionUpdate }: BoletoQuickRecoveryProps) {
   const [template, setTemplate] = useState<RecoveryTemplate | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -61,6 +65,9 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
   const [imageBlob, setImageBlob] = useState<Blob | null>(null);
   const [isDragging, setIsDragging] = useState<string | null>(null);
   const [clickCount, setClickCount] = useState(0);
+  const [isEditingPhone, setIsEditingPhone] = useState(false);
+  const [editingPhoneValue, setEditingPhoneValue] = useState("");
+  const [isSavingPhone, setIsSavingPhone] = useState(false);
 
   const { extensionAvailable, extensionStatus, openChat, sendText, sendImage, retryConnection } = useWhatsAppExtension();
 
@@ -69,6 +76,8 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
       fetchDefaultTemplate();
       loadPdf();
       fetchClickCount();
+      setEditingPhoneValue(transaction.customer_phone || "");
+      setIsEditingPhone(false);
     } else if (!open) {
       if (pdfBlobUrl) URL.revokeObjectURL(pdfBlobUrl);
       if (imageBlobUrl) URL.revokeObjectURL(imageBlobUrl);
@@ -76,6 +85,7 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
       setImageBlobUrl(null);
       setPdfArrayBuffer(null);
       setClickCount(0);
+      setIsEditingPhone(false);
     }
   }, [open, transaction]);
 
@@ -99,6 +109,28 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
       contact_method: "whatsapp",
     });
     setClickCount((prev) => prev + 1);
+  };
+
+  const handleSavePhone = async () => {
+    if (!transaction) return;
+    setIsSavingPhone(true);
+    try {
+      const { error } = await supabase
+        .from('transactions')
+        .update({ customer_phone: editingPhoneValue })
+        .eq('id', transaction.id);
+
+      if (error) throw error;
+
+      toast.success("Telefone atualizado");
+      setIsEditingPhone(false);
+      onTransactionUpdate?.();
+    } catch (error: any) {
+      toast.error("Erro ao atualizar telefone");
+      console.error(error);
+    } finally {
+      setIsSavingPhone(false);
+    }
   };
 
   const fetchDefaultTemplate = async () => {
@@ -542,14 +574,55 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
                   <Phone className="h-3.5 w-3.5" />
                   <span>Telefone</span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium">{transaction.customer_phone || "-"}</p>
-                  {transaction.customer_phone && (
-                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleCopyField(transaction.customer_phone!, "phone")}>
-                      {copiedId === "phone" ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                {isEditingPhone ? (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={editingPhoneValue}
+                      onChange={(e) => setEditingPhoneValue(e.target.value)}
+                      placeholder="5521999999999"
+                      className="h-8 text-sm"
+                    />
+                    <Button 
+                      size="icon" 
+                      variant="default" 
+                      className="h-7 w-7 shrink-0" 
+                      onClick={handleSavePhone}
+                      disabled={isSavingPhone}
+                    >
+                      {isSavingPhone ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                     </Button>
-                  )}
-                </div>
+                    <Button 
+                      size="icon" 
+                      variant="ghost" 
+                      className="h-7 w-7 shrink-0" 
+                      onClick={() => {
+                        setIsEditingPhone(false);
+                        setEditingPhoneValue(transaction.customer_phone || "");
+                      }}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium">{transaction.customer_phone || "-"}</p>
+                    <div className="flex items-center gap-1">
+                      <Button 
+                        size="icon" 
+                        variant="ghost" 
+                        className="h-7 w-7" 
+                        onClick={() => setIsEditingPhone(true)}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      {transaction.customer_phone && (
+                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleCopyField(transaction.customer_phone!, "phone")}>
+                          {copiedId === "phone" ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Valor - Destacado */}
