@@ -11,6 +11,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { Badge } from "@/components/ui/badge";
 
 interface PixCardQuickRecoveryProps {
   transaction: Transaction;
@@ -20,7 +21,22 @@ export function PixCardQuickRecovery({ transaction }: PixCardQuickRecoveryProps)
   const [message, setMessage] = useState("");
   const [copied, setCopied] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [clickCount, setClickCount] = useState(0);
   const { sendText, extensionStatus } = useWhatsAppExtension();
+
+  // Fetch click count
+  useEffect(() => {
+    const fetchClickCount = async () => {
+      const { count } = await supabase
+        .from("pix_card_recovery_clicks")
+        .select("*", { count: "exact", head: true })
+        .eq("transaction_id", transaction.id);
+      
+      setClickCount(count || 0);
+    };
+
+    fetchClickCount();
+  }, [transaction.id]);
 
   useEffect(() => {
     const fetchMessage = async () => {
@@ -46,11 +62,26 @@ export function PixCardQuickRecovery({ transaction }: PixCardQuickRecoveryProps)
     }
   }, [isOpen, transaction]);
 
+  const registerClick = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    await supabase
+      .from("pix_card_recovery_clicks")
+      .insert({
+        transaction_id: transaction.id,
+        user_id: user.id,
+      });
+    
+    setClickCount(prev => prev + 1);
+  };
+
   const handleCopy = async () => {
     await navigator.clipboard.writeText(message);
     setCopied(true);
     toast.success("Mensagem copiada!");
     setTimeout(() => setCopied(false), 2000);
+    await registerClick();
   };
 
   const handleOpenChat = async () => {
@@ -70,6 +101,7 @@ export function PixCardQuickRecovery({ transaction }: PixCardQuickRecoveryProps)
     if (success) {
       toast.success("Mensagem enviada para o WhatsApp");
       setIsOpen(false);
+      await registerClick();
     } else {
       toast.error("Erro ao enviar mensagem");
     }
@@ -87,10 +119,18 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-muted-foreground hover:text-success hover:bg-success/10"
+          className="h-8 w-8 text-muted-foreground hover:text-success hover:bg-success/10 relative"
           onClick={(e) => e.stopPropagation()}
         >
           <WhatsAppIcon className="h-4 w-4" />
+          {clickCount > 0 && (
+            <Badge 
+              variant="secondary" 
+              className="absolute -top-1 -right-1 h-4 min-w-4 px-1 text-[10px] bg-muted text-muted-foreground"
+            >
+              {clickCount}
+            </Badge>
+          )}
         </Button>
       </PopoverTrigger>
       <PopoverContent 
@@ -101,7 +141,14 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-medium">Recuperação Rápida</h4>
-            <span className="text-xs text-muted-foreground capitalize">{transaction.type}</span>
+            <div className="flex items-center gap-2">
+              {clickCount > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  {clickCount}x tentativa{clickCount > 1 ? "s" : ""}
+                </span>
+              )}
+              <span className="text-xs text-muted-foreground capitalize">{transaction.type}</span>
+            </div>
           </div>
           
           <div className="p-2.5 bg-secondary/30 rounded-lg border border-border/30">
