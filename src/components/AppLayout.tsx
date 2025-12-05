@@ -2,13 +2,15 @@ import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
 import { supabase } from "@/integrations/supabase/client";
-import { Menu } from "lucide-react";
+import { Menu, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useUnviewedTransactions } from "@/hooks/useUnviewedTransactions";
 import { useAbandonedEvents } from "@/hooks/useAbandonedEvents";
 import { useUnviewedAbandonedEvents } from "@/hooks/useUnviewedAbandonedEvents";
+import { useWhatsAppExtension } from "@/hooks/useWhatsAppExtension";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -34,6 +36,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const unviewedCount = useUnviewedTransactions(transactions);
   const { events: abandonedEvents } = useAbandonedEvents();
   const unviewedAbandonedCount = useUnviewedAbandonedEvents(abandonedEvents);
+  const { extensionStatus, retryConnection } = useWhatsAppExtension();
   
   const totalNotifications = unviewedCount + unviewedAbandonedCount;
 
@@ -97,6 +100,48 @@ export function AppLayout({ children }: AppLayoutProps) {
 
           {/* Right Actions */}
           <div className="flex items-center gap-2">
+            {/* WhatsApp Extension Status - Desktop Only */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={retryConnection}
+                    className={`hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium transition-all ${
+                      extensionStatus === "connected"
+                        ? "bg-success/10 text-success border border-success/30"
+                        : extensionStatus === "connecting"
+                        ? "bg-warning/10 text-warning border border-warning/30"
+                        : "bg-destructive/10 text-destructive border border-destructive/30 hover:bg-destructive/20"
+                    }`}
+                  >
+                    {extensionStatus === "connecting" ? (
+                      <RefreshCw className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <span className={`h-2 w-2 rounded-full ${
+                        extensionStatus === "connected" ? "bg-success" : "bg-destructive"
+                      }`} />
+                    )}
+                    <span className="hidden xl:inline">
+                      {extensionStatus === "connected"
+                        ? "Extensão"
+                        : extensionStatus === "connecting"
+                        ? "Conectando..."
+                        : "Desconectado"}
+                    </span>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>
+                    {extensionStatus === "connected"
+                      ? "Extensão WhatsApp conectada"
+                      : extensionStatus === "connecting"
+                      ? "Tentando conectar..."
+                      : "Clique para tentar reconectar"}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
             {/* New Transaction Alert Indicator */}
             {totalNotifications > 0 && (
               <div className="flex items-center gap-2 px-3 py-1.5 bg-success/10 border border-success/30 rounded-full animate-pulse">
