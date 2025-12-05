@@ -78,7 +78,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="p-0 w-[240px] border-r border-border">
-                <AppSidebar isAdmin={isAdmin} userId={userId} unviewedTransactions={unviewedCount} />
+                <AppSidebar isAdmin={isAdmin} userId={userId} unviewedTransactions={unviewedCount} isMobile={true} />
               </SheetContent>
             </Sheet>
           </div>

@@ -893,7 +893,7 @@ export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin =
                   <Button
                     variant="outline"
                     size="icon"
-                    className="h-9 w-9 shrink-0"
+                    className="h-9 w-9 shrink-0 hidden sm:flex"
                     onClick={() => setTemplateSettingsOpen(true)}
                   >
                     <Settings2 className="h-4 w-4" />
@@ -906,7 +906,9 @@ export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin =
             </TooltipProvider>
           )}
           {activeTab === "pix-cartao-pendentes" && (
-            <PixCardRecoverySettings />
+            <div className="hidden sm:block">
+              <PixCardRecoverySettings />
+            </div>
           )}
         </div>
       </Tabs>
