@@ -64,6 +64,7 @@ export function useTransactions() {
   // Track seen transaction IDs to avoid duplicate notifications
   const seenTransactionIdsRef = useRef<Set<string>>(new Set());
   const hasInitializedRef = useRef(false);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   // Pre-populate seen IDs with existing transactions (separate effect)
   useEffect(() => {
@@ -76,10 +77,18 @@ export function useTransactions() {
 
   // Subscribe to realtime updates with notifications (separate effect, no transactions dependency)
   useEffect(() => {
+    // Cleanup previous channel if exists
+    if (channelRef.current) {
+      console.log("[Realtime] Cleaning up previous channel...");
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+
     console.log("[Realtime] Setting up subscription...");
     
+    const channelId = `transactions-realtime-${Date.now()}`;
     const channel = supabase
-      .channel("transactions-changes")
+      .channel(channelId)
       .on(
         "postgres_changes",
         {
@@ -170,11 +179,17 @@ export function useTransactions() {
       )
       .subscribe((status) => {
         console.log("[Realtime] Subscription status:", status);
+        if (status === 'SUBSCRIBED') {
+          channelRef.current = channel;
+        }
       });
 
     return () => {
       console.log("[Realtime] Cleaning up subscription...");
-      supabase.removeChannel(channel);
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
     };
   }, [refetch]);
 
