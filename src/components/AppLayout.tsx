@@ -15,7 +15,7 @@ const pageConfig: Record<string, { title: string; subtitle: string }> = {
   "/": { title: "Dashboard", subtitle: "Visão geral do seu negócio" },
   "/transacoes": { title: "Transações", subtitle: "Gerencie todas as transações" },
   "/recuperacao": { title: "Recuperação", subtitle: "Recupere vendas perdidas" },
-  "/projetos": { title: "Mapas Mentais", subtitle: "Organize suas ideias" },
+  "/projetos": { title: "Quadros", subtitle: "Organize suas tarefas" },
   "/typebots": { title: "Typebots", subtitle: "Análise de performance" },
   "/gerar-boleto": { title: "Gerar Boleto", subtitle: "Crie novos boletos" },
   "/configuracoes": { title: "Configurações", subtitle: "Ajustes do sistema" },
