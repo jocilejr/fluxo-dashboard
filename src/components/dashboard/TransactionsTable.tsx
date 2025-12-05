@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Transaction } from "@/hooks/useTransactions";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trash2, Download, Search, ChevronDown, ChevronUp, Users, Clock, CheckCircle2, AlertCircle, RefreshCw, CalendarIcon, MessageSquare, Settings2 } from "lucide-react";
+import { Trash2, Download, Search, ChevronDown, ChevronUp, Users, Clock, CheckCircle2, AlertCircle, RefreshCw, CalendarIcon, MessageSquare, Settings2, Pencil, Check, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -97,6 +97,8 @@ export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin =
   const [quickRecoveryOpen, setQuickRecoveryOpen] = useState(false);
   const [templateSettingsOpen, setTemplateSettingsOpen] = useState(false);
   const [selectedBoleto, setSelectedBoleto] = useState<Transaction | null>(null);
+  const [editingPhoneId, setEditingPhoneId] = useState<string | null>(null);
+  const [editingPhoneValue, setEditingPhoneValue] = useState("");
   
   // Transaction date filter state
   const [dateFilter, setDateFilter] = useState<TransactionDateFilter>(() => {
@@ -334,6 +336,35 @@ export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin =
       toast.error("Erro ao remover transação");
       console.error(error);
     }
+  };
+
+  const handleEditPhone = (transaction: Transaction) => {
+    setEditingPhoneId(transaction.id);
+    setEditingPhoneValue(transaction.customer_phone || "");
+  };
+
+  const handleSavePhone = async (transactionId: string) => {
+    try {
+      const { error } = await supabase
+        .from('transactions')
+        .update({ customer_phone: editingPhoneValue })
+        .eq('id', transactionId);
+
+      if (error) throw error;
+
+      toast.success("Telefone atualizado");
+      setEditingPhoneId(null);
+      setEditingPhoneValue("");
+      onDelete?.(); // Refresh data
+    } catch (error: any) {
+      toast.error("Erro ao atualizar telefone");
+      console.error(error);
+    }
+  };
+
+  const handleCancelEditPhone = () => {
+    setEditingPhoneId(null);
+    setEditingPhoneValue("");
   };
 
   const handleTabChange = (value: string) => {
@@ -669,6 +700,62 @@ export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin =
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
+                      )}
+                      {transaction.type === 'boleto' && transaction.status === 'gerado' && (
+                        <Popover open={editingPhoneId === transaction.id} onOpenChange={(open) => {
+                          if (!open) handleCancelEditPhone();
+                        }}>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-muted-foreground hover:text-info hover:bg-info/10"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEditPhone(transaction);
+                                    }}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                </PopoverTrigger>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Editar telefone</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                          <PopoverContent className="w-72 p-3" onClick={(e) => e.stopPropagation()}>
+                            <div className="space-y-3">
+                              <p className="text-sm font-medium">Editar Telefone</p>
+                              <Input
+                                value={editingPhoneValue}
+                                onChange={(e) => setEditingPhoneValue(e.target.value)}
+                                placeholder="5521999999999"
+                                className="h-9"
+                              />
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  className="flex-1"
+                                  onClick={() => handleSavePhone(transaction.id)}
+                                >
+                                  <Check className="h-4 w-4 mr-1" />
+                                  Salvar
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={handleCancelEditPhone}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
                       )}
                       {(transaction.type === 'pix' || transaction.type === 'cartao') && transaction.status === 'pendente' && (
                         <TooltipProvider>
