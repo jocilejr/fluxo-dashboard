@@ -85,7 +85,7 @@ services:
       GOTRUE_JWT_EXP: ${GOTRUE_JWT_EXPIRY:-3600}
       GOTRUE_JWT_SECRET: ${JWT_SECRET}
       
-      GOTRUE_EXTERNAL_EMAIL_ENABLED: true
+      GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
       GOTRUE_MAILER_AUTOCONFIRM: ${GOTRUE_MAILER_AUTOCONFIRM:-true}
       GOTRUE_SMTP_ADMIN_EMAIL: ${ADMIN_EMAIL}
       GOTRUE_MAILER_URLPATHS_INVITE: /auth/v1/verify
@@ -93,8 +93,8 @@ services:
       GOTRUE_MAILER_URLPATHS_RECOVERY: /auth/v1/verify
       GOTRUE_MAILER_URLPATHS_EMAIL_CHANGE: /auth/v1/verify
       
-      GOTRUE_EXTERNAL_PHONE_ENABLED: false
-      GOTRUE_SMS_AUTOCONFIRM: true
+      GOTRUE_EXTERNAL_PHONE_ENABLED: "false"
+      GOTRUE_SMS_AUTOCONFIRM: "true"
     depends_on:
       db:
         condition: service_healthy
