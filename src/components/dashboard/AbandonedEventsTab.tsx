@@ -115,11 +115,13 @@ export function AbandonedEventsTab({ isAdmin = false }: AbandonedEventsTabProps)
       const name = e.customer_name?.toLowerCase() || "";
       const phone = e.customer_phone?.toLowerCase() || "";
       const email = e.customer_email?.toLowerCase() || "";
+      const document = e.customer_document?.toLowerCase() || "";
       const errorMsg = e.error_message?.toLowerCase() || "";
       return (
         name.includes(query) ||
         phone.includes(query) ||
         email.includes(query) ||
+        document.includes(query) ||
         errorMsg.includes(query)
       );
     });
@@ -370,11 +372,14 @@ export function AbandonedEventsTab({ isAdmin = false }: AbandonedEventsTabProps)
                     <td className="py-3.5 px-4">
                       <div className="flex flex-col">
                         <span className="text-sm font-medium truncate max-w-[200px]">{event.customer_name || '-'}</span>
-                        {event.customer_email && (
-                          <span className="text-xs text-muted-foreground truncate max-w-[200px]">{event.customer_email}</span>
-                        )}
                         {event.customer_phone && (
                           <span className="text-xs text-muted-foreground">{event.customer_phone}</span>
+                        )}
+                        {event.customer_document && (
+                          <span className="text-xs text-info font-medium">CPF: {event.customer_document}</span>
+                        )}
+                        {event.customer_email && (
+                          <span className="text-xs text-muted-foreground truncate max-w-[200px]">{event.customer_email}</span>
                         )}
                       </div>
                     </td>
