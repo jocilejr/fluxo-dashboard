@@ -28,7 +28,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userName, setUserName] = useState<string>("");
   const location = useLocation();
-  const { transactions, notifications } = useTransactions();
+  const { transactions } = useTransactions();
   const unviewedCount = useUnviewedTransactions(transactions);
 
   const currentPage = pageConfig[location.pathname] || { title: "Página", subtitle: "" };
@@ -92,14 +92,14 @@ export function AppLayout({ children }: AppLayoutProps) {
           {/* Right Actions */}
           <div className="flex items-center gap-2">
             {/* New Transaction Alert Indicator */}
-            {notifications.length > 0 && (
+            {unviewedCount > 0 && (
               <div className="flex items-center gap-2 px-3 py-1.5 bg-success/10 border border-success/30 rounded-full animate-pulse">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
                 </span>
                 <span className="text-xs font-medium text-success">
-                  {notifications.length} nova{notifications.length > 1 ? 's' : ''}
+                  {unviewedCount} nova{unviewedCount > 1 ? 's' : ''}
                 </span>
               </div>
             )}
