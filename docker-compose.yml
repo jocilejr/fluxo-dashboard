@@ -299,6 +299,7 @@ services:
   #  APLICAÇÃO (Dash Origem Viva)
   # ═══════════════════════════════════════════════════════════════════════════
   app:
+    image: dash-origem-viva:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -307,7 +308,6 @@ services:
         - VITE_SUPABASE_PUBLISHABLE_KEY=${VITE_SUPABASE_PUBLISHABLE_KEY}
         - VITE_SUPABASE_PROJECT_ID=${VITE_SUPABASE_PROJECT_ID}
         - VITE_VAPID_PUBLIC_KEY=${VITE_VAPID_PUBLIC_KEY}
-    container_name: dash-origem-viva
     restart: unless-stopped
     ports:
       - "${HTTP_PORT:-80}:80"
