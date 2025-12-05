@@ -780,6 +780,7 @@ export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin =
                                   variant="ghost"
                                   size="icon"
                                   className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                  onClick={(e) => e.stopPropagation()}
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
@@ -790,7 +791,7 @@ export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin =
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
-                        <AlertDialogContent>
+                        <AlertDialogContent onClick={(e) => e.stopPropagation()}>
                           <AlertDialogHeader>
                             <AlertDialogTitle>Remover transação?</AlertDialogTitle>
                             <AlertDialogDescription>
@@ -973,6 +974,7 @@ export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin =
         open={quickRecoveryOpen}
         onOpenChange={setQuickRecoveryOpen}
         transaction={selectedBoleto}
+        onTransactionUpdate={onDelete}
       />
 
       <BoletoRecoveryModal
