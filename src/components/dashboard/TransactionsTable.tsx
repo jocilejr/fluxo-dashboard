@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/tooltip";
 import { BoletoRecoveryModal } from "./BoletoRecoveryModal";
 import { BoletoQuickRecovery } from "./BoletoQuickRecovery";
+import { BoletoRecoveryIcon } from "./BoletoRecoveryIcon";
 import { PixCardQuickRecovery } from "./PixCardQuickRecovery";
 import { PixCardRecoverySettings } from "./PixCardRecoverySettings";
 
@@ -391,7 +392,7 @@ export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin =
                 {typeLabels[transaction.type]}
               </Badge>
               {transaction.type === "boleto" && transaction.status === "gerado" && (
-                <MessageSquare className="h-3.5 w-3.5 text-primary" />
+                <BoletoRecoveryIcon transaction={transaction} />
               )}
             </div>
             <Badge variant="outline" className={cn("font-medium text-xs", statusStyles[transaction.status])}>
@@ -572,7 +573,7 @@ export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin =
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger>
-                              <MessageSquare className="h-3.5 w-3.5 text-primary" />
+                              <BoletoRecoveryIcon transaction={transaction} />
                             </TooltipTrigger>
                             <TooltipContent>
                               <p>Clique para recuperação</p>
