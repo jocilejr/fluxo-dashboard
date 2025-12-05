@@ -148,12 +148,12 @@ const Dashboard = () => {
     ).length;
 
     return {
-      boletosGerados: filteredTransactions.filter((t) => t.type === "boleto").length,
+      boletosGerados: filteredTransactions.filter((t) => t.type === "boleto" && t.status === "gerado").length,
       boletosPagos: filteredTransactions.filter((t) => t.type === "boleto" && t.status === "pago").length,
       boletosPendentesOuPagos,
-      pixGerado: filteredTransactions.filter((t) => t.type === "pix").length,
+      pixGerado: filteredTransactions.filter((t) => t.type === "pix" && t.status !== "pago").length,
       pixPago: filteredTransactions.filter((t) => t.type === "pix" && t.status === "pago").length,
-      pedidosCartao: filteredTransactions.filter((t) => t.type === "cartao").length,
+      pedidosCartao: filteredTransactions.filter((t) => t.type === "cartao" && t.status !== "pago").length,
       cartaoPago: filteredTransactions.filter((t) => t.type === "cartao" && t.status === "pago").length,
       totalOrders,
       paidOrders,
