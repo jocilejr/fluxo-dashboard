@@ -167,7 +167,6 @@ export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin =
   // Filter transactions by date first
   // For paid transactions, use paid_at date; for others, use created_at
   const dateFilteredTransactions = useMemo(() => {
-    if (!transactions || transactions.length === 0) return [];
     return transactions.filter((t) => {
       // For paid transactions, use paid_at if available, otherwise use created_at
       const dateStr = t.status === "pago" && t.paid_at ? t.paid_at : t.created_at;
@@ -215,8 +214,7 @@ export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin =
     if (activeTab === "abandono-falha") {
       return { totalAmount: 0, uniqueCustomers: 0, todayCount: 0, total: 0 };
     }
-    const tab = activeTab as keyof typeof tabTransactions;
-    const currentTransactions = tabTransactions[tab] || [];
+    const currentTransactions = tabTransactions[activeTab] || [];
     const totalAmount = currentTransactions.reduce((sum, t) => sum + Number(t.amount), 0);
     const uniqueCustomers = new Set(currentTransactions.filter(t => t.customer_name).map(t => t.customer_name)).size;
     const todayCount = currentTransactions.filter(t => {
