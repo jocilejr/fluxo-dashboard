@@ -122,7 +122,7 @@ const App = () => (
             }
           />
           {/* Rota pública para página de entrega - sem autenticação */}
-          <Route path="/e/:slug" element={<EntregaPublica />} />
+          <Route path="/:slug" element={<EntregaPublica />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
