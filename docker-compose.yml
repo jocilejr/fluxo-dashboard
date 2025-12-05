@@ -22,7 +22,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
     volumes:
       - ./docker/supabase/volumes/db/data:/var/lib/postgresql/data
-      - ./docker/supabase/init/zz-update-passwords.sh:/docker-entrypoint-initdb.d/zz-update-passwords.sh:ro
+      - ./docker/supabase/init/99-create-roles.sh:/docker-entrypoint-initdb.d/99-create-roles.sh:ro
       - ./supabase/migrations:/docker-entrypoint-initdb.d/migrations:ro
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "postgres", "-h", "localhost"]
