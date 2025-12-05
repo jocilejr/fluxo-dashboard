@@ -163,11 +163,13 @@ function analyzeResults(results: any[], typebotDetails: any): any {
     .sort((a, b) => b.count - a.count)
     .slice(0, 5)
   
-  // Analyze by hour
+  // Analyze by hour (Brazil timezone UTC-3)
   const hourlyDistribution: Record<number, number> = {}
   for (const result of results) {
-    const hour = new Date(result.createdAt).getHours()
-    hourlyDistribution[hour] = (hourlyDistribution[hour] || 0) + 1
+    const date = new Date(result.createdAt)
+    // Convert to Brazil timezone (UTC-3)
+    const brazilHour = (date.getUTCHours() - 3 + 24) % 24
+    hourlyDistribution[brazilHour] = (hourlyDistribution[brazilHour] || 0) + 1
   }
   
   const peakHour = Object.entries(hourlyDistribution)
