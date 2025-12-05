@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Transaction } from "@/hooks/useTransactions";
 import { useBoletoRecovery, BoletoWithRecovery } from "@/hooks/useBoletoRecovery";
@@ -26,6 +27,8 @@ import {
   DollarSign,
   Barcode,
   FileText,
+  List,
+  Search,
 } from "lucide-react";
 
 interface BoletoRecoveryDashboardProps {
@@ -38,14 +41,34 @@ export function BoletoRecoveryDashboard({ transactions, isLoading }: BoletoRecov
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [queueOpen, setQueueOpen] = useState(false);
   const [selectedBoleto, setSelectedBoleto] = useState<BoletoWithRecovery | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const {
     todayBoletos,
     pendingBoletos,
     overdueBoletos,
+    processedBoletos,
     stats,
     addContact,
   } = useBoletoRecovery(transactions);
+
+  // Filter all boletos by search
+  const filteredAllBoletos = useMemo(() => {
+    if (!searchQuery.trim()) return processedBoletos;
+    const query = searchQuery.toLowerCase().trim();
+    return processedBoletos.filter((boleto) => {
+      const name = boleto.customer_name?.toLowerCase() || "";
+      const phone = boleto.customer_phone?.toLowerCase() || "";
+      const email = boleto.customer_email?.toLowerCase() || "";
+      const barcode = boleto.external_id?.toLowerCase() || "";
+      return (
+        name.includes(query) ||
+        phone.includes(query) ||
+        email.includes(query) ||
+        barcode.includes(query)
+      );
+    });
+  }, [processedBoletos, searchQuery]);
 
   const handleMarkContacted = (transactionId: string, ruleId?: string, notes?: string) => {
     addContact.mutate(
@@ -88,7 +111,7 @@ export function BoletoRecoveryDashboard({ transactions, isLoading }: BoletoRecov
 
       {/* Tabs */}
       <Tabs defaultValue="today" className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-3">
+        <TabsList className="grid w-full max-w-xl grid-cols-4">
           <TabsTrigger value="today" className="gap-2">
             <Clock className="h-4 w-4" />
             Hoje
@@ -113,6 +136,15 @@ export function BoletoRecoveryDashboard({ transactions, isLoading }: BoletoRecov
             {stats.overdueCount > 0 && (
               <Badge variant="destructive" className="ml-1 h-5 px-1.5">
                 {stats.overdueCount}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="all" className="gap-2">
+            <List className="h-4 w-4" />
+            Todos
+            {stats.totalCount > 0 && (
+              <Badge variant="outline" className="ml-1 h-5 px-1.5">
+                {stats.totalCount}
               </Badge>
             )}
           </TabsTrigger>
@@ -146,6 +178,25 @@ export function BoletoRecoveryDashboard({ transactions, isLoading }: BoletoRecov
             onSelect={setSelectedBoleto}
             onMarkContacted={handleMarkContacted}
             showOverdueWarning
+          />
+        </TabsContent>
+
+        <TabsContent value="all" className="mt-4 space-y-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome, telefone, email ou código de barras..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <BoletoList
+            boletos={filteredAllBoletos}
+            emptyMessage={searchQuery ? "Nenhum boleto encontrado" : "Nenhum boleto no sistema"}
+            emptyIcon={<List className="h-12 w-12 text-muted-foreground" />}
+            onSelect={setSelectedBoleto}
+            onMarkContacted={handleMarkContacted}
           />
         </TabsContent>
       </Tabs>
