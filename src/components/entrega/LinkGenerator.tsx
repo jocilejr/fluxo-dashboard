@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Copy, Check, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface DeliveryProduct {
   id: string;
@@ -26,8 +27,31 @@ interface LinkGeneratorProps {
 const LinkGenerator = ({ open, onClose, product }: LinkGeneratorProps) => {
   const [phone, setPhone] = useState("");
   const [copied, setCopied] = useState(false);
+  const [customDomain, setCustomDomain] = useState<string | null>(null);
 
-  const baseUrl = window.location.origin;
+  useEffect(() => {
+    if (open) {
+      loadCustomDomain();
+    }
+  }, [open]);
+
+  const loadCustomDomain = async () => {
+    try {
+      const { data } = await supabase
+        .from("delivery_settings")
+        .select("custom_domain")
+        .limit(1)
+        .single();
+
+      if (data?.custom_domain) {
+        setCustomDomain(data.custom_domain);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar domínio:", error);
+    }
+  };
+
+  const baseUrl = customDomain ? `https://${customDomain}` : window.location.origin;
   const cleanPhone = phone.replace(/\D/g, "");
   const generatedUrl = cleanPhone
     ? `${baseUrl}/${product?.slug}?telefone=${cleanPhone}`
