@@ -211,7 +211,10 @@ export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin =
 
   // Calculate stats for current tab
   const tabStats = useMemo(() => {
-    const currentTransactions = tabTransactions[activeTab];
+    if (activeTab === "abandono-falha") {
+      return { totalAmount: 0, uniqueCustomers: 0, todayCount: 0, total: 0 };
+    }
+    const currentTransactions = tabTransactions[activeTab] || [];
     const totalAmount = currentTransactions.reduce((sum, t) => sum + Number(t.amount), 0);
     const uniqueCustomers = new Set(currentTransactions.filter(t => t.customer_name).map(t => t.customer_name)).size;
     const todayCount = currentTransactions.filter(t => {
