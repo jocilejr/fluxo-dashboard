@@ -133,103 +133,102 @@ export function BoletoRecoveryQueue({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="w-[95vw] max-w-2xl border-0 bg-gradient-to-b from-card to-background p-0 overflow-hidden max-h-[90vh]">
+      <DialogContent className="max-w-md sm:max-w-lg md:max-w-2xl border-0 bg-gradient-to-b from-card to-background p-0 overflow-hidden max-h-[85vh]">
         {/* Header */}
-        <div className="p-4 sm:p-6 pb-4 border-b border-border/50">
-          <div className="flex items-center justify-between mb-4 gap-2">
-            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-              <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+        <div className="p-3 sm:p-4 md:p-6 pb-3 border-b border-border/50">
+          <div className="flex items-center justify-between mb-3 gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                 <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               </div>
               <div className="min-w-0">
-                <h2 className="text-base sm:text-lg font-semibold tracking-tight truncate">Modo Recuperação</h2>
+                <h2 className="text-sm sm:text-base md:text-lg font-semibold tracking-tight">Modo Recuperação</h2>
                 <p className="text-[10px] sm:text-xs text-muted-foreground">Fila de contatos pendentes</p>
               </div>
             </div>
-            <Badge variant="outline" className="font-mono text-[10px] sm:text-xs px-2 sm:px-3 py-1 shrink-0">
-              {safeIndex + 1} de {boletos.length}
+            <Badge variant="outline" className="font-mono text-[10px] px-2 py-0.5 shrink-0">
+              {safeIndex + 1}/{boletos.length}
             </Badge>
           </div>
 
           {/* Progress Bar */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs">
+          <div className="space-y-1">
+            <div className="flex items-center justify-between text-[10px] sm:text-xs">
               <span className="text-muted-foreground">Progresso</span>
               <span className="font-medium">{Math.round(progress)}%</span>
             </div>
-            <Progress value={progress} className="h-1.5" />
-            <p className="text-xs text-muted-foreground">
-              {remaining} {remaining === 1 ? 'contato restante' : 'contatos restantes'}
+            <Progress value={progress} className="h-1" />
+            <p className="text-[10px] text-muted-foreground">
+              {remaining} {remaining === 1 ? 'restante' : 'restantes'}
             </p>
           </div>
         </div>
 
         {/* Content */}
-        <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto">
+        <div className="p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 overflow-y-auto max-h-[50vh]">
           {/* Customer Card */}
-          <div className="rounded-xl border border-border/50 bg-muted/20 overflow-hidden">
-            <div className="p-3 sm:p-4 border-b border-border/30 flex items-center gap-3 sm:gap-4">
-              <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center ring-2 ring-primary/10 shrink-0">
-                <User className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+          <div className="rounded-lg border border-border/50 bg-muted/20 overflow-hidden">
+            <div className="p-2.5 sm:p-3 border-b border-border/30 flex items-center gap-2 sm:gap-3">
+              <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center ring-1 ring-primary/10 shrink-0">
+                <User className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               </div>
-              <div className="flex-1 min-w-0 overflow-hidden">
-                <h3 className="font-semibold text-sm sm:text-base truncate">
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-xs sm:text-sm truncate">
                   {currentBoleto.customer_name || "Cliente não identificado"}
                 </h3>
-                <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1.5 truncate">
-                  <Phone className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0" />
+                <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1">
+                  <Phone className="h-3 w-3 shrink-0" />
                   <span className="truncate">{currentBoleto.customer_phone || "Sem telefone"}</span>
                 </p>
               </div>
               {currentBoleto.isOverdue && (
-                <Badge variant="destructive" className="gap-1 shrink-0 text-[10px] sm:text-xs">
-                  <AlertTriangle className="h-3 w-3" />
-                  <span className="hidden sm:inline">Vencido</span>
+                <Badge variant="destructive" className="gap-1 shrink-0 text-[9px] px-1.5 py-0.5">
+                  <AlertTriangle className="h-2.5 w-2.5" />
                 </Badge>
               )}
             </div>
 
-            <div className="p-3 sm:p-4 grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
-              <div className="space-y-0.5 sm:space-y-1 min-w-0">
-                <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider">Valor</p>
-                <p className="font-semibold text-sm sm:text-base text-primary truncate">{formatCurrency(currentBoleto.amount)}</p>
+            <div className="p-2.5 sm:p-3 grid grid-cols-4 gap-2">
+              <div className="min-w-0">
+                <p className="text-[9px] sm:text-[10px] text-muted-foreground uppercase">Valor</p>
+                <p className="font-semibold text-[11px] sm:text-xs text-primary truncate">{formatCurrency(currentBoleto.amount)}</p>
               </div>
-              <div className="space-y-0.5 sm:space-y-1 min-w-0">
-                <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider">Gerado em</p>
-                <p className="font-medium text-xs sm:text-sm truncate">
-                  {format(new Date(currentBoleto.created_at), "dd/MM/yyyy", { locale: ptBR })}
+              <div className="min-w-0">
+                <p className="text-[9px] sm:text-[10px] text-muted-foreground uppercase">Gerado</p>
+                <p className="font-medium text-[10px] sm:text-xs truncate">
+                  {format(new Date(currentBoleto.created_at), "dd/MM/yy", { locale: ptBR })}
                 </p>
               </div>
-              <div className="space-y-0.5 sm:space-y-1 min-w-0">
-                <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider">Vencimento</p>
-                <p className="font-medium text-xs sm:text-sm truncate">
-                  {format(currentBoleto.dueDate, "dd/MM/yyyy", { locale: ptBR })}
+              <div className="min-w-0">
+                <p className="text-[9px] sm:text-[10px] text-muted-foreground uppercase">Vence</p>
+                <p className="font-medium text-[10px] sm:text-xs truncate">
+                  {format(currentBoleto.dueDate, "dd/MM/yy", { locale: ptBR })}
                 </p>
               </div>
-              <div className="space-y-0.5 sm:space-y-1 min-w-0">
-                <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider">Regra</p>
-                <p className="font-medium text-xs sm:text-sm truncate">
+              <div className="min-w-0">
+                <p className="text-[9px] sm:text-[10px] text-muted-foreground uppercase">Regra</p>
+                <p className="font-medium text-[10px] sm:text-xs truncate">
                   {currentBoleto.applicableRule?.name || "—"}
                 </p>
               </div>
             </div>
 
             {currentBoleto.external_id && (
-              <div className="px-3 sm:px-4 pb-3 sm:pb-4">
-                <div className="flex items-center gap-2 p-2 sm:p-2.5 rounded-lg bg-background/50 border border-border/30 min-w-0 overflow-hidden">
-                  <Barcode className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground shrink-0" />
-                  <span className="font-mono text-[10px] sm:text-xs truncate text-muted-foreground flex-1 min-w-0">
+              <div className="px-2.5 sm:px-3 pb-2.5 sm:pb-3">
+                <div className="flex items-center gap-1.5 p-1.5 sm:p-2 rounded bg-background/50 border border-border/30 overflow-hidden">
+                  <Barcode className="h-3 w-3 text-muted-foreground shrink-0" />
+                  <span className="font-mono text-[9px] sm:text-[10px] truncate text-muted-foreground flex-1">
                     {currentBoleto.external_id}
                   </span>
                   {(currentBoleto.metadata as any)?.boleto_url && (
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-6 sm:h-7 text-[10px] sm:text-xs gap-1 sm:gap-1.5 shrink-0 px-2 sm:px-3"
+                      className="h-5 sm:h-6 text-[9px] sm:text-[10px] gap-1 shrink-0 px-1.5 sm:px-2"
                       onClick={() => window.open((currentBoleto.metadata as any).boleto_url, "_blank")}
                     >
-                      <FileText className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                      <span className="hidden sm:inline">Ver</span> Boleto
+                      <FileText className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                      Boleto
                     </Button>
                   )}
                 </div>
@@ -239,23 +238,23 @@ export function BoletoRecoveryQueue({
 
           {/* Message Preview */}
           {currentBoleto.formattedMessage && (
-            <div className="space-y-3">
+            <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-medium flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                  Mensagem de Recuperação
+                <h4 className="text-xs sm:text-sm font-medium flex items-center gap-1.5">
+                  <MessageSquare className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+                  Mensagem
                 </h4>
                 <Button 
                   variant="ghost" 
                   size="sm" 
                   onClick={handleCopyMessage} 
-                  className="h-7 text-xs gap-1.5 hover:bg-muted"
+                  className="h-6 text-[10px] sm:text-xs gap-1 hover:bg-muted px-2"
                 >
-                  <Copy className="h-3.5 w-3.5" />
+                  <Copy className="h-3 w-3" />
                   Copiar
                 </Button>
               </div>
-              <div className="p-4 rounded-xl bg-muted/30 border border-border/30 text-sm leading-relaxed whitespace-pre-wrap">
+              <div className="p-2.5 sm:p-3 rounded-lg bg-muted/30 border border-border/30 text-[11px] sm:text-xs leading-relaxed whitespace-pre-wrap max-h-32 overflow-y-auto">
                 {currentBoleto.formattedMessage}
               </div>
             </div>
@@ -264,31 +263,30 @@ export function BoletoRecoveryQueue({
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 sm:p-6 pt-4 border-t border-border/50 bg-muted/10">
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+        <div className="p-3 sm:p-4 md:p-6 pt-3 border-t border-border/50 bg-muted/10">
+          <div className="flex gap-2">
             <Button 
               onClick={handleSendWhatsApp} 
-              className="flex-1 gap-2 h-10 sm:h-11 font-medium text-sm" 
+              className="flex-1 gap-1.5 h-8 sm:h-9 font-medium text-[11px] sm:text-xs" 
               disabled={!currentBoleto.customer_phone}
             >
-              <Phone className="h-4 w-4" />
-              Enviar WhatsApp
+              <Phone className="h-3.5 w-3.5" />
+              WhatsApp
             </Button>
             <Button 
               onClick={handleMarkContacted} 
               variant="secondary" 
-              className="flex-1 gap-2 h-10 sm:h-11 font-medium text-sm"
+              className="flex-1 gap-1.5 h-8 sm:h-9 font-medium text-[11px] sm:text-xs"
             >
-              <CheckCircle2 className="h-4 w-4" />
-              Marcar Contactado
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Contactado
             </Button>
             <Button 
               onClick={handleSkip} 
               variant="ghost" 
-              className="sm:w-auto gap-2 h-10 sm:h-11 text-sm"
+              className="gap-1 h-8 sm:h-9 text-[11px] sm:text-xs px-2 sm:px-3"
             >
-              <SkipForward className="h-4 w-4" />
-              Pular
+              <SkipForward className="h-3.5 w-3.5" />
             </Button>
           </div>
         </div>
