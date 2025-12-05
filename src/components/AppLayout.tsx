@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
 import { supabase } from "@/integrations/supabase/client";
-import { Menu } from "lucide-react";
+import { Menu, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
@@ -9,10 +10,23 @@ interface AppLayoutProps {
   children: React.ReactNode;
 }
 
+const pageConfig: Record<string, { title: string; subtitle: string }> = {
+  "/": { title: "Dashboard", subtitle: "Visão geral do seu negócio" },
+  "/transacoes": { title: "Transações", subtitle: "Gerencie todas as transações" },
+  "/recuperacao": { title: "Recuperação", subtitle: "Recupere vendas perdidas" },
+  "/typebots": { title: "Typebots", subtitle: "Análise de performance" },
+  "/gerar-boleto": { title: "Gerar Boleto", subtitle: "Crie novos boletos" },
+  "/configuracoes": { title: "Configurações", subtitle: "Ajustes do sistema" },
+};
+
 export function AppLayout({ children }: AppLayoutProps) {
   const [userId, setUserId] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userName, setUserName] = useState<string>("");
+  const location = useLocation();
+
+  const currentPage = pageConfig[location.pathname] || { title: "Página", subtitle: "" };
 
   useEffect(() => {
     const getUser = async () => {
@@ -20,6 +34,8 @@ export function AppLayout({ children }: AppLayoutProps) {
       setUserId(user?.id || null);
       
       if (user) {
+        setUserName(user.email?.split("@")[0] || "Usuário");
+        
         const { data } = await supabase
           .from("user_roles")
           .select("role")
@@ -33,43 +49,70 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   return (
     <div className="min-h-screen bg-background flex w-full">
-      {/* Desktop Sidebar - Sticky */}
-      <div className="hidden md:block flex-shrink-0">
+      {/* Desktop Sidebar */}
+      <div className="hidden lg:block flex-shrink-0">
         <AppSidebar isAdmin={isAdmin} userId={userId} />
       </div>
 
-      {/* Mobile Header */}
-      <div className="md:hidden fixed top-0 left-0 right-0 h-14 bg-card/95 backdrop-blur-lg border-b border-border/50 flex items-center px-4 z-50 shadow-lg">
-        <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="hover:bg-secondary">
-              <Menu className="h-5 w-5" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="p-0 w-[260px] border-r border-border/50">
-            <AppSidebar isAdmin={isAdmin} userId={userId} />
-          </SheetContent>
-        </Sheet>
-        <div className="flex items-center gap-3 ml-3">
-          <div className="relative">
-            <div className="absolute inset-0 bg-primary/20 blur-lg rounded-full" />
-            <img src="/logo-ov.png" alt="Origem Viva" className="h-8 w-8 relative z-10" />
+      {/* Main Container */}
+      <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
+        {/* Top Header */}
+        <header className="h-14 lg:h-16 border-b border-border/50 bg-card/50 backdrop-blur-md sticky top-0 z-40 flex items-center justify-between px-4 lg:px-6">
+          {/* Mobile Menu */}
+          <div className="lg:hidden">
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-9 w-9">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="p-0 w-[240px] border-r border-border">
+                <AppSidebar isAdmin={isAdmin} userId={userId} />
+              </SheetContent>
+            </Sheet>
           </div>
-          <div className="flex flex-col">
-            <span className="font-bold text-sm">Origem Viva</span>
-            <span className="text-[9px] text-muted-foreground font-medium tracking-wider uppercase">
-              Marketing Digital
-            </span>
-          </div>
-        </div>
-      </div>
 
-      {/* Main Content */}
-      <main className="flex-1 min-h-screen overflow-x-hidden md:pt-0 pt-14">
-        <div className="h-full">
-          {children}
-        </div>
-      </main>
+          {/* Page Title - Desktop */}
+          <div className="hidden lg:block">
+            <h1 className="text-lg font-semibold text-foreground">{currentPage.title}</h1>
+            <p className="text-xs text-muted-foreground">{currentPage.subtitle}</p>
+          </div>
+
+          {/* Mobile Title */}
+          <div className="lg:hidden flex items-center gap-2">
+            <img src="/logo-ov.png" alt="Origem Viva" className="h-7 w-7" />
+            <span className="font-semibold text-sm">{currentPage.title}</span>
+          </div>
+
+          {/* Right Actions */}
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground">
+              <Bell className="h-[18px] w-[18px]" />
+            </Button>
+            
+            <div className="hidden sm:flex items-center gap-2 pl-2 border-l border-border/50">
+              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                <span className="text-xs font-semibold text-primary uppercase">
+                  {userName.charAt(0)}
+                </span>
+              </div>
+              <div className="hidden md:block">
+                <p className="text-xs font-medium text-foreground capitalize">{userName}</p>
+                <p className="text-[10px] text-muted-foreground">
+                  {isAdmin ? "Administrador" : "Colaborador"}
+                </p>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Page Content */}
+        <main className="flex-1 overflow-auto bg-grid-pattern">
+          <div className="min-h-full">
+            {children}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

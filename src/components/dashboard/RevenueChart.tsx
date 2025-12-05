@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react';
 import { format, eachDayOfInterval, subDays, subMonths, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { TrendingUp, TrendingDown } from 'lucide-react';
 
 interface RevenueChartProps {
   transactions: Transaction[];
@@ -24,13 +25,13 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     const total = payload.reduce((sum: number, entry: any) => sum + entry.value, 0);
     return (
       <div className="bg-card/95 backdrop-blur-md rounded-lg p-3 border border-border/50 shadow-xl">
-        <p className="text-sm font-medium mb-2 text-foreground">{label}</p>
+        <p className="text-xs font-medium mb-2 text-muted-foreground">{label}</p>
         {payload.map((entry: any, index: number) => (
           <p key={index} className="text-xs" style={{ color: entry.color }}>
             {entry.name === 'boleto' ? 'Boleto' : entry.name === 'pix' ? 'PIX' : 'Cartão'}: R$ {entry.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           </p>
         ))}
-        <p className="text-xs font-medium mt-2 pt-2 border-t border-border/50 text-foreground">
+        <p className="text-xs font-semibold mt-2 pt-2 border-t border-border/50 text-foreground">
           Total: R$ {total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
         </p>
       </div>
@@ -83,8 +84,7 @@ export function RevenueChart({ transactions }: RevenueChartProps) {
     
     days.forEach((date) => {
       const key = format(date, 'yyyy-MM-dd');
-      const labelFormat = selectedPeriod === '6m' ? 'dd/MM' : 'dd/MM';
-      dataMap[key] = { boleto: 0, pix: 0, cartao: 0, label: format(date, labelFormat, { locale: ptBR }) };
+      dataMap[key] = { boleto: 0, pix: 0, cartao: 0, label: format(date, 'dd/MM', { locale: ptBR }) };
     });
 
     filteredTransactions.forEach((t) => {
@@ -97,7 +97,7 @@ export function RevenueChart({ transactions }: RevenueChartProps) {
     });
 
     return Object.values(dataMap);
-  }, [transactions, dateRange, selectedPeriod]);
+  }, [transactions, dateRange]);
 
   const hasData = chartData.some((d) => d.boleto > 0 || d.pix > 0 || d.cartao > 0);
 
@@ -105,30 +105,51 @@ export function RevenueChart({ transactions }: RevenueChartProps) {
     return chartData.reduce((sum, d) => sum + d.boleto + d.pix + d.cartao, 0);
   }, [chartData]);
 
+  // Calculate trend (comparing first half vs second half of period)
+  const trend = useMemo(() => {
+    if (chartData.length < 2) return null;
+    const midpoint = Math.floor(chartData.length / 2);
+    const firstHalf = chartData.slice(0, midpoint).reduce((sum, d) => sum + d.boleto + d.pix + d.cartao, 0);
+    const secondHalf = chartData.slice(midpoint).reduce((sum, d) => sum + d.boleto + d.pix + d.cartao, 0);
+    
+    if (firstHalf === 0) return null;
+    const percentChange = ((secondHalf - firstHalf) / firstHalf) * 100;
+    return { value: Math.abs(percentChange).toFixed(1), isPositive: percentChange >= 0 };
+  }, [chartData]);
+
   return (
-    <div className="glass-card rounded-xl p-6 animate-slide-up" style={{ animationDelay: "300ms" }}>
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
+    <div className="bg-card/60 border border-border/30 rounded-xl p-5 animate-slide-up h-full" style={{ animationDelay: "300ms" }}>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-5">
         <div>
-          <div className="flex items-center gap-3 mb-1">
-            <h3 className="text-lg font-semibold">Faturamento</h3>
-            <span className="text-2xl font-bold text-primary">
-              R$ {totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-            </span>
+          <div className="flex items-baseline gap-2 mb-0.5">
+            <h3 className="text-sm font-semibold text-foreground">Faturamento</h3>
+            {trend && (
+              <div className={cn(
+                "flex items-center gap-0.5 text-[10px] font-medium",
+                trend.isPositive ? "text-success" : "text-destructive"
+              )}>
+                {trend.isPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                <span>{trend.value}%</span>
+              </div>
+            )}
           </div>
-          <p className="text-sm text-muted-foreground">Receita por método de pagamento</p>
+          <p className="text-2xl font-bold text-foreground tracking-tight">
+            R$ {totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+          </p>
         </div>
         
         {/* Period Selector */}
-        <div className="flex items-center gap-1 p-1 bg-secondary/50 rounded-lg">
+        <div className="flex items-center gap-0.5 p-0.5 bg-secondary/30 rounded-lg border border-border/30">
           {periodOptions.map((option) => (
             <button
               key={option.value}
               onClick={() => setSelectedPeriod(option.value)}
               className={cn(
-                "px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200",
+                "px-2.5 py-1 text-[10px] font-semibold rounded transition-all duration-150",
                 selectedPeriod === option.value
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                  ? "bg-foreground text-background"
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
               {option.label}
@@ -138,62 +159,63 @@ export function RevenueChart({ transactions }: RevenueChartProps) {
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-4 text-xs mb-4">
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-info" />
+      <div className="flex items-center gap-4 text-[10px] mb-4">
+        <div className="flex items-center gap-1.5">
+          <div className="w-2 h-2 rounded-full bg-info" />
           <span className="text-muted-foreground">Boleto</span>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-success" />
+        <div className="flex items-center gap-1.5">
+          <div className="w-2 h-2 rounded-full bg-success" />
           <span className="text-muted-foreground">PIX</span>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-chart-4" />
+        <div className="flex items-center gap-1.5">
+          <div className="w-2 h-2 rounded-full bg-chart-4" />
           <span className="text-muted-foreground">Cartão</span>
         </div>
       </div>
       
-      <div className="h-[300px]">
+      {/* Chart */}
+      <div className="h-[240px]">
         {!hasData ? (
           <div className="flex items-center justify-center h-full text-muted-foreground">
-            <p>Nenhuma transação paga no período selecionado</p>
+            <p className="text-sm">Nenhuma transação no período</p>
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+            <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorBoleto" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(217, 91%, 60%)" stopOpacity={0.4}/>
+                  <stop offset="5%" stopColor="hsl(217, 91%, 60%)" stopOpacity={0.3}/>
                   <stop offset="95%" stopColor="hsl(217, 91%, 60%)" stopOpacity={0}/>
                 </linearGradient>
                 <linearGradient id="colorPix" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(142, 76%, 45%)" stopOpacity={0.4}/>
-                  <stop offset="95%" stopColor="hsl(142, 76%, 45%)" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="hsl(142, 70%, 45%)" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="hsl(142, 70%, 45%)" stopOpacity={0}/>
                 </linearGradient>
                 <linearGradient id="colorCartao" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(280, 65%, 60%)" stopOpacity={0.4}/>
+                  <stop offset="5%" stopColor="hsl(280, 65%, 60%)" stopOpacity={0.3}/>
                   <stop offset="95%" stopColor="hsl(280, 65%, 60%)" stopOpacity={0}/>
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(217, 33%, 17%)" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 14%, 12%)" vertical={false} />
               <XAxis 
                 dataKey="label" 
-                stroke="hsl(215, 20%, 55%)" 
-                fontSize={10}
+                stroke="hsl(220, 10%, 40%)" 
+                fontSize={9}
                 tickLine={false}
                 axisLine={false}
                 interval={selectedPeriod === '6m' ? 'preserveStartEnd' : 0}
                 angle={selectedPeriod === '6m' || selectedPeriod === '1m' ? -45 : 0}
                 textAnchor={selectedPeriod === '6m' || selectedPeriod === '1m' ? "end" : "middle"}
-                height={selectedPeriod === '6m' || selectedPeriod === '1m' ? 60 : 30}
+                height={selectedPeriod === '6m' || selectedPeriod === '1m' ? 50 : 25}
               />
               <YAxis 
-                stroke="hsl(215, 20%, 55%)" 
-                fontSize={11}
+                stroke="hsl(220, 10%, 40%)" 
+                fontSize={9}
                 tickLine={false}
                 axisLine={false}
                 tickFormatter={(value) => value >= 1000 ? `${(value / 1000).toFixed(0)}k` : value}
-                width={45}
+                width={35}
               />
               <Tooltip content={<CustomTooltip />} />
               <Area 
@@ -202,15 +224,15 @@ export function RevenueChart({ transactions }: RevenueChartProps) {
                 stroke="hsl(217, 91%, 60%)" 
                 fillOpacity={1} 
                 fill="url(#colorBoleto)" 
-                strokeWidth={2}
+                strokeWidth={1.5}
               />
               <Area 
                 type="monotone" 
                 dataKey="pix" 
-                stroke="hsl(142, 76%, 45%)" 
+                stroke="hsl(142, 70%, 45%)" 
                 fillOpacity={1} 
                 fill="url(#colorPix)" 
-                strokeWidth={2}
+                strokeWidth={1.5}
               />
               <Area 
                 type="monotone" 
@@ -218,7 +240,7 @@ export function RevenueChart({ transactions }: RevenueChartProps) {
                 stroke="hsl(280, 65%, 60%)" 
                 fillOpacity={1} 
                 fill="url(#colorCartao)" 
-                strokeWidth={2}
+                strokeWidth={1.5}
               />
             </AreaChart>
           </ResponsiveContainer>

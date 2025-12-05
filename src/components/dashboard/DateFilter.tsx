@@ -21,9 +21,7 @@ interface DateFilterProps {
   onChange: (value: DateFilterValue) => void;
 }
 
-// Get current date in Brazil timezone
 function getBrazilNow(): Date {
-  // Get current time in Brazil timezone as a string, then parse it back
   const brazilDateStr = new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' });
   return new Date(brazilDateStr);
 }
@@ -78,27 +76,33 @@ export function DateFilter({ value, onChange }: DateFilterProps) {
   };
 
   return (
-    <div className="flex items-center gap-2 overflow-x-auto pb-2 -mb-2 scrollbar-hide">
+    <div className="flex items-center gap-1 p-1 bg-secondary/30 rounded-lg border border-border/30">
       {presets.map((preset) => (
-        <Button
+        <button
           key={preset.type}
-          variant={value.type === preset.type ? "default" : "outline"}
-          size="sm"
           onClick={() => handlePresetClick(preset.type)}
-          className="h-8 shrink-0 text-xs sm:text-sm"
+          className={cn(
+            "px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-150",
+            value.type === preset.type
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+          )}
         >
           {preset.label}
-        </Button>
+        </button>
       ))}
       
       <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverTrigger asChild>
-          <Button
-            variant={value.type === "custom" ? "default" : "outline"}
-            size="sm"
-            className={cn("h-8 gap-2 shrink-0 text-xs sm:text-sm", value.type === "custom" && "min-w-[160px] sm:min-w-[200px]")}
+          <button
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-150",
+              value.type === "custom"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+            )}
           >
-            <CalendarIcon className="h-4 w-4" />
+            <CalendarIcon className="h-3.5 w-3.5" />
             {value.type === "custom" ? (
               <span>
                 {format(value.startDate, "dd/MM", { locale: ptBR })} - {format(value.endDate, "dd/MM", { locale: ptBR })}
@@ -106,9 +110,9 @@ export function DateFilter({ value, onChange }: DateFilterProps) {
             ) : (
               <span className="hidden sm:inline">Personalizado</span>
             )}
-          </Button>
+          </button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
+        <PopoverContent className="w-auto p-0" align="end">
           <Calendar
             initialFocus
             mode="range"
