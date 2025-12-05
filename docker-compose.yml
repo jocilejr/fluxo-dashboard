@@ -226,6 +226,10 @@ services:
     image: supabase/edge-runtime:v1.45.2
     container_name: supabase-functions
     restart: unless-stopped
+    command:
+      - start
+      - --main-service
+      - /home/deno/functions/main
     environment:
       JWT_SECRET: ${JWT_SECRET}
       SUPABASE_URL: http://kong:8000
@@ -233,6 +237,10 @@ services:
       SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
       SUPABASE_DB_URL: postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-postgres}
       VERIFY_JWT: "false"
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      TYPEBOT_API_TOKEN: ${TYPEBOT_API_TOKEN:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
     volumes:
       - ./supabase/functions:/home/deno/functions:ro
     depends_on:
