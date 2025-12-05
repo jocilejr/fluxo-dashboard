@@ -5,8 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, Users, DollarSign, MessageSquare, Link as LinkIcon, Shield, Bell } from "lucide-react";
+import { Settings, Users, DollarSign, MessageSquare, Link as LinkIcon, Shield, Bell, Database } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import DataImportExport from "@/components/settings/DataImportExport";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { WebhooksSection } from "@/components/dashboard/WebhooksSection";
@@ -493,6 +494,10 @@ const Configuracoes = () => {
               <LinkIcon className="h-3.5 w-3.5" />
               Webhooks
             </TabsTrigger>
+            <TabsTrigger value="data" className="gap-2 data-[state=active]:bg-foreground data-[state=active]:text-background text-xs">
+              <Database className="h-3.5 w-3.5" />
+              Dados
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -802,6 +807,10 @@ const Configuracoes = () => {
 
         <TabsContent value="webhooks">
           <WebhooksSection />
+        </TabsContent>
+
+        <TabsContent value="data">
+          <DataImportExport />
         </TabsContent>
       </Tabs>
     </div>
