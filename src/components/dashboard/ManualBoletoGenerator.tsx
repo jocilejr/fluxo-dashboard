@@ -74,6 +74,10 @@ export function ManualBoletoGenerator() {
       toast.error("Valor inválido");
       return;
     }
+    if (!formData.cpf.trim() || formData.cpf.length !== 11) {
+      toast.error("CPF inválido (deve ter 11 dígitos)");
+      return;
+    }
     if (!webhookUrl) {
       toast.error("Webhook não configurado. Configure nas configurações.");
       return;
@@ -167,7 +171,7 @@ export function ManualBoletoGenerator() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="cpf">CPF (opcional)</Label>
+            <Label htmlFor="cpf">CPF *</Label>
             <Input
               id="cpf"
               placeholder="12345678901"
