@@ -6,7 +6,6 @@ import { Brain } from "lucide-react";
 
 const Projetos = () => {
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
-  const [theme, setTheme] = useState<"light" | "dark">("dark");
   const { projects } = useMindMaps();
 
   const currentProject = projects.find(p => p.id === selectedProject);
@@ -16,8 +15,6 @@ const Projetos = () => {
       <ProjectsSidebar
         selectedProject={selectedProject}
         onSelectProject={setSelectedProject}
-        theme={theme}
-        onToggleTheme={() => setTheme(t => t === "dark" ? "light" : "dark")}
       />
       
       <div className="flex-1 flex flex-col p-4">
@@ -29,7 +26,7 @@ const Projetos = () => {
                 <p className="text-sm text-muted-foreground">{currentProject.description}</p>
               )}
             </div>
-            <MindMapCanvas projectId={selectedProject} theme={theme} />
+            <MindMapCanvas projectId={selectedProject} />
           </>
         ) : (
           <div className="flex-1 flex items-center justify-center">
