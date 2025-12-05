@@ -29,7 +29,7 @@ const navItems: NavItem[] = [
   { title: "Dashboard", icon: LayoutDashboard, path: "/", permissionKey: "dashboard" },
   { title: "Transações", icon: List, path: "/transacoes", permissionKey: "transacoes" },
   { title: "Recuperação", icon: RefreshCcw, path: "/recuperacao", permissionKey: "recuperacao" },
-  { title: "Projetos", icon: Brain, path: "/projetos", permissionKey: "projetos" },
+  { title: "Quadros", icon: Brain, path: "/projetos", permissionKey: "projetos" },
   { title: "Typebots", icon: Bot, path: "/typebots", permissionKey: "typebots", adminOnly: true },
   { title: "Gerar Boleto", icon: FileText, path: "/gerar-boleto", permissionKey: "gerar_boleto" },
   { title: "Configurações", icon: Settings, path: "/configuracoes", permissionKey: "configuracoes", adminOnly: true },
