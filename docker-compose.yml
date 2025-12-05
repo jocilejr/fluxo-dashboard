@@ -334,4 +334,5 @@ services:
 
 networks:
   supabase-network:
-    driver: bridge
+    driver: overlay
+    attachable: true
