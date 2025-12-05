@@ -1,11 +1,9 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
-import { useTransactions, Transaction } from "@/hooks/useTransactions";
+import { useState, useMemo, useEffect } from "react";
+import { useTransactions } from "@/hooks/useTransactions";
 import { useAbandonedEvents } from "@/hooks/useAbandonedEvents";
-import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { 
   Search, 
-  Filter, 
   QrCode, 
   FileText, 
   CreditCard,
@@ -13,8 +11,7 @@ import {
   Clock,
   AlertTriangle,
   RefreshCw,
-  MessageSquare,
-  ChevronRight
+  MessageSquare
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { startOfDay, endOfDay, subDays, isWithinInterval } from "date-fns";
@@ -159,29 +156,30 @@ export function MobileTransactions() {
     }
   };
 
-  const openWhatsApp = (phone: string | null) => {
+  const openWhatsAppBusiness = (phone: string | null) => {
     if (!phone) {
       toast.error("Sem telefone");
       return;
     }
     const cleanPhone = phone.replace(/\D/g, '');
-    window.open(`https://wa.me/55${cleanPhone}`, '_blank');
+    const fullPhone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
+    window.open(`https://api.whatsapp.com/send?phone=${fullPhone}`, '_blank');
   };
 
   if (isLoading) {
     return (
-      <div className="p-4 space-y-3">
+      <div className="p-4 space-y-3 bg-[hsl(222,47%,11%)] min-h-full">
         {[...Array(5)].map((_, i) => (
-          <div key={i} className="h-20 bg-secondary/30 rounded-2xl animate-pulse" />
+          <div key={i} className="h-20 bg-[hsl(222,35%,20%)] rounded-2xl animate-pulse" />
         ))}
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-[hsl(222,47%,11%)]">
       {/* Sticky Header */}
-      <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-xl px-4 pt-3 pb-2 space-y-3 border-b border-border/30">
+      <div className="sticky top-0 z-30 bg-[hsl(222,47%,11%)]/98 backdrop-blur-xl px-4 pt-3 pb-2 space-y-3 border-b border-[hsl(40,50%,55%)]/10">
         {/* Date Filter Pills */}
         <div className="flex items-center gap-2">
           {(["hoje", "ontem", "semana"] as DateFilterType[]).map((filter) => (
@@ -191,8 +189,8 @@ export function MobileTransactions() {
               className={cn(
                 "px-4 py-2 rounded-full text-xs font-semibold transition-all",
                 dateFilter === filter
-                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                  : "bg-secondary/50 text-muted-foreground"
+                  ? "bg-[hsl(40,50%,55%)] text-[hsl(222,47%,11%)] shadow-lg shadow-[hsl(40,50%,55%)]/20"
+                  : "bg-[hsl(222,35%,20%)] text-[hsl(220,15%,55%)]"
               )}
             >
               {filter === "hoje" ? "Hoje" : filter === "ontem" ? "Ontem" : "7 dias"}
@@ -200,7 +198,7 @@ export function MobileTransactions() {
           ))}
           <button 
             onClick={handleRefresh}
-            className="ml-auto p-2 rounded-full bg-secondary/50 text-muted-foreground"
+            className="ml-auto p-2 rounded-full bg-[hsl(222,35%,20%)] text-[hsl(220,15%,55%)]"
           >
             <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
           </button>
@@ -208,12 +206,12 @@ export function MobileTransactions() {
 
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[hsl(220,15%,55%)]" />
           <Input
             placeholder="Buscar cliente..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 h-11 rounded-xl bg-secondary/30 border-0 text-sm"
+            className="pl-10 h-11 rounded-xl bg-[hsl(222,35%,20%)] border-[hsl(40,50%,55%)]/10 text-sm text-[hsl(45,20%,95%)] placeholder:text-[hsl(220,15%,55%)]"
           />
         </div>
 
@@ -226,14 +224,14 @@ export function MobileTransactions() {
               className={cn(
                 "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all",
                 activeTab === tab
-                  ? "bg-foreground text-background"
-                  : "bg-secondary/30 text-muted-foreground"
+                  ? "bg-[hsl(45,20%,95%)] text-[hsl(222,47%,11%)]"
+                  : "bg-[hsl(222,35%,20%)] text-[hsl(220,15%,55%)]"
               )}
             >
               <span className="capitalize">{tab}</span>
               <span className={cn(
                 "min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold flex items-center justify-center",
-                activeTab === tab ? "bg-background/20 text-background" : "bg-secondary text-muted-foreground"
+                activeTab === tab ? "bg-[hsl(222,47%,11%)]/20 text-[hsl(222,47%,11%)]" : "bg-[hsl(222,44%,14%)] text-[hsl(220,15%,55%)]"
               )}>
                 {counts[tab]}
               </span>
@@ -247,7 +245,7 @@ export function MobileTransactions() {
         {activeTab === "abandonos" ? (
           // Abandoned Events
           filteredAbandoned.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+            <div className="flex flex-col items-center justify-center py-12 text-[hsl(220,15%,55%)]">
               <AlertTriangle className="h-10 w-10 mb-2 opacity-30" />
               <p className="text-sm">Nenhum abandono</p>
             </div>
@@ -255,33 +253,33 @@ export function MobileTransactions() {
             filteredAbandoned.map((event) => (
               <div 
                 key={event.id}
-                className="bg-card border border-border/30 rounded-2xl p-4 space-y-2"
+                className="bg-[hsl(222,44%,14%)] border border-[hsl(40,50%,55%)]/10 rounded-2xl p-4 space-y-2"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="h-9 w-9 rounded-xl bg-warning/10 flex items-center justify-center">
-                      <AlertTriangle className="h-4 w-4 text-warning" />
+                    <div className="h-9 w-9 rounded-xl bg-[hsl(38,92%,50%)]/10 flex items-center justify-center">
+                      <AlertTriangle className="h-4 w-4 text-[hsl(38,92%,50%)]" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-foreground truncate max-w-[180px]">
+                      <p className="text-sm font-semibold text-[hsl(45,20%,95%)] truncate max-w-[180px]">
                         {event.customer_name || "Sem nome"}
                       </p>
-                      <p className="text-[10px] text-muted-foreground">
+                      <p className="text-[10px] text-[hsl(220,15%,55%)]">
                         {formatTime(event.created_at)} • {event.event_type === "cart_abandoned" ? "Carrinho" : "Falha"}
                       </p>
                     </div>
                   </div>
-                  <p className="text-sm font-bold text-foreground">
+                  <p className="text-sm font-bold text-[hsl(45,20%,95%)]">
                     {event.amount ? formatCurrency(event.amount) : "-"}
                   </p>
                 </div>
                 {event.customer_phone && (
                   <button
-                    onClick={() => openWhatsApp(event.customer_phone)}
-                    className="w-full flex items-center justify-center gap-2 py-2 bg-success/10 text-success rounded-xl text-xs font-semibold"
+                    onClick={() => openWhatsAppBusiness(event.customer_phone)}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 bg-[hsl(40,50%,55%)]/15 text-[hsl(40,50%,55%)] rounded-xl text-xs font-semibold border border-[hsl(40,50%,55%)]/20"
                   >
                     <MessageSquare className="h-4 w-4" />
-                    Contatar via WhatsApp
+                    WhatsApp Business
                   </button>
                 )}
               </div>
@@ -290,7 +288,7 @@ export function MobileTransactions() {
         ) : (
           // Regular Transactions
           filteredTransactions.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+            <div className="flex flex-col items-center justify-center py-12 text-[hsl(220,15%,55%)]">
               <FileText className="h-10 w-10 mb-2 opacity-30" />
               <p className="text-sm">Nenhuma transação</p>
             </div>
@@ -302,24 +300,24 @@ export function MobileTransactions() {
               return (
                 <div 
                   key={transaction.id}
-                  className="bg-card border border-border/30 rounded-2xl p-4"
+                  className="bg-[hsl(222,44%,14%)] border border-[hsl(40,50%,55%)]/10 rounded-2xl p-4"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className={cn(
                         "h-11 w-11 rounded-xl flex items-center justify-center",
-                        isPaid ? "bg-success/10" : "bg-warning/10"
+                        isPaid ? "bg-[hsl(40,50%,55%)]/15" : "bg-[hsl(38,92%,50%)]/10"
                       )}>
                         <Icon className={cn(
                           "h-5 w-5",
-                          isPaid ? "text-success" : "text-warning"
+                          isPaid ? "text-[hsl(40,50%,55%)]" : "text-[hsl(38,92%,50%)]"
                         )} />
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-foreground truncate max-w-[160px]">
+                        <p className="text-sm font-semibold text-[hsl(45,20%,95%)] truncate max-w-[160px]">
                           {transaction.customer_name || "Cliente"}
                         </p>
-                        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                        <div className="flex items-center gap-1.5 text-[10px] text-[hsl(220,15%,55%)]">
                           <span className="uppercase">{transaction.type}</span>
                           <span>•</span>
                           <span>{formatTime(transaction.created_at)}</span>
@@ -329,15 +327,15 @@ export function MobileTransactions() {
                     <div className="text-right">
                       <p className={cn(
                         "text-sm font-bold",
-                        isPaid ? "text-success" : "text-foreground"
+                        isPaid ? "text-[hsl(40,50%,55%)]" : "text-[hsl(45,20%,95%)]"
                       )}>
                         {formatCurrency(Number(transaction.amount))}
                       </p>
                       <div className={cn(
                         "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold",
                         isPaid 
-                          ? "bg-success/10 text-success" 
-                          : "bg-warning/10 text-warning"
+                          ? "bg-[hsl(40,50%,55%)]/15 text-[hsl(40,50%,55%)]" 
+                          : "bg-[hsl(38,92%,50%)]/10 text-[hsl(38,92%,50%)]"
                       )}>
                         {isPaid ? <CheckCircle2 className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
                         {isPaid ? "Pago" : transaction.status}
@@ -347,11 +345,11 @@ export function MobileTransactions() {
                   
                   {!isPaid && transaction.customer_phone && (
                     <button
-                      onClick={() => openWhatsApp(transaction.customer_phone)}
-                      className="w-full flex items-center justify-center gap-2 mt-3 py-2 bg-success/10 text-success rounded-xl text-xs font-semibold"
+                      onClick={() => openWhatsAppBusiness(transaction.customer_phone)}
+                      className="w-full flex items-center justify-center gap-2 mt-3 py-2.5 bg-[hsl(40,50%,55%)]/15 text-[hsl(40,50%,55%)] rounded-xl text-xs font-semibold border border-[hsl(40,50%,55%)]/20"
                     >
                       <MessageSquare className="h-4 w-4" />
-                      Enviar WhatsApp
+                      WhatsApp Business
                     </button>
                   )}
                 </div>
