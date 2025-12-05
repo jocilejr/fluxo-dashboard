@@ -91,11 +91,11 @@ export function AppSidebar({ isAdmin, userId }: AppSidebarProps) {
           collapsed && "justify-center"
         )}>
           <div className="relative flex-shrink-0">
-            <div className="absolute -inset-1 bg-primary/20 blur-md rounded-full opacity-60" />
+            <div className="absolute -inset-1 bg-primary/20 blur-md rounded-lg opacity-60" />
             <img 
               src="/logo-ov.png" 
               alt="Origem Viva" 
-              className="h-8 w-8 relative z-10" 
+              className="h-8 w-8 relative z-10 rounded-lg" 
             />
           </div>
           {!collapsed && (
