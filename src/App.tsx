@@ -3,7 +3,9 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AppLayout } from "./components/AppLayout";
+import { ResponsiveLayout } from "./components/ResponsiveLayout";
+import { MobileLayout } from "./components/mobile/MobileLayout";
+import { MobileProfile } from "./components/mobile/MobileProfile";
 import Dashboard from "./pages/Dashboard";
 import Transacoes from "./pages/Transacoes";
 import Recuperacao from "./pages/Recuperacao";
@@ -31,9 +33,9 @@ const App = () => (
             path="/"
             element={
               <ProtectedRoute>
-                <AppLayout>
+                <ResponsiveLayout mobileComponent="dashboard">
                   <Dashboard />
-                </AppLayout>
+                </ResponsiveLayout>
               </ProtectedRoute>
             }
           />
@@ -41,9 +43,19 @@ const App = () => (
             path="/transacoes"
             element={
               <ProtectedRoute>
-                <AppLayout>
+                <ResponsiveLayout mobileComponent="transactions">
                   <Transacoes />
-                </AppLayout>
+                </ResponsiveLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/perfil"
+            element={
+              <ProtectedRoute>
+                <MobileLayout>
+                  <MobileProfile />
+                </MobileLayout>
               </ProtectedRoute>
             }
           />
@@ -51,9 +63,9 @@ const App = () => (
             path="/recuperacao"
             element={
               <ProtectedRoute>
-                <AppLayout>
+                <ResponsiveLayout>
                   <Recuperacao />
-                </AppLayout>
+                </ResponsiveLayout>
               </ProtectedRoute>
             }
           />
@@ -61,9 +73,9 @@ const App = () => (
             path="/projetos"
             element={
               <ProtectedRoute>
-                <AppLayout>
+                <ResponsiveLayout>
                   <Projetos />
-                </AppLayout>
+                </ResponsiveLayout>
               </ProtectedRoute>
             }
           />
@@ -71,9 +83,9 @@ const App = () => (
             path="/typebots"
             element={
               <ProtectedRoute>
-                <AppLayout>
+                <ResponsiveLayout>
                   <TypebotRanking />
-                </AppLayout>
+                </ResponsiveLayout>
               </ProtectedRoute>
             }
           />
@@ -81,9 +93,9 @@ const App = () => (
             path="/gerar-boleto"
             element={
               <ProtectedRoute>
-                <AppLayout>
+                <ResponsiveLayout>
                   <GerarBoleto />
-                </AppLayout>
+                </ResponsiveLayout>
               </ProtectedRoute>
             }
           />
@@ -91,9 +103,9 @@ const App = () => (
             path="/configuracoes"
             element={
               <ProtectedRoute>
-                <AppLayout>
+                <ResponsiveLayout>
                   <Configuracoes />
-                </AppLayout>
+                </ResponsiveLayout>
               </ProtectedRoute>
             }
           />
