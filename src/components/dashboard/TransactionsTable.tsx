@@ -85,9 +85,12 @@ const typeStyles = {
 const VIEWED_STORAGE_KEY = "viewed_transactions";
 const VIEWED_ABANDONED_KEY = "viewed_abandoned_events";
 
-type TabKey = "aprovados" | "boletos-gerados" | "pix-cartao-pendentes" | "abandono-falha";
+type TransactionTabKey = "aprovados" | "boletos-gerados" | "pix-cartao-pendentes";
+type TabKey = TransactionTabKey | "abandono-falha";
 type SortField = "created_at" | "amount" | "customer_name";
 type SortDirection = "asc" | "desc";
+
+const isTransactionTab = (tab: TabKey): tab is TransactionTabKey => tab !== "abandono-falha";
 
 export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin = false }: TransactionsTableProps) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -211,7 +214,7 @@ export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin =
 
   // Calculate stats for current tab
   const tabStats = useMemo(() => {
-    if (activeTab === "abandono-falha") {
+    if (!isTransactionTab(activeTab)) {
       return { totalAmount: 0, uniqueCustomers: 0, todayCount: 0, total: 0 };
     }
     const currentTransactions = tabTransactions[activeTab] || [];
@@ -250,7 +253,7 @@ export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin =
 
   // Mark current tab's transactions as viewed
   const markAsViewed = useCallback((tab: TabKey) => {
-    if (tab === "abandono-falha") {
+    if (!isTransactionTab(tab)) {
       // Handle abandoned events separately
       const abandonedIds = abandonedEvents.map(e => e.id);
       setViewedIds(prev => {
@@ -282,7 +285,7 @@ export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin =
 
   // Mark as viewed when tab changes or transactions load
   useEffect(() => {
-    if (activeTab === "abandono-falha") {
+    if (!isTransactionTab(activeTab)) {
       if (abandonedEvents.length > 0) {
         markAsViewed(activeTab);
       }
@@ -297,7 +300,7 @@ export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin =
   }, [activeTab]);
 
   // Filter transactions by active tab
-  const tabFilteredTransactions = activeTab === "abandono-falha" ? [] : tabTransactions[activeTab];
+  const tabFilteredTransactions = isTransactionTab(activeTab) ? tabTransactions[activeTab] : [];
 
   // Apply search filter and sorting
   const filteredTransactions = useMemo(() => {
