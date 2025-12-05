@@ -27,22 +27,16 @@ import {
   Trash2,
   Edit2,
   Brain,
-  Sun,
-  Moon,
 } from "lucide-react";
 
 interface ProjectsSidebarProps {
   selectedProject: string | null;
   onSelectProject: (id: string) => void;
-  theme: "light" | "dark";
-  onToggleTheme: () => void;
 }
 
 export function ProjectsSidebar({
   selectedProject,
   onSelectProject,
-  theme,
-  onToggleTheme,
 }: ProjectsSidebarProps) {
   const { projects, sections, createProject, deleteProject, updateProject, loadingProjects } = useMindMaps();
   const [createOpen, setCreateOpen] = useState(false);
@@ -89,76 +83,65 @@ export function ProjectsSidebar({
   }, {} as Record<string, MindMapProject[]>);
 
   return (
-    <div className={cn(
-      "w-72 border-r flex flex-col",
-      theme === "dark" ? "bg-card border-border/30" : "bg-white border-gray-200"
-    )}>
+    <div className="w-72 border-r flex flex-col bg-card border-border/30">
       {/* Header */}
-      <div className={cn(
-        "p-4 border-b flex items-center justify-between",
-        theme === "dark" ? "border-border/30" : "border-gray-200"
-      )}>
+      <div className="p-4 border-b border-border/30 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Brain className="h-5 w-5 text-primary" />
           <h2 className="font-semibold">Projetos</h2>
         </div>
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onToggleTheme}>
-            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          </Button>
-          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-            <DialogTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <Plus className="h-4 w-4" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Novo Mapa Mental</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 pt-4">
-                <div className="space-y-2">
-                  <Label>Nome do projeto</Label>
-                  <Input
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    placeholder="Meu mapa mental"
-                    onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Seção</Label>
-                  <Input
-                    value={newSection}
-                    onChange={(e) => setNewSection(e.target.value)}
-                    placeholder="Geral"
-                  />
-                  {sections.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {sections.map(s => (
-                        <button
-                          key={s}
-                          className={cn(
-                            "px-2 py-1 text-xs rounded-full border transition-colors",
-                            newSection === s
-                              ? "bg-primary text-primary-foreground border-primary"
-                              : "bg-muted hover:bg-muted/80 border-border"
-                          )}
-                          onClick={() => setNewSection(s)}
-                        >
-                          {s}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <Button className="w-full" onClick={handleCreate} disabled={!newName.trim()}>
-                  Criar Projeto
-                </Button>
+        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+          <DialogTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <Plus className="h-4 w-4" />
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Novo Mapa Mental</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label>Nome do projeto</Label>
+                <Input
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="Meu mapa mental"
+                  onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+                />
               </div>
-            </DialogContent>
-          </Dialog>
-        </div>
+              <div className="space-y-2">
+                <Label>Seção</Label>
+                <Input
+                  value={newSection}
+                  onChange={(e) => setNewSection(e.target.value)}
+                  placeholder="Geral"
+                />
+                {sections.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {sections.map(s => (
+                      <button
+                        key={s}
+                        className={cn(
+                          "px-2 py-1 text-xs rounded-full border transition-colors",
+                          newSection === s
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-muted hover:bg-muted/80 border-border"
+                        )}
+                        onClick={() => setNewSection(s)}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <Button className="w-full" onClick={handleCreate} disabled={!newName.trim()}>
+                Criar Projeto
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Projects list */}
@@ -183,12 +166,7 @@ export function ProjectsSidebar({
                 <div key={section} className="mb-1">
                   <button
                     onClick={() => toggleSection(section)}
-                    className={cn(
-                      "flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-sm font-medium transition-colors",
-                      theme === "dark" 
-                        ? "hover:bg-muted/50 text-muted-foreground" 
-                        : "hover:bg-gray-100 text-gray-600"
-                    )}
+                    className="flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-sm font-medium transition-colors hover:bg-muted/50 text-muted-foreground"
                   >
                     {isOpen ? (
                       <ChevronDown className="h-4 w-4" />
@@ -209,9 +187,7 @@ export function ProjectsSidebar({
                             "group flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-colors",
                             selectedProject === project.id
                               ? "bg-primary text-primary-foreground"
-                              : theme === "dark"
-                                ? "hover:bg-muted/50"
-                                : "hover:bg-gray-100"
+                              : "hover:bg-muted/50"
                           )}
                           onClick={() => onSelectProject(project.id)}
                         >

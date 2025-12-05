@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
 import { TransactionsTable } from "@/components/dashboard/TransactionsTable";
-import { SaleNotification } from "@/components/dashboard/SaleNotification";
 import { useTransactions } from "@/hooks/useTransactions";
 import { supabase } from "@/integrations/supabase/client";
 
 const Transacoes = () => {
-  const { transactions, isLoading, refetch, hasNewTransaction, notifications, dismissAllNotifications } = useTransactions();
+  const { transactions, isLoading, refetch } = useTransactions();
   const [isRealAdmin, setIsRealAdmin] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -27,12 +26,6 @@ const Transacoes = () => {
 
   return (
     <div className="p-4 lg:p-6 space-y-4 animate-fade-in">
-      <SaleNotification 
-        isVisible={hasNewTransaction}
-        notifications={notifications}
-        onDismiss={dismissAllNotifications}
-      />
-
       <TransactionsTable 
         transactions={transactions} 
         isLoading={isLoading} 
