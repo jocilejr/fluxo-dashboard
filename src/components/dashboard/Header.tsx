@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { SettingsDialog } from "./SettingsDialog";
+import { ManualBoletoGenerator } from "./ManualBoletoGenerator";
 import { usePWA } from "@/hooks/usePWA";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { toast } from "@/hooks/use-toast";
@@ -120,6 +121,8 @@ export function Header() {
         
         {/* Desktop Actions */}
         <div className="hidden sm:flex items-center gap-2">
+          <ManualBoletoGenerator />
+          
           {isSupported && (
             <Tooltip>
               <TooltipTrigger asChild>
