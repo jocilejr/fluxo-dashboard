@@ -219,6 +219,7 @@ create_directories() {
     mkdir -p docker/supabase/volumes/db/data
     mkdir -p docker/supabase/volumes/storage
     mkdir -p docker/supabase/volumes/functions
+    mkdir -p docker/supabase/init
     mkdir -p backups
     mkdir -p logs
     
@@ -397,8 +398,18 @@ run_migrations() {
 create_admin_user() {
     print_header "Criando Usuário Administrador"
     
+    # Verifica se auth está realmente acessível
+    print_info "Verificando serviço de autenticação..."
+    if ! curl -sf http://localhost:9999/health > /dev/null 2>&1; then
+        print_error "Serviço de autenticação não está respondendo"
+        print_info "Verifique: docker compose logs auth --tail=50"
+        return 1
+    fi
+    print_success "Serviço de autenticação disponível"
+    
     # Cria usuário via API do GoTrue
-    RESPONSE=$(curl -s -X POST "http://localhost:9999/admin/users" \
+    print_info "Criando usuário ${ADMIN_EMAIL}..."
+    RESPONSE=$(curl -s --max-time 30 -X POST "http://localhost:9999/admin/users" \
         -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
         -H "Content-Type: application/json" \
         -d "{
@@ -410,6 +421,13 @@ create_admin_user() {
                 \"phone\": \"${ADMIN_PHONE}\"
             }
         }")
+    
+    # Debug da resposta
+    if [[ -z "$RESPONSE" ]]; then
+        print_error "Sem resposta do servidor de autenticação"
+        return 1
+    fi
+    print_info "Resposta recebida: ${RESPONSE:0:100}..."
     
     USER_ID=$(echo "$RESPONSE" | jq -r '.id // empty')
     
@@ -429,7 +447,9 @@ EOF
         
         print_success "Role admin atribuída"
     else
-        print_warning "Usuário pode já existir ou houve erro na criação"
+        ERROR_MSG=$(echo "$RESPONSE" | jq -r '.error // .msg // .message // "erro desconhecido"' 2>/dev/null)
+        print_error "Falha ao criar usuário: $ERROR_MSG"
+        print_info "Resposta completa: $RESPONSE"
     fi
 }
 
