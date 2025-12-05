@@ -792,10 +792,10 @@ export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin =
   const renderTabTrigger = (value: TabKey, label: string) => {
     const count = unviewedCounts[value];
     return (
-      <TabsTrigger value={value} className="relative text-xs sm:text-sm">
+      <TabsTrigger value={value} className="relative text-[10px] sm:text-xs py-2 px-1.5 sm:px-3 whitespace-nowrap">
         {label}
         {count > 0 && (
-          <span className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 min-w-[18px] h-[18px] sm:min-w-[20px] sm:h-[20px] flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] sm:text-xs font-bold animate-pulse">
+          <span className="absolute -top-1 -right-0.5 sm:-top-2 sm:-right-2 min-w-[16px] h-[16px] sm:min-w-[20px] sm:h-[20px] flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[9px] sm:text-xs font-bold animate-pulse">
             {count > 99 ? "99+" : count}
           </span>
         )}
@@ -880,9 +880,9 @@ export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin =
       
       <Tabs value={activeTab} onValueChange={handleTabChange} className="mb-4">
         <div className="flex items-center gap-2">
-          <TabsList className="grid flex-1 grid-cols-4 gap-1">
+          <TabsList className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-1 h-auto p-1">
             {renderTabTrigger("aprovados", "Aprovados")}
-            {renderTabTrigger("boletos-gerados", "Boletos Gerados")}
+            {renderTabTrigger("boletos-gerados", "Boletos Ger.")}
             {renderTabTrigger("pix-cartao-pendentes", "PIX/Cartão Pend.")}
             {renderTabTrigger("abandono-falha", "Abandono/Falha")}
           </TabsList>

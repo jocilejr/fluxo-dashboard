@@ -145,22 +145,22 @@ const Dashboard = () => {
             <DateFilter value={dateFilter} onChange={setDateFilter} />
           </div>
           
-          <div className="grid grid-cols-3 gap-3 lg:gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 lg:gap-4">
             <StatCard title="PIX Gerado" value={stats.pixGerado.toLocaleString('pt-BR')} subtitle="No período" icon={QrCode} variant="info" delay={0} isLoading={isLoading} />
             <StatCard title="Boleto Gerado" value={stats.boletosGerados.toLocaleString('pt-BR')} subtitle="No período" icon={FileText} variant="info" delay={50} isLoading={isLoading} />
             <StatCard title="Cartão Gerado" value={stats.pedidosCartao.toLocaleString('pt-BR')} subtitle="No período" icon={CreditCard} variant="info" delay={100} isLoading={isLoading} />
           </div>
 
-          <div className="grid grid-cols-3 gap-3 lg:gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 lg:gap-4">
             <StatCard title="PIX Pago" value={stats.pixPago.toLocaleString('pt-BR')} subtitle="No período" icon={QrCode} variant="success" delay={150} isLoading={isLoading} />
             <StatCard title="Boleto Pago" value={stats.boletosPagos.toLocaleString('pt-BR')} subtitle={calculateConversionRate(stats.boletosPagos, stats.boletosPendentesOuPagos)} icon={FileText} variant="success" delay={200} isLoading={isLoading} />
             <StatCard title="Cartão Pago" value={stats.cartaoPago.toLocaleString('pt-BR')} subtitle="No período" icon={CreditCard} variant="success" delay={250} isLoading={isLoading} />
           </div>
 
-          <div className="grid grid-cols-3 gap-3 lg:gap-4">
-            <StatCard title="Faturamento Total" value={formatCurrency(stats.totalRevenue)} subtitle={stats.manualRevenueTotal > 0 ? `+${formatCurrency(stats.manualRevenueTotal)} manual` : "Pedidos pagos"} icon={DollarSign} variant="info" delay={300} isLoading={isLoading} />
-            <StatCard title={`Imposto${stats.taxRate > 0 ? ` (${stats.taxRate}%)` : ''}`} value={stats.taxRate > 0 ? `-${formatCurrency(stats.taxAmount)}` : "R$ 0,00"} subtitle={stats.taxRate > 0 ? "Dedução fiscal" : "Sem imposto configurado"} icon={Percent} variant="warning" delay={350} isLoading={isLoading} />
-            <StatCard title="Valor Líquido" value={formatCurrency(stats.netRevenue)} subtitle={stats.taxRate > 0 ? "Após impostos" : "Receita total"} icon={Wallet} variant="success" delay={400} isLoading={isLoading} />
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 lg:gap-4">
+            <StatCard title="Faturamento" value={formatCurrency(stats.totalRevenue)} subtitle={stats.manualRevenueTotal > 0 ? `+${formatCurrency(stats.manualRevenueTotal)} manual` : "Pedidos pagos"} icon={DollarSign} variant="info" delay={300} isLoading={isLoading} />
+            <StatCard title={`Imposto${stats.taxRate > 0 ? ` (${stats.taxRate}%)` : ''}`} value={stats.taxRate > 0 ? `-${formatCurrency(stats.taxAmount)}` : "R$ 0,00"} subtitle={stats.taxRate > 0 ? "Dedução fiscal" : "Não configurado"} icon={Percent} variant="warning" delay={350} isLoading={isLoading} />
+            <StatCard title="Líquido" value={formatCurrency(stats.netRevenue)} subtitle={stats.taxRate > 0 ? "Após impostos" : "Receita total"} icon={Wallet} variant="success" delay={400} isLoading={isLoading} />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
