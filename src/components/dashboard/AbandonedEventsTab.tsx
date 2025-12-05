@@ -255,7 +255,7 @@ export function AbandonedEventsTab({ isAdmin = false }: AbandonedEventsTabProps)
             className="pl-9 text-sm"
           />
         </div>
-        {isAdmin && <AbandonedRecoverySettings />}
+        {isAdmin && <div className="hidden sm:block"><AbandonedRecoverySettings /></div>}
       </div>
 
       {/* Mobile View */}

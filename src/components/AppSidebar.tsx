@@ -23,15 +23,16 @@ interface NavItem {
   path: string;
   permissionKey: string;
   adminOnly?: boolean;
+  desktopOnly?: boolean;
 }
 
 const navItems: NavItem[] = [
   { title: "Dashboard", icon: LayoutDashboard, path: "/", permissionKey: "dashboard" },
   { title: "Transações", icon: List, path: "/transacoes", permissionKey: "transacoes" },
-  { title: "Recuperação", icon: RefreshCcw, path: "/recuperacao", permissionKey: "recuperacao" },
-  { title: "Quadros", icon: Brain, path: "/projetos", permissionKey: "projetos" },
-  { title: "Typebots", icon: Bot, path: "/typebots", permissionKey: "typebots", adminOnly: true },
-  { title: "Gerar Boleto", icon: FileText, path: "/gerar-boleto", permissionKey: "gerar_boleto" },
+  { title: "Recuperação", icon: RefreshCcw, path: "/recuperacao", permissionKey: "recuperacao", desktopOnly: true },
+  { title: "Quadros", icon: Brain, path: "/projetos", permissionKey: "projetos", desktopOnly: true },
+  { title: "Typebots", icon: Bot, path: "/typebots", permissionKey: "typebots", adminOnly: true, desktopOnly: true },
+  { title: "Gerar Boleto", icon: FileText, path: "/gerar-boleto", permissionKey: "gerar_boleto", desktopOnly: true },
   { title: "Configurações", icon: Settings, path: "/configuracoes", permissionKey: "configuracoes", adminOnly: true },
 ];
 
@@ -39,9 +40,10 @@ interface AppSidebarProps {
   isAdmin: boolean;
   userId: string | null;
   unviewedTransactions?: number;
+  isMobile?: boolean;
 }
 
-export function AppSidebar({ isAdmin, userId, unviewedTransactions = 0 }: AppSidebarProps) {
+export function AppSidebar({ isAdmin, userId, unviewedTransactions = 0, isMobile = false }: AppSidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -73,7 +75,10 @@ export function AppSidebar({ isAdmin, userId, unviewedTransactions = 0 }: AppSid
     return permission ? permission.is_allowed : true;
   };
 
-  const visibleItems = navItems.filter(hasPermission);
+  const visibleItems = navItems.filter(item => {
+    if (isMobile && item.desktopOnly) return false;
+    return hasPermission(item);
+  });
 
   return (
     <aside 
