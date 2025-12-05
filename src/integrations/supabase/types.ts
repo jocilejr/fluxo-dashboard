@@ -259,6 +259,38 @@ export type Database = {
         }
         Relationships: []
       }
+      pix_card_recovery_clicks: {
+        Row: {
+          clicked_at: string
+          created_at: string
+          id: string
+          transaction_id: string
+          user_id: string
+        }
+        Insert: {
+          clicked_at?: string
+          created_at?: string
+          id?: string
+          transaction_id: string
+          user_id: string
+        }
+        Update: {
+          clicked_at?: string
+          created_at?: string
+          id?: string
+          transaction_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pix_card_recovery_clicks_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pix_card_recovery_settings: {
         Row: {
           created_at: string
