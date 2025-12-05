@@ -500,6 +500,43 @@ export default function TypebotRanking() {
                 </div>
               </div>
 
+              {/* Hourly Distribution Chart */}
+              {typebotDetails.analytics.hourlyDistribution && typebotDetails.analytics.hourlyDistribution.length > 0 && (
+                <div className="rounded-lg bg-white/[0.03] border border-white/5 p-4">
+                  <h4 className="flex items-center gap-2 mb-4 font-medium text-sm">
+                    <Clock className="h-4 w-4 text-violet-400" />
+                    Leads por Hora
+                  </h4>
+                  <div className="flex items-end gap-1 h-32">
+                    {Array.from({ length: 24 }, (_, hour) => {
+                      const hourData = typebotDetails.analytics.hourlyDistribution.find(h => h.hour === hour);
+                      const count = hourData?.count || 0;
+                      const maxCount = Math.max(...typebotDetails.analytics.hourlyDistribution.map(h => h.count), 1);
+                      const heightPercent = (count / maxCount) * 100;
+                      const isPeakHour = typebotDetails.analytics.peakHour?.hour === hour;
+                      return (
+                        <div key={hour} className="flex-1 flex flex-col items-center gap-1 group relative">
+                          <div 
+                            className={cn(
+                              "w-full rounded-t transition-all",
+                              isPeakHour ? "bg-violet-500" : count > 0 ? "bg-violet-500/50" : "bg-white/10",
+                              "hover:bg-violet-400"
+                            )}
+                            style={{ height: `${Math.max(heightPercent, 4)}%` }}
+                          />
+                          <span className="text-[9px] text-slate-500">{hour}</span>
+                          {count > 0 && (
+                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                              {count} lead{count > 1 ? 's' : ''}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Two Column Layout */}
               <div className="grid grid-cols-2 gap-5">
                 {/* Left Column - Peak Hour & Drop-off */}
