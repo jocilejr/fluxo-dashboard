@@ -8,7 +8,9 @@ import { Trash2, Search, ShoppingCart, AlertTriangle, Phone, MessageSquare, User
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAbandonedEvents, AbandonedEvent } from "@/hooks/useAbandonedEvents";
+import { useQuery } from "@tanstack/react-query";
 import { getGreeting } from "@/lib/greeting";
+import { AbandonedRecoverySettings } from "./AbandonedRecoverySettings";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -64,6 +66,18 @@ export function AbandonedEventsTab({ isAdmin = false }: AbandonedEventsTabProps)
     } catch {
       return [];
     }
+  });
+
+  const { data: recoverySettings } = useQuery({
+    queryKey: ["abandoned-recovery-settings"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("abandoned_recovery_settings")
+        .select("*")
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
   });
 
   const formatCurrency = (value: number | null) => {
@@ -139,20 +153,17 @@ export function AbandonedEventsTab({ isAdmin = false }: AbandonedEventsTabProps)
 
   const prepareRecoveryMessage = (event: AbandonedEvent) => {
     const firstName = event.customer_name?.split(' ')[0] || 'Cliente';
+    const fullName = event.customer_name || 'Cliente';
     const amount = event.amount ? formatCurrency(event.amount) : '';
-    const product = event.product_name || '';
     const greeting = getGreeting();
 
-    let message = `${greeting}, ${firstName}!`;
-    if (product) {
-      message += ` Vi que você demonstrou interesse em "${product}"`;
-    }
-    if (amount) {
-      message += amount ? ` no valor de ${amount}` : '';
-    }
-    message += `. Posso ajudar você a finalizar sua compra?`;
-
-    return message;
+    const template = recoverySettings?.message || 'Olá {primeiro_nome}! Vi que você demonstrou interesse em nossos produtos. Posso ajudar você a finalizar sua compra?';
+    
+    return template
+      .replace(/{saudação}/g, greeting)
+      .replace(/{nome}/g, fullName)
+      .replace(/{primeiro_nome}/g, firstName)
+      .replace(/{valor}/g, amount);
   };
 
   const openWhatsApp = (event: AbandonedEvent) => {
@@ -234,14 +245,17 @@ export function AbandonedEventsTab({ isAdmin = false }: AbandonedEventsTabProps)
       )}
 
       {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por nome, telefone, email, motivo..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9 text-sm"
-        />
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nome, telefone, email, motivo..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 text-sm"
+          />
+        </div>
+        {isAdmin && <AbandonedRecoverySettings />}
       </div>
 
       {/* Mobile View */}

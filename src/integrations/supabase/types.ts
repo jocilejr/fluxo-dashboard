@@ -77,6 +77,27 @@ export type Database = {
         }
         Relationships: []
       }
+      abandoned_recovery_settings: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       boleto_recovery_contacts: {
         Row: {
           contact_method: string
