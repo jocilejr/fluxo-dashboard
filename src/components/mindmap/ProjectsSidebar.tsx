@@ -16,17 +16,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import {
   Plus,
   FolderOpen,
   ChevronRight,
+  ChevronDown,
   MoreHorizontal,
   Trash2,
   Edit2,
@@ -181,79 +177,84 @@ export function ProjectsSidebar({
               </Button>
             </div>
           ) : (
-            sections.map(section => (
-              <Collapsible
-                key={section}
-                open={openSections.includes(section)}
-                onOpenChange={() => toggleSection(section)}
-              >
-                <CollapsibleTrigger className={cn(
-                  "flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-sm font-medium transition-colors",
-                  theme === "dark" 
-                    ? "hover:bg-muted/50 text-muted-foreground" 
-                    : "hover:bg-gray-100 text-gray-600"
-                )}>
-                  <ChevronRight className={cn(
-                    "h-4 w-4 transition-transform",
-                    openSections.includes(section) && "rotate-90"
-                  )} />
-                  {section}
-                  <span className="ml-auto text-xs opacity-50">
-                    {projectsBySection[section]?.length || 0}
-                  </span>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="pl-4">
-                  {projectsBySection[section]?.map(project => (
-                    <div
-                      key={project.id}
-                      className={cn(
-                        "group flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-colors",
-                        selectedProject === project.id
-                          ? "bg-primary text-primary-foreground"
-                          : theme === "dark"
-                            ? "hover:bg-muted/50"
-                            : "hover:bg-gray-100"
-                      )}
-                      onClick={() => onSelectProject(project.id)}
-                    >
-                      <Brain className="h-4 w-4 shrink-0" />
-                      <span className="text-sm truncate flex-1">{project.name}</span>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className={cn(
-                              "h-6 w-6 opacity-0 group-hover:opacity-100 shrink-0",
-                              selectedProject === project.id && "opacity-100"
-                            )}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-popover">
-                          <DropdownMenuItem onClick={() => {
-                            setEditingProject(project);
-                            setNewName(project.name);
-                          }}>
-                            <Edit2 className="h-4 w-4 mr-2" />
-                            Renomear
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-destructive"
-                            onClick={() => handleDelete(project.id)}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Excluir
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+            sections.map(section => {
+              const isOpen = openSections.includes(section);
+              return (
+                <div key={section} className="mb-1">
+                  <button
+                    onClick={() => toggleSection(section)}
+                    className={cn(
+                      "flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-sm font-medium transition-colors",
+                      theme === "dark" 
+                        ? "hover:bg-muted/50 text-muted-foreground" 
+                        : "hover:bg-gray-100 text-gray-600"
+                    )}
+                  >
+                    {isOpen ? (
+                      <ChevronDown className="h-4 w-4" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4" />
+                    )}
+                    {section}
+                    <span className="ml-auto text-xs opacity-50">
+                      {projectsBySection[section]?.length || 0}
+                    </span>
+                  </button>
+                  {isOpen && (
+                    <div className="pl-4">
+                      {projectsBySection[section]?.map(project => (
+                        <div
+                          key={project.id}
+                          className={cn(
+                            "group flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-colors",
+                            selectedProject === project.id
+                              ? "bg-primary text-primary-foreground"
+                              : theme === "dark"
+                                ? "hover:bg-muted/50"
+                                : "hover:bg-gray-100"
+                          )}
+                          onClick={() => onSelectProject(project.id)}
+                        >
+                          <Brain className="h-4 w-4 shrink-0" />
+                          <span className="text-sm truncate flex-1">{project.name}</span>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className={cn(
+                                  "h-6 w-6 opacity-0 group-hover:opacity-100 shrink-0",
+                                  selectedProject === project.id && "opacity-100"
+                                )}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="bg-popover">
+                              <DropdownMenuItem onClick={() => {
+                                setEditingProject(project);
+                                setNewName(project.name);
+                              }}>
+                                <Edit2 className="h-4 w-4 mr-2" />
+                                Renomear
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="text-destructive"
+                                onClick={() => handleDelete(project.id)}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Excluir
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </CollapsibleContent>
-              </Collapsible>
-            ))
+                  )}
+                </div>
+              );
+            })
           )}
         </div>
       </ScrollArea>
