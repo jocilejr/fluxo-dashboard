@@ -84,8 +84,8 @@ export function ManualBoletoGenerator() {
       const payload = {
         nome: formData.nome.trim(),
         telefone: formatPhone(formData.telefone),
-        valor: parseFloat(formData.valor),
-        cpf: formatCPF(formData.cpf) || undefined,
+        Valor: parseFloat(formData.valor),
+        CPF: formatCPF(formData.cpf),
       };
 
       const response = await fetch(webhookUrl, {
