@@ -7,6 +7,7 @@ import { AppLayout } from "./components/AppLayout";
 import Dashboard from "./pages/Dashboard";
 import Transacoes from "./pages/Transacoes";
 import Recuperacao from "./pages/Recuperacao";
+import Projetos from "./pages/Projetos";
 import TypebotRanking from "./pages/TypebotRanking";
 import GerarBoleto from "./pages/GerarBoleto";
 import Configuracoes from "./pages/Configuracoes";
@@ -52,6 +53,16 @@ const App = () => (
               <ProtectedRoute>
                 <AppLayout>
                   <Recuperacao />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/projetos"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <Projetos />
                 </AppLayout>
               </ProtectedRoute>
             }
