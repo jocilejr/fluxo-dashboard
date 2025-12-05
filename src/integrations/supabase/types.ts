@@ -357,6 +357,27 @@ export type Database = {
         }
         Relationships: []
       }
+      delivery_settings: {
+        Row: {
+          created_at: string
+          custom_domain: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          custom_domain?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          custom_domain?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       financial_settings: {
         Row: {
           created_at: string
