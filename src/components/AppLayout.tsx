@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useUnviewedTransactions } from "@/hooks/useUnviewedTransactions";
+import { useAbandonedEvents } from "@/hooks/useAbandonedEvents";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -30,6 +31,16 @@ export function AppLayout({ children }: AppLayoutProps) {
   const location = useLocation();
   const { transactions } = useTransactions();
   const unviewedCount = useUnviewedTransactions(transactions);
+  const { events: abandonedEvents } = useAbandonedEvents();
+  
+  // Count today's abandoned events
+  const todayAbandonedCount = abandonedEvents.filter(event => {
+    const eventDate = new Date(event.created_at);
+    const today = new Date();
+    return eventDate.toDateString() === today.toDateString();
+  }).length;
+  
+  const totalNotifications = unviewedCount + todayAbandonedCount;
 
   const currentPage = pageConfig[location.pathname] || { title: "Página", subtitle: "" };
 
@@ -92,14 +103,14 @@ export function AppLayout({ children }: AppLayoutProps) {
           {/* Right Actions */}
           <div className="flex items-center gap-2">
             {/* New Transaction Alert Indicator */}
-            {unviewedCount > 0 && (
+            {totalNotifications > 0 && (
               <div className="flex items-center gap-2 px-3 py-1.5 bg-success/10 border border-success/30 rounded-full animate-pulse">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
                 </span>
                 <span className="text-xs font-medium text-success">
-                  {unviewedCount} nova{unviewedCount > 1 ? 's' : ''}
+                  {totalNotifications} nova{totalNotifications > 1 ? 's' : ''}
                 </span>
               </div>
             )}
