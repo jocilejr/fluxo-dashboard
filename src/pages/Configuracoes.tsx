@@ -9,9 +9,7 @@ import { Settings, Users, DollarSign, MessageSquare, Link as LinkIcon, Shield } 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { WebhookInfo } from "@/components/dashboard/WebhookInfo";
-import { GroupWebhookInfo } from "@/components/dashboard/GroupWebhookInfo";
-import { AbandonedWebhookInfo } from "@/components/dashboard/AbandonedWebhookInfo";
+import { WebhooksSection } from "@/components/dashboard/WebhooksSection";
 import { Trash2, Plus, Loader2, Key } from "lucide-react";
 
 interface UserWithPermissions {
@@ -542,11 +540,7 @@ const Configuracoes = () => {
         </TabsContent>
 
         <TabsContent value="webhooks">
-          <div className="space-y-4">
-            <WebhookInfo />
-            <GroupWebhookInfo />
-            <AbandonedWebhookInfo />
-          </div>
+          <WebhooksSection />
         </TabsContent>
       </Tabs>
     </div>
