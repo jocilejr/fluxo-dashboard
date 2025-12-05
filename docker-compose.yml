@@ -308,10 +308,6 @@ services:
         - VITE_SUPABASE_PUBLISHABLE_KEY=${VITE_SUPABASE_PUBLISHABLE_KEY}
         - VITE_SUPABASE_PROJECT_ID=${VITE_SUPABASE_PROJECT_ID}
         - VITE_VAPID_PUBLIC_KEY=${VITE_VAPID_PUBLIC_KEY}
-    restart: unless-stopped
-    ports:
-      - "${HTTP_PORT:-80}:80"
-      - "${HTTPS_PORT:-443}:443"
     environment:
       - DOMAIN=${DOMAIN}
     volumes:
