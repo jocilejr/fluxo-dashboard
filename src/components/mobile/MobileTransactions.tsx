@@ -162,33 +162,33 @@ export function MobileTransactions() {
 
   // Tab colors config
   const getTabStyle = (tab: TabType, isActive: boolean) => {
-    if (!isActive) return "bg-[hsl(222,35%,18%)] text-[hsl(220,15%,50%)]";
+    if (!isActive) return "bg-secondary text-muted-foreground";
     switch (tab) {
       case "pagos":
-        return "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+        return "bg-success/20 text-success border border-success/30";
       case "pendentes":
-        return "bg-amber-500/20 text-amber-400 border border-amber-500/30";
+        return "bg-warning/20 text-warning border border-warning/30";
       case "abandonos":
-        return "bg-red-500/20 text-red-400 border border-red-500/30";
+        return "bg-destructive/20 text-destructive border border-destructive/30";
       default:
-        return "bg-[hsl(40,50%,55%)] text-[hsl(222,47%,11%)]";
+        return "bg-primary text-primary-foreground";
     }
   };
 
   if (isLoading) {
     return (
-      <div className="p-3 space-y-2 bg-[hsl(222,47%,11%)] min-h-full">
+      <div className="p-3 space-y-2 bg-background min-h-full">
         {[...Array(5)].map((_, i) => (
-          <div key={i} className="h-16 bg-[hsl(222,35%,18%)] rounded-xl animate-pulse" />
+          <div key={i} className="h-16 bg-card rounded-xl animate-pulse" />
         ))}
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-full bg-[hsl(222,47%,11%)]">
+    <div className="flex flex-col h-full bg-background">
       {/* Sticky Header */}
-      <div className="sticky top-0 z-30 bg-[hsl(222,47%,11%)]/98 backdrop-blur-xl px-3 pt-2 pb-2 space-y-2 border-b border-[hsl(40,50%,55%)]/10">
+      <div className="sticky top-0 z-30 bg-background/98 backdrop-blur-xl px-3 pt-2 pb-2 space-y-2 border-b border-border">
         {/* Date Filter Pills */}
         <div className="flex items-center gap-1.5">
           {(["hoje", "ontem", "semana"] as DateFilterType[]).map((filter) => (
@@ -198,8 +198,8 @@ export function MobileTransactions() {
               className={cn(
                 "px-3 py-1.5 rounded-full text-[10px] font-semibold transition-all",
                 dateFilter === filter
-                  ? "bg-[hsl(40,50%,55%)] text-[hsl(222,47%,11%)]"
-                  : "bg-[hsl(222,35%,18%)] text-[hsl(220,15%,50%)]"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-secondary text-muted-foreground"
               )}
             >
               {filter === "hoje" ? "Hoje" : filter === "ontem" ? "Ontem" : "7d"}
@@ -207,7 +207,7 @@ export function MobileTransactions() {
           ))}
           <button 
             onClick={handleRefresh}
-            className="ml-auto p-1.5 rounded-full bg-[hsl(222,35%,18%)] text-[hsl(220,15%,50%)]"
+            className="ml-auto p-1.5 rounded-full bg-secondary text-muted-foreground"
           >
             <RefreshCw className={cn("h-3.5 w-3.5", isRefreshing && "animate-spin")} />
           </button>
@@ -215,12 +215,12 @@ export function MobileTransactions() {
 
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[hsl(220,15%,50%)]" />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
             placeholder="Buscar..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-8 h-9 rounded-lg bg-[hsl(222,35%,18%)] border-[hsl(40,50%,55%)]/10 text-xs text-[hsl(45,20%,95%)] placeholder:text-[hsl(220,15%,50%)]"
+            className="pl-8 h-9 rounded-lg bg-secondary border-border text-xs text-foreground placeholder:text-muted-foreground"
           />
         </div>
 
@@ -238,7 +238,7 @@ export function MobileTransactions() {
               <span className="capitalize">{tab === "abandonos" ? "Aband." : tab}</span>
               <span className={cn(
                 "min-w-[14px] h-[14px] px-0.5 rounded text-[9px] font-bold flex items-center justify-center",
-                activeTab === tab ? "bg-black/10" : "bg-[hsl(222,44%,14%)]"
+                activeTab === tab ? "bg-black/10" : "bg-card"
               )}>
                 {counts[tab]}
               </span>
@@ -251,7 +251,7 @@ export function MobileTransactions() {
       <div className="flex-1 overflow-auto px-3 py-2 space-y-1.5">
         {activeTab === "abandonos" ? (
           filteredAbandoned.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-[hsl(220,15%,50%)]">
+            <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
               <AlertTriangle className="h-8 w-8 mb-2 opacity-30" />
               <p className="text-xs">Nenhum abandono</p>
             </div>
@@ -259,30 +259,30 @@ export function MobileTransactions() {
             filteredAbandoned.map((event) => (
               <div 
                 key={event.id}
-                className="bg-[hsl(222,44%,14%)] border-l-2 border-l-red-500 rounded-lg p-3 space-y-2"
+                className="bg-card border-l-2 border-l-destructive rounded-lg p-3 space-y-2"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="h-8 w-8 rounded-lg bg-red-500/10 flex items-center justify-center">
-                      <AlertTriangle className="h-4 w-4 text-red-400" />
+                    <div className="h-8 w-8 rounded-lg bg-destructive/10 flex items-center justify-center">
+                      <AlertTriangle className="h-4 w-4 text-destructive" />
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-[hsl(45,20%,95%)] truncate max-w-[140px]">
+                      <p className="text-xs font-semibold text-foreground truncate max-w-[140px]">
                         {event.customer_name || "Sem nome"}
                       </p>
-                      <p className="text-[9px] text-[hsl(220,15%,50%)]">
+                      <p className="text-[9px] text-muted-foreground">
                         {formatTime(event.created_at)} • {event.event_type === "cart_abandoned" ? "Carrinho" : "Falha"}
                       </p>
                     </div>
                   </div>
-                  <p className="text-xs font-bold text-red-400">
+                  <p className="text-xs font-bold text-destructive">
                     {event.amount ? formatCurrency(event.amount) : "-"}
                   </p>
                 </div>
                 {event.customer_phone && (
                   <button
                     onClick={() => openWhatsAppBusiness(event.customer_phone)}
-                    className="w-full flex items-center justify-center gap-1.5 py-2 bg-[hsl(40,50%,55%)]/15 text-[hsl(40,50%,55%)] rounded-lg text-[10px] font-semibold"
+                    className="w-full flex items-center justify-center gap-1.5 py-2 bg-success/15 text-success rounded-lg text-[10px] font-semibold"
                   >
                     <MessageSquare className="h-3.5 w-3.5" />
                     WhatsApp Business
@@ -293,7 +293,7 @@ export function MobileTransactions() {
           )
         ) : (
           filteredTransactions.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10 text-[hsl(220,15%,50%)]">
+            <div className="flex flex-col items-center justify-center py-10 text-muted-foreground">
               <FileText className="h-8 w-8 mb-2 opacity-30" />
               <p className="text-xs">Nenhuma transação</p>
             </div>
@@ -306,26 +306,26 @@ export function MobileTransactions() {
                 <div 
                   key={transaction.id}
                   className={cn(
-                    "bg-[hsl(222,44%,14%)] border-l-2 rounded-lg p-3",
-                    isPaid ? "border-l-emerald-500" : "border-l-amber-500"
+                    "bg-card border-l-2 rounded-lg p-3",
+                    isPaid ? "border-l-success" : "border-l-warning"
                   )}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className={cn(
                         "h-9 w-9 rounded-lg flex items-center justify-center",
-                        isPaid ? "bg-emerald-500/10" : "bg-amber-500/10"
+                        isPaid ? "bg-success/10" : "bg-warning/10"
                       )}>
                         <Icon className={cn(
                           "h-4 w-4",
-                          isPaid ? "text-emerald-400" : "text-amber-400"
+                          isPaid ? "text-success" : "text-warning"
                         )} />
                       </div>
                       <div>
-                        <p className="text-xs font-semibold text-[hsl(45,20%,95%)] truncate max-w-[130px]">
+                        <p className="text-xs font-semibold text-foreground truncate max-w-[130px]">
                           {transaction.customer_name || "Cliente"}
                         </p>
-                        <div className="flex items-center gap-1 text-[9px] text-[hsl(220,15%,50%)]">
+                        <div className="flex items-center gap-1 text-[9px] text-muted-foreground">
                           <span className="uppercase">{transaction.type}</span>
                           <span>•</span>
                           <span>{formatTime(transaction.created_at)}</span>
@@ -335,15 +335,15 @@ export function MobileTransactions() {
                     <div className="text-right">
                       <p className={cn(
                         "text-xs font-bold",
-                        isPaid ? "text-emerald-400" : "text-[hsl(45,20%,95%)]"
+                        isPaid ? "text-success" : "text-foreground"
                       )}>
                         {formatCurrency(Number(transaction.amount))}
                       </p>
                       <div className={cn(
                         "inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold",
                         isPaid 
-                          ? "bg-emerald-500/15 text-emerald-400" 
-                          : "bg-amber-500/15 text-amber-400"
+                          ? "bg-success/15 text-success" 
+                          : "bg-warning/15 text-warning"
                       )}>
                         {isPaid ? <CheckCircle2 className="h-2.5 w-2.5" /> : <Clock className="h-2.5 w-2.5" />}
                         {isPaid ? "Pago" : "Pendente"}
@@ -354,7 +354,7 @@ export function MobileTransactions() {
                   {!isPaid && transaction.customer_phone && (
                     <button
                       onClick={() => openWhatsAppBusiness(transaction.customer_phone)}
-                      className="w-full flex items-center justify-center gap-1.5 mt-2 py-2 bg-[hsl(40,50%,55%)]/15 text-[hsl(40,50%,55%)] rounded-lg text-[10px] font-semibold"
+                      className="w-full flex items-center justify-center gap-1.5 mt-2 py-2 bg-success/15 text-success rounded-lg text-[10px] font-semibold"
                     >
                       <MessageSquare className="h-3.5 w-3.5" />
                       WhatsApp Business
