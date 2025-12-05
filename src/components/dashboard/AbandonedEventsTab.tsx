@@ -204,41 +204,41 @@ export function AbandonedEventsTab({ isAdmin = false }: AbandonedEventsTabProps)
     <div className="space-y-4">
       {/* Stats Bar - Admin only */}
       {isAdmin && (
-        <div className="grid grid-cols-4 gap-3 p-4 bg-secondary/20 rounded-lg border border-border/30">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-warning/10">
-              <ShoppingCart className="h-4 w-4 text-warning" />
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 p-3 sm:p-4 bg-secondary/20 rounded-lg border border-border/30">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="p-1.5 sm:p-2 rounded-lg bg-warning/10">
+              <ShoppingCart className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-warning" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Carrinhos</p>
-              <p className="text-sm font-semibold">{stats.cartAbandoned}</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">Carrinhos</p>
+              <p className="text-xs sm:text-sm font-semibold">{stats.cartAbandoned}</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-destructive/10">
-              <AlertTriangle className="h-4 w-4 text-destructive" />
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="p-1.5 sm:p-2 rounded-lg bg-destructive/10">
+              <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-destructive" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Falhas</p>
-              <p className="text-sm font-semibold">{stats.boletoFailed}</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">Falhas</p>
+              <p className="text-xs sm:text-sm font-semibold">{stats.boletoFailed}</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-info/10">
-              <Users className="h-4 w-4 text-info" />
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="p-1.5 sm:p-2 rounded-lg bg-info/10">
+              <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-info" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Total</p>
-              <p className="text-sm font-semibold">{stats.total}</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">Total</p>
+              <p className="text-xs sm:text-sm font-semibold">{stats.total}</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-success/10">
-              <AlertCircle className="h-4 w-4 text-success" />
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="p-1.5 sm:p-2 rounded-lg bg-success/10">
+              <AlertCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-success" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Valor Total</p>
-              <p className="text-sm font-semibold">{formatCurrency(stats.totalAmount)}</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">Valor Total</p>
+              <p className="text-xs sm:text-sm font-semibold">{formatCurrency(stats.totalAmount)}</p>
             </div>
           </div>
         </div>

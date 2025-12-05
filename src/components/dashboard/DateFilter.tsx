@@ -76,13 +76,13 @@ export function DateFilter({ value, onChange }: DateFilterProps) {
   };
 
   return (
-    <div className="flex items-center gap-1 p-1 bg-secondary/30 rounded-lg border border-border/30">
+    <div className="flex flex-wrap items-center gap-1 p-1 bg-secondary/30 rounded-lg border border-border/30">
       {presets.map((preset) => (
         <button
           key={preset.type}
           onClick={() => handlePresetClick(preset.type)}
           className={cn(
-            "px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-150",
+            "px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs font-medium rounded-md transition-all duration-150",
             value.type === preset.type
               ? "bg-primary text-primary-foreground shadow-sm"
               : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
@@ -96,13 +96,13 @@ export function DateFilter({ value, onChange }: DateFilterProps) {
         <PopoverTrigger asChild>
           <button
             className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-150",
+              "flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs font-medium rounded-md transition-all duration-150",
               value.type === "custom"
                 ? "bg-primary text-primary-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
             )}
           >
-            <CalendarIcon className="h-3.5 w-3.5" />
+            <CalendarIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
             {value.type === "custom" ? (
               <span>
                 {format(value.startDate, "dd/MM", { locale: ptBR })} - {format(value.endDate, "dd/MM", { locale: ptBR })}
