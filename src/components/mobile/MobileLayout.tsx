@@ -52,7 +52,7 @@ export function MobileLayout({ children }: MobileLayoutProps) {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-[hsl(222,47%,11%)] flex flex-col mobile-theme">
       <MobileHeader 
         title={title}
         userName={userName}

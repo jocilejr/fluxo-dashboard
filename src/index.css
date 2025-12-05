@@ -62,6 +62,19 @@
     --sidebar-ring: 142 70% 45%;
   }
 
+  /* Mobile-specific color palette - Origem Viva brand */
+  .mobile-theme {
+    --mobile-bg: 222 47% 11%;
+    --mobile-bg-card: 222 44% 14%;
+    --mobile-gold: 40 50% 55%;
+    --mobile-gold-dark: 40 45% 45%;
+    --mobile-gold-light: 40 55% 70%;
+    --mobile-navy: 222 47% 11%;
+    --mobile-navy-light: 222 35% 20%;
+    --mobile-text: 45 20% 95%;
+    --mobile-text-muted: 220 15% 55%;
+  }
+
   .dark {
     --background: 220 20% 4%;
     --foreground: 0 0% 98%;
