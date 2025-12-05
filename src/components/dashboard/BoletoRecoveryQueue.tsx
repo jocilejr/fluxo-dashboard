@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,10 +18,12 @@ import {
   X,
   User,
   Calendar,
-  DollarSign,
+  Banknote,
   Barcode,
-  AlertCircle,
+  AlertTriangle,
   FileText,
+  Clock,
+  ArrowRight,
 } from "lucide-react";
 
 interface BoletoRecoveryQueueProps {
@@ -43,7 +44,6 @@ export function BoletoRecoveryQueue({
   const [notes, setNotes] = useState("");
   const { extensionStatus, sendText } = useWhatsAppExtension();
 
-  // Reset index when modal opens
   useEffect(() => {
     if (open) {
       setCurrentIndex(0);
@@ -51,10 +51,10 @@ export function BoletoRecoveryQueue({
     }
   }, [open]);
 
-  // Safe index to prevent out of bounds
   const safeIndex = currentIndex >= boletos.length ? 0 : currentIndex;
   const currentBoleto = boletos.length > 0 ? boletos[safeIndex] : null;
   const progress = boletos.length > 0 ? ((safeIndex) / boletos.length) * 100 : 0;
+  const remaining = boletos.length - safeIndex;
 
   const formatCurrency = (value: number) =>
     value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -128,15 +128,14 @@ export function BoletoRecoveryQueue({
   if (!currentBoleto) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Modo Recuperação</DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col items-center justify-center py-8 text-center">
-            <CheckCircle2 className="h-16 w-16 text-success mb-4" />
-            <p className="text-lg font-medium">Nenhum boleto para recuperar hoje!</p>
-            <p className="text-sm text-muted-foreground mt-2">
-              Volte amanhã ou configure novas regras na régua de cobrança.
+        <DialogContent className="max-w-md border-0 bg-gradient-to-b from-card to-background p-0 overflow-hidden">
+          <div className="p-8 flex flex-col items-center justify-center text-center">
+            <div className="h-20 w-20 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6">
+              <CheckCircle2 className="h-10 w-10 text-emerald-500" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2">Tudo em dia!</h3>
+            <p className="text-muted-foreground text-sm max-w-xs">
+              Nenhum boleto para recuperar no momento. Configure novas regras na régua de cobrança.
             </p>
           </div>
         </DialogContent>
@@ -146,137 +145,180 @@ export function BoletoRecoveryQueue({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5" />
-              Modo Recuperação
-            </DialogTitle>
-            <Badge variant="outline">
-              {safeIndex + 1} / {boletos.length}
-            </Badge>
-          </div>
-        </DialogHeader>
-
-        {/* Progress */}
-        <div className="space-y-2">
-          <Progress value={progress} className="h-2" />
-          <p className="text-xs text-muted-foreground text-center">
-            {Math.round(progress)}% concluído
-          </p>
-        </div>
-
-        {/* Customer Info Card */}
-        <Card className="bg-muted/30">
-          <CardContent className="p-4 space-y-3">
+      <DialogContent className="max-w-2xl border-0 bg-gradient-to-b from-card to-background p-0 overflow-hidden max-h-[90vh]">
+        {/* Header */}
+        <div className="p-6 pb-4 border-b border-border/50">
+          <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20">
-                <User className="h-5 w-5 text-primary" />
+              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <MessageSquare className="h-5 w-5 text-primary" />
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold truncate">{currentBoleto.customer_name || "Cliente"}</p>
-                <p className="text-sm text-muted-foreground">{currentBoleto.customer_phone || "Sem telefone"}</p>
+              <div>
+                <h2 className="text-lg font-semibold tracking-tight">Modo Recuperação</h2>
+                <p className="text-xs text-muted-foreground">Fila de contatos pendentes</p>
               </div>
             </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="font-mono text-xs px-3 py-1">
+                {safeIndex + 1} de {boletos.length}
+              </Badge>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleClose}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
 
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className="flex items-center gap-2">
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
-                <span className="text-muted-foreground">Valor:</span>
-                <span className="font-medium">{formatCurrency(currentBoleto.amount)}</span>
+          {/* Progress Bar */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">Progresso</span>
+              <span className="font-medium">{Math.round(progress)}%</span>
+            </div>
+            <Progress value={progress} className="h-1.5" />
+            <p className="text-xs text-muted-foreground">
+              {remaining} {remaining === 1 ? 'contato restante' : 'contatos restantes'}
+            </p>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-5 overflow-y-auto">
+          {/* Customer Card */}
+          <div className="rounded-xl border border-border/50 bg-muted/20 overflow-hidden">
+            <div className="p-4 border-b border-border/30 flex items-center gap-4">
+              <div className="h-12 w-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center ring-2 ring-primary/10">
+                <User className="h-6 w-6 text-primary" />
               </div>
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span className="text-muted-foreground">Gerado em:</span>
-                <span className="font-medium">
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-base truncate">
+                  {currentBoleto.customer_name || "Cliente não identificado"}
+                </h3>
+                <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                  <Phone className="h-3.5 w-3.5" />
+                  {currentBoleto.customer_phone || "Sem telefone"}
+                </p>
+              </div>
+              {currentBoleto.isOverdue && (
+                <Badge variant="destructive" className="gap-1 shrink-0">
+                  <AlertTriangle className="h-3 w-3" />
+                  Vencido
+                </Badge>
+              )}
+            </div>
+
+            <div className="p-4 grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Valor</p>
+                <p className="font-semibold text-primary">{formatCurrency(currentBoleto.amount)}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Gerado em</p>
+                <p className="font-medium text-sm">
                   {format(new Date(currentBoleto.created_at), "dd/MM/yyyy", { locale: ptBR })}
-                </span>
+                </p>
               </div>
-              <div className="flex items-center gap-2 col-span-2 sm:col-span-1">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span className="text-muted-foreground">Vencimento:</span>
-                <span className="font-medium">
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Vencimento</p>
+                <p className="font-medium text-sm">
                   {format(currentBoleto.dueDate, "dd/MM/yyyy", { locale: ptBR })}
-                </span>
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">Regra</p>
+                <p className="font-medium text-sm truncate">
+                  {currentBoleto.applicableRule?.name || "—"}
+                </p>
               </div>
             </div>
 
             {currentBoleto.external_id && (
-              <div className="flex items-center gap-2 text-sm">
-                <Barcode className="h-4 w-4 text-muted-foreground" />
-                <span className="text-muted-foreground">Código:</span>
-                <span className="font-mono text-xs truncate flex-1">{currentBoleto.external_id}</span>
+              <div className="px-4 pb-4">
+                <div className="flex items-center gap-2 p-2.5 rounded-lg bg-background/50 border border-border/30">
+                  <Barcode className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span className="font-mono text-xs truncate text-muted-foreground">
+                    {currentBoleto.external_id}
+                  </span>
+                  {(currentBoleto.metadata as any)?.boleto_url && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="ml-auto h-7 text-xs gap-1.5 shrink-0"
+                      onClick={() => window.open((currentBoleto.metadata as any).boleto_url, "_blank")}
+                    >
+                      <FileText className="h-3.5 w-3.5" />
+                      Ver Boleto
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
-
-            {/* Status badges and Boleto Link */}
-            <div className="flex flex-wrap items-center gap-2">
-              {currentBoleto.applicableRule && (
-                <Badge variant="secondary">{currentBoleto.applicableRule.name}</Badge>
-              )}
-              {currentBoleto.isOverdue && (
-                <Badge variant="destructive" className="gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  Vencido
-                </Badge>
-              )}
-              {(currentBoleto.metadata as any)?.boleto_url && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1 ml-auto"
-                  onClick={() => window.open((currentBoleto.metadata as any).boleto_url, "_blank")}
-                >
-                  <FileText className="h-4 w-4" />
-                  Ver Boleto
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Message Preview */}
-        {currentBoleto.formattedMessage && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Mensagem</span>
-              <Button variant="ghost" size="sm" onClick={handleCopyMessage} className="gap-1">
-                <Copy className="h-3 w-3" />
-                Copiar
-              </Button>
-            </div>
-            <div className="p-3 bg-muted/30 rounded-lg border text-sm whitespace-pre-wrap">
-              {currentBoleto.formattedMessage}
-            </div>
           </div>
-        )}
 
-        {/* Notes */}
-        <div className="space-y-2">
-          <span className="text-sm font-medium">Observações (opcional)</span>
-          <Textarea
-            placeholder="Adicione notas sobre o contato..."
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={2}
-          />
+          {/* Message Preview */}
+          {currentBoleto.formattedMessage && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-medium flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                  Mensagem de Recuperação
+                </h4>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={handleCopyMessage} 
+                  className="h-7 text-xs gap-1.5 hover:bg-muted"
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                  Copiar
+                </Button>
+              </div>
+              <div className="p-4 rounded-xl bg-muted/30 border border-border/30 text-sm leading-relaxed whitespace-pre-wrap">
+                {currentBoleto.formattedMessage}
+              </div>
+            </div>
+          )}
+
+          {/* Notes */}
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium">Observações</h4>
+            <Textarea
+              placeholder="Adicione notas sobre o contato (opcional)..."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={2}
+              className="resize-none text-sm bg-muted/20 border-border/50 focus:border-primary/50"
+            />
+          </div>
         </div>
 
-        {/* Actions */}
-        <div className="flex flex-col sm:flex-row gap-3 pt-2">
-          <Button onClick={handleSendWhatsApp} className="flex-1 gap-2" disabled={!currentBoleto.customer_phone}>
-            <Phone className="h-4 w-4" />
-            Enviar WhatsApp
-          </Button>
-          <Button onClick={handleMarkContacted} variant="secondary" className="flex-1 gap-2">
-            <CheckCircle2 className="h-4 w-4" />
-            Marcar Contactado
-          </Button>
-          <Button onClick={handleSkip} variant="ghost" className="gap-2">
-            <SkipForward className="h-4 w-4" />
-            Pular
-          </Button>
+        {/* Footer Actions */}
+        <div className="p-6 pt-4 border-t border-border/50 bg-muted/10">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button 
+              onClick={handleSendWhatsApp} 
+              className="flex-1 gap-2 h-11 font-medium" 
+              disabled={!currentBoleto.customer_phone}
+            >
+              <Phone className="h-4 w-4" />
+              Enviar WhatsApp
+            </Button>
+            <Button 
+              onClick={handleMarkContacted} 
+              variant="secondary" 
+              className="flex-1 gap-2 h-11 font-medium"
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              Marcar Contactado
+            </Button>
+            <Button 
+              onClick={handleSkip} 
+              variant="ghost" 
+              className="sm:w-auto gap-2 h-11"
+            >
+              <SkipForward className="h-4 w-4" />
+              Pular
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
