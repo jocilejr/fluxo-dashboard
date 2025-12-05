@@ -13,6 +13,8 @@ import Projetos from "./pages/Projetos";
 import TypebotRanking from "./pages/TypebotRanking";
 import GerarBoleto from "./pages/GerarBoleto";
 import Configuracoes from "./pages/Configuracoes";
+import Entrega from "./pages/Entrega";
+import EntregaPublica from "./pages/EntregaPublica";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -109,6 +111,18 @@ const App = () => (
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/entrega"
+            element={
+              <ProtectedRoute>
+                <ResponsiveLayout>
+                  <Entrega />
+                </ResponsiveLayout>
+              </ProtectedRoute>
+            }
+          />
+          {/* Rota pública para página de entrega - sem autenticação */}
+          <Route path="/e/:slug" element={<EntregaPublica />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

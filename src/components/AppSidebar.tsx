@@ -11,6 +11,7 @@ import {
   ChevronRight,
   LogOut,
   Brain,
+  Package,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -30,6 +31,7 @@ const navItems: NavItem[] = [
   { title: "Dashboard", icon: LayoutDashboard, path: "/", permissionKey: "dashboard" },
   { title: "Transações", icon: List, path: "/transacoes", permissionKey: "transacoes" },
   { title: "Recuperação", icon: RefreshCcw, path: "/recuperacao", permissionKey: "recuperacao", desktopOnly: true },
+  { title: "Entrega", icon: Package, path: "/entrega", permissionKey: "entrega", desktopOnly: true },
   { title: "Quadros", icon: Brain, path: "/projetos", permissionKey: "projetos", desktopOnly: true },
   { title: "Typebots", icon: Bot, path: "/typebots", permissionKey: "typebots", adminOnly: true, desktopOnly: true },
   { title: "Gerar Boleto", icon: FileText, path: "/gerar-boleto", permissionKey: "gerar_boleto", desktopOnly: true },

@@ -26,3 +26,6 @@ verify_jwt = true
 
 [functions.webhook-abandoned]
 verify_jwt = false
+
+[functions.delivery-access]
+verify_jwt = false
