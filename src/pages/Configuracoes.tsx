@@ -328,219 +328,220 @@ const Configuracoes = () => {
   };
 
   return (
-    <div className="p-4 sm:p-6">
-      <h1 className="text-2xl font-bold mb-6">Configurações</h1>
-
+    <div className="p-4 lg:p-6 animate-fade-in">
       <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full max-w-2xl grid-cols-5 mb-6">
-          <TabsTrigger value="users" className="gap-2">
-            <Users className="h-4 w-4" />
-            Usuários
-          </TabsTrigger>
-          <TabsTrigger value="permissions" className="gap-2">
-            <Shield className="h-4 w-4" />
-            Permissões
-          </TabsTrigger>
-          <TabsTrigger value="financial" className="gap-2">
-            <DollarSign className="h-4 w-4" />
-            Financeiro
-          </TabsTrigger>
-          <TabsTrigger value="recovery" className="gap-2">
-            <MessageSquare className="h-4 w-4" />
-            Recuperação
-          </TabsTrigger>
-          <TabsTrigger value="webhooks" className="gap-2">
-            <LinkIcon className="h-4 w-4" />
-            Webhooks
-          </TabsTrigger>
-        </TabsList>
+        <div className="flex flex-col lg:flex-row lg:items-center gap-4 mb-6">
+          <TabsList className="bg-secondary/30 border border-border/30 p-1 h-auto flex-wrap">
+            <TabsTrigger value="users" className="gap-2 data-[state=active]:bg-foreground data-[state=active]:text-background text-xs">
+              <Users className="h-3.5 w-3.5" />
+              Usuários
+            </TabsTrigger>
+            <TabsTrigger value="permissions" className="gap-2 data-[state=active]:bg-foreground data-[state=active]:text-background text-xs">
+              <Shield className="h-3.5 w-3.5" />
+              Permissões
+            </TabsTrigger>
+            <TabsTrigger value="financial" className="gap-2 data-[state=active]:bg-foreground data-[state=active]:text-background text-xs">
+              <DollarSign className="h-3.5 w-3.5" />
+              Financeiro
+            </TabsTrigger>
+            <TabsTrigger value="recovery" className="gap-2 data-[state=active]:bg-foreground data-[state=active]:text-background text-xs">
+              <MessageSquare className="h-3.5 w-3.5" />
+              Recuperação
+            </TabsTrigger>
+            <TabsTrigger value="webhooks" className="gap-2 data-[state=active]:bg-foreground data-[state=active]:text-background text-xs">
+              <LinkIcon className="h-3.5 w-3.5" />
+              Webhooks
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="users">
-          <Card>
-            <CardHeader>
-              <CardTitle>Gerenciar Usuários</CardTitle>
-              <CardDescription>Adicione ou remova usuários do sistema</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-card/60 border border-border/30 rounded-xl p-5 lg:p-6">
+            <div className="mb-5">
+              <h3 className="text-sm font-semibold text-foreground">Gerenciar Usuários</h3>
+              <p className="text-xs text-muted-foreground">Adicione ou remova usuários do sistema</p>
+            </div>
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <Input
                   placeholder="Email"
                   value={newUserEmail}
                   onChange={(e) => setNewUserEmail(e.target.value)}
+                  className="bg-secondary/30 border-border/30 h-9 text-sm"
                 />
                 <Input
                   type="password"
                   placeholder="Senha"
                   value={newUserPassword}
                   onChange={(e) => setNewUserPassword(e.target.value)}
+                  className="bg-secondary/30 border-border/30 h-9 text-sm"
                 />
-                <Button onClick={createUser} disabled={isCreatingUser}>
-                  {isCreatingUser ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+                <Button onClick={createUser} disabled={isCreatingUser} size="sm" className="h-9">
+                  {isCreatingUser ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-2" /> : <Plus className="h-3.5 w-3.5 mr-2" />}
                   Criar Usuário
                 </Button>
               </div>
 
               <div className="space-y-2">
                 {usersWithPermissions?.filter(u => u.role !== "admin").map((user) => (
-                  <div key={user.user_id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/30">
+                  <div key={user.user_id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/20 border border-border/20">
                     <span className="text-sm">{user.email}</span>
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={() => resetPassword(user.user_id)}>
-                        <Key className="h-4 w-4" />
+                      <Button variant="outline" size="sm" onClick={() => resetPassword(user.user_id)} className="h-8 w-8 p-0">
+                        <Key className="h-3.5 w-3.5" />
                       </Button>
-                      <Button variant="destructive" size="sm" onClick={() => deleteUser(user.user_id)}>
-                        <Trash2 className="h-4 w-4" />
+                      <Button variant="destructive" size="sm" onClick={() => deleteUser(user.user_id)} className="h-8 w-8 p-0">
+                        <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                   </div>
                 ))}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </TabsContent>
 
         <TabsContent value="permissions">
-          <Card>
-            <CardHeader>
-              <CardTitle>Permissões por Usuário</CardTitle>
-              <CardDescription>Configure quais abas cada usuário pode acessar</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                {usersWithPermissions?.filter(u => u.role !== "admin").map((user) => (
-                  <div key={user.user_id} className="p-4 rounded-lg border border-border">
-                    <h4 className="font-medium mb-3">{user.email}</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {AVAILABLE_PERMISSIONS.map((perm) => (
-                        <div key={perm.key} className="flex items-center justify-between">
-                          <Label htmlFor={`${user.user_id}-${perm.key}`} className="text-sm">
-                            {perm.label}
-                          </Label>
-                          <Switch
-                            id={`${user.user_id}-${perm.key}`}
-                            checked={getUserPermission(user, perm.key)}
-                            onCheckedChange={(checked) => 
-                              updatePermission.mutate({ userId: user.user_id, permissionKey: perm.key, isAllowed: checked })
-                            }
-                          />
-                        </div>
-                      ))}
-                    </div>
+          <div className="bg-card/60 border border-border/30 rounded-xl p-5 lg:p-6">
+            <div className="mb-5">
+              <h3 className="text-sm font-semibold text-foreground">Permissões por Usuário</h3>
+              <p className="text-xs text-muted-foreground">Configure quais abas cada usuário pode acessar</p>
+            </div>
+            <div className="space-y-4">
+              {usersWithPermissions?.filter(u => u.role !== "admin").map((user) => (
+                <div key={user.user_id} className="p-4 rounded-lg bg-secondary/20 border border-border/20">
+                  <h4 className="font-medium text-sm mb-3">{user.email}</h4>
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    {AVAILABLE_PERMISSIONS.map((perm) => (
+                      <div key={perm.key} className="flex items-center justify-between">
+                        <Label htmlFor={`${user.user_id}-${perm.key}`} className="text-xs text-muted-foreground">
+                          {perm.label}
+                        </Label>
+                        <Switch
+                          id={`${user.user_id}-${perm.key}`}
+                          checked={getUserPermission(user, perm.key)}
+                          onCheckedChange={(checked) => 
+                            updatePermission.mutate({ userId: user.user_id, permissionKey: perm.key, isAllowed: checked })
+                          }
+                        />
+                      </div>
+                    ))}
                   </div>
-                ))}
-                {(!usersWithPermissions || usersWithPermissions.filter(u => u.role !== "admin").length === 0) && (
-                  <p className="text-muted-foreground text-center py-8">Nenhum usuário (não-admin) cadastrado</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                </div>
+              ))}
+              {(!usersWithPermissions || usersWithPermissions.filter(u => u.role !== "admin").length === 0) && (
+                <p className="text-muted-foreground text-center py-8 text-sm">Nenhum usuário (não-admin) cadastrado</p>
+              )}
+            </div>
+          </div>
         </TabsContent>
 
         <TabsContent value="financial">
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Taxa de Imposto</CardTitle>
-                <CardDescription>Defina a alíquota de imposto para cálculo do valor líquido</CardDescription>
-              </CardHeader>
-              <CardContent className="flex gap-4">
+          <div className="space-y-4">
+            <div className="bg-card/60 border border-border/30 rounded-xl p-5 lg:p-6">
+              <div className="mb-4">
+                <h3 className="text-sm font-semibold text-foreground">Taxa de Imposto</h3>
+                <p className="text-xs text-muted-foreground">Defina a alíquota de imposto para cálculo do valor líquido</p>
+              </div>
+              <div className="flex items-center gap-3">
                 <Input
                   type="number"
                   placeholder="0"
                   value={taxRate}
                   onChange={(e) => setTaxRate(e.target.value)}
-                  className="max-w-[120px]"
+                  className="max-w-[100px] bg-secondary/30 border-border/30 h-9 text-sm"
                 />
-                <span className="self-center">%</span>
-                <Button onClick={() => updateTaxRate.mutate(parseFloat(taxRate) || 0)}>
+                <span className="text-sm text-muted-foreground">%</span>
+                <Button onClick={() => updateTaxRate.mutate(parseFloat(taxRate) || 0)} size="sm" className="h-9">
                   Salvar
                 </Button>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Receitas Manuais</CardTitle>
-                <CardDescription>Adicione receitas recebidas fora do sistema</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex gap-4">
+            <div className="bg-card/60 border border-border/30 rounded-xl p-5 lg:p-6">
+              <div className="mb-4">
+                <h3 className="text-sm font-semibold text-foreground">Receitas Manuais</h3>
+                <p className="text-xs text-muted-foreground">Adicione receitas recebidas fora do sistema</p>
+              </div>
+              <div className="space-y-4">
+                <div className="flex gap-3">
                   <Input
                     placeholder="Descrição"
                     value={newRevenueDescription}
                     onChange={(e) => setNewRevenueDescription(e.target.value)}
-                    className="flex-1"
+                    className="flex-1 bg-secondary/30 border-border/30 h-9 text-sm"
                   />
                   <Input
                     type="number"
                     placeholder="Valor"
                     value={newRevenueAmount}
                     onChange={(e) => setNewRevenueAmount(e.target.value)}
-                    className="w-32"
+                    className="w-28 bg-secondary/30 border-border/30 h-9 text-sm"
                   />
-                  <Button onClick={() => addManualRevenue.mutate({ description: newRevenueDescription, amount: parseFloat(newRevenueAmount) || 0 })}>
+                  <Button onClick={() => addManualRevenue.mutate({ description: newRevenueDescription, amount: parseFloat(newRevenueAmount) || 0 })} size="sm" className="h-9 w-9 p-0">
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
                 <div className="space-y-2">
                   {manualRevenues?.map((r) => (
-                    <div key={r.id} className="flex items-center justify-between p-2 rounded bg-secondary/30">
+                    <div key={r.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/20 border border-border/20">
                       <span className="text-sm">{r.description}</span>
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium">R$ {Number(r.amount).toFixed(2)}</span>
-                        <Button variant="ghost" size="sm" onClick={() => deleteManualRevenue.mutate(r.id)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
+                        <Button variant="ghost" size="sm" onClick={() => deleteManualRevenue.mutate(r.id)} className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive">
+                          <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     </div>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         </TabsContent>
 
         <TabsContent value="recovery">
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Mensagem PIX/Cartão</CardTitle>
-                <CardDescription>Mensagem padrão para recuperação de PIX e cartão pendentes</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
+          <div className="space-y-4">
+            <div className="bg-card/60 border border-border/30 rounded-xl p-5 lg:p-6">
+              <div className="mb-4">
+                <h3 className="text-sm font-semibold text-foreground">Mensagem PIX/Cartão</h3>
+                <p className="text-xs text-muted-foreground">Mensagem padrão para recuperação de PIX e cartão pendentes</p>
+              </div>
+              <div className="space-y-3">
                 <textarea
-                  className="w-full min-h-[100px] p-3 rounded-md bg-secondary/50 border border-border/50 text-sm resize-none"
+                  className="w-full min-h-[100px] p-3 rounded-lg bg-secondary/30 border border-border/30 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary"
                   value={recoveryMessage}
                   onChange={(e) => setRecoveryMessage(e.target.value)}
                   placeholder="Use {nome}, {primeiro_nome}, {valor}, {saudação}"
                 />
-                <Button onClick={() => updateRecoveryMessage.mutate(recoveryMessage)}>
+                <Button onClick={() => updateRecoveryMessage.mutate(recoveryMessage)} size="sm" className="h-9">
                   Salvar Mensagem
                 </Button>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Webhook Boleto Manual</CardTitle>
-                <CardDescription>URL para geração de boletos manuais</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
+            <div className="bg-card/60 border border-border/30 rounded-xl p-5 lg:p-6">
+              <div className="mb-4">
+                <h3 className="text-sm font-semibold text-foreground">Webhook Boleto Manual</h3>
+                <p className="text-xs text-muted-foreground">URL para geração de boletos manuais</p>
+              </div>
+              <div className="space-y-3">
                 <Input
                   placeholder="https://..."
                   value={boletoWebhook}
                   onChange={(e) => setBoletoWebhook(e.target.value)}
+                  className="bg-secondary/30 border-border/30 h-9 text-sm"
                 />
-                <Button onClick={() => updateBoletoWebhook.mutate(boletoWebhook)}>
+                <Button onClick={() => updateBoletoWebhook.mutate(boletoWebhook)} size="sm" className="h-9">
                   Salvar Webhook
                 </Button>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         </TabsContent>
 
         <TabsContent value="webhooks">
-          <div className="space-y-6">
+          <div className="space-y-4">
             <WebhookInfo />
             <GroupWebhookInfo />
           </div>

@@ -26,9 +26,7 @@ const Transacoes = () => {
   }, []);
 
   return (
-    <div className="p-4 sm:p-6">
-      <h1 className="text-2xl font-bold mb-6">Transações</h1>
-      
+    <div className="p-4 lg:p-6 space-y-4 animate-fade-in">
       <SaleNotification 
         isVisible={hasNewTransaction}
         notifications={notifications}
