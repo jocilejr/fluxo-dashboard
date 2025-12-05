@@ -507,32 +507,38 @@ export default function TypebotRanking() {
                     <Clock className="h-4 w-4 text-violet-400" />
                     Leads por Hora
                   </h4>
-                  <div className="flex items-end gap-1 h-32">
+                  <div className="flex items-end gap-[2px] h-28">
                     {Array.from({ length: 24 }, (_, hour) => {
                       const hourData = typebotDetails.analytics.hourlyDistribution.find(h => h.hour === hour);
                       const count = hourData?.count || 0;
                       const maxCount = Math.max(...typebotDetails.analytics.hourlyDistribution.map(h => h.count), 1);
-                      const heightPercent = (count / maxCount) * 100;
+                      const heightPercent = count > 0 ? Math.max((count / maxCount) * 100, 8) : 4;
                       const isPeakHour = typebotDetails.analytics.peakHour?.hour === hour;
                       return (
-                        <div key={hour} className="flex-1 flex flex-col items-center gap-1 group relative">
+                        <div key={hour} className="flex-1 flex flex-col items-center group relative h-full justify-end">
                           <div 
                             className={cn(
-                              "w-full rounded-t transition-all",
-                              isPeakHour ? "bg-violet-500" : count > 0 ? "bg-violet-500/50" : "bg-white/10",
+                              "w-full rounded-t transition-all min-h-[4px]",
+                              isPeakHour ? "bg-violet-500" : count > 0 ? "bg-violet-500/60" : "bg-white/10",
                               "hover:bg-violet-400"
                             )}
-                            style={{ height: `${Math.max(heightPercent, 4)}%` }}
+                            style={{ height: `${heightPercent}%` }}
                           />
-                          <span className="text-[9px] text-slate-500">{hour}</span>
                           {count > 0 && (
-                            <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
-                              {count} lead{count > 1 ? 's' : ''}
+                            <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-slate-800 border border-white/10 px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
+                              {hour}h: {count} lead{count > 1 ? 's' : ''}
                             </div>
                           )}
                         </div>
                       );
                     })}
+                  </div>
+                  <div className="flex gap-[2px] mt-1">
+                    {Array.from({ length: 24 }, (_, hour) => (
+                      <div key={hour} className="flex-1 text-center">
+                        <span className="text-[8px] text-slate-500">{hour}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
