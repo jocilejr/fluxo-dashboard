@@ -49,15 +49,21 @@ RUN apk add --no-cache gettext
 # Copia arquivos buildados
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copia configuração do nginx
+# Copia configuração do nginx como template
 COPY docker/nginx/nginx.conf /etc/nginx/nginx.conf.template
 
-# Cria diretórios para SSL
-RUN mkdir -p /etc/nginx/ssl
+# Cria diretórios para SSL e conf.d
+RUN mkdir -p /etc/nginx/ssl /var/run/nginx
 
-# Script de inicialização para substituir variáveis
+# Cria diretório gravável para o nginx.conf processado
+RUN mkdir -p /etc/nginx/conf.d && \
+    chmod 755 /etc/nginx /etc/nginx/conf.d
+
+# Script de inicialização - escreve em /tmp e copia
 RUN echo '#!/bin/sh' > /docker-entrypoint.sh && \
-    echo 'envsubst "\$DOMAIN" < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf' >> /docker-entrypoint.sh && \
+    echo 'set -e' >> /docker-entrypoint.sh && \
+    echo 'envsubst "\$DOMAIN \$HTTPS_PORT" < /etc/nginx/nginx.conf.template > /tmp/nginx.conf' >> /docker-entrypoint.sh && \
+    echo 'cat /tmp/nginx.conf > /etc/nginx/nginx.conf' >> /docker-entrypoint.sh && \
     echo 'exec nginx -g "daemon off;"' >> /docker-entrypoint.sh && \
     chmod +x /docker-entrypoint.sh
 
