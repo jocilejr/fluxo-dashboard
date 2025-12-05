@@ -97,6 +97,19 @@ export function AppLayout({ children }: AppLayoutProps) {
               notifications={notifications}
               onDismiss={dismissAllNotifications}
             />
+
+            {/* New Transaction Alert Indicator */}
+            {notifications.length > 0 && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-success/10 border border-success/30 rounded-full animate-pulse">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
+                </span>
+                <span className="text-xs font-medium text-success">
+                  {notifications.length} nova{notifications.length > 1 ? 's' : ''}
+                </span>
+              </div>
+            )}
             
             <div className="hidden sm:flex items-center gap-2 pl-2 border-l border-border/50">
               <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
