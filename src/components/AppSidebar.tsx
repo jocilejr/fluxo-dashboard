@@ -37,9 +37,10 @@ const navItems: NavItem[] = [
 interface AppSidebarProps {
   isAdmin: boolean;
   userId: string | null;
+  unviewedTransactions?: number;
 }
 
-export function AppSidebar({ isAdmin, userId }: AppSidebarProps) {
+export function AppSidebar({ isAdmin, userId, unviewedTransactions = 0 }: AppSidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -123,6 +124,8 @@ export function AppSidebar({ isAdmin, userId }: AppSidebarProps) {
         
         {visibleItems.map((item) => {
           const isActive = location.pathname === item.path;
+          const showBadge = item.path === "/transacoes" && unviewedTransactions > 0;
+          
           return (
             <button
               key={item.path}
@@ -134,18 +137,35 @@ export function AppSidebar({ isAdmin, userId }: AppSidebarProps) {
                   : "text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
               )}
             >
-              <item.icon className={cn(
-                "h-[18px] w-[18px] flex-shrink-0",
-                collapsed && "mx-auto"
-              )} />
+              <div className="relative">
+                <item.icon className={cn(
+                  "h-[18px] w-[18px] flex-shrink-0",
+                  collapsed && "mx-auto"
+                )} />
+                {showBadge && collapsed && (
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
+                    {unviewedTransactions > 99 ? "99+" : unviewedTransactions}
+                  </span>
+                )}
+              </div>
               {!collapsed && (
-                <span className="text-[13px] font-medium truncate">{item.title}</span>
+                <span className="text-[13px] font-medium truncate flex-1">{item.title}</span>
+              )}
+              {showBadge && !collapsed && (
+                <span className="min-w-[20px] h-5 px-1.5 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full flex items-center justify-center">
+                  {unviewedTransactions > 99 ? "99+" : unviewedTransactions}
+                </span>
               )}
               
               {/* Tooltip for collapsed state */}
               {collapsed && (
                 <div className="absolute left-full ml-2 px-2.5 py-1.5 bg-popover text-popover-foreground text-xs font-medium rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 whitespace-nowrap z-50 shadow-xl border border-border">
                   {item.title}
+                  {showBadge && (
+                    <span className="ml-2 px-1.5 py-0.5 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full">
+                      {unviewedTransactions}
+                    </span>
+                  )}
                 </div>
               )}
             </button>

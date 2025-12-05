@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Menu, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useTransactions } from "@/hooks/useTransactions";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -25,8 +26,10 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userName, setUserName] = useState<string>("");
   const location = useLocation();
+  const { notifications } = useTransactions();
 
   const currentPage = pageConfig[location.pathname] || { title: "Página", subtitle: "" };
+  const unviewedCount = notifications.length;
 
   useEffect(() => {
     const getUser = async () => {
@@ -51,7 +54,7 @@ export function AppLayout({ children }: AppLayoutProps) {
     <div className="min-h-screen bg-background flex w-full">
       {/* Desktop Sidebar */}
       <div className="hidden lg:block flex-shrink-0">
-        <AppSidebar isAdmin={isAdmin} userId={userId} />
+        <AppSidebar isAdmin={isAdmin} userId={userId} unviewedTransactions={unviewedCount} />
       </div>
 
       {/* Main Container */}
@@ -67,7 +70,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="p-0 w-[240px] border-r border-border">
-                <AppSidebar isAdmin={isAdmin} userId={userId} />
+                <AppSidebar isAdmin={isAdmin} userId={userId} unviewedTransactions={unviewedCount} />
               </SheetContent>
             </Sheet>
           </div>
