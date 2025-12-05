@@ -27,6 +27,14 @@ interface PushSubscription {
   auth: string;
 }
 
+interface WirePusherTemplate {
+  event_type: string;
+  title: string;
+  message: string;
+  notification_type: string;
+  is_active: boolean;
+}
+
 function normalizePhone(phone?: string): string | undefined {
   if (!phone) return undefined;
   return phone.replace(/^\+/, '');
@@ -50,6 +58,96 @@ function base64UrlDecode(str: string): Uint8Array {
   const padding = '='.repeat((4 - (base64.length % 4)) % 4);
   const binary = atob(base64 + padding);
   return new Uint8Array([...binary].map(c => c.charCodeAt(0)));
+}
+
+// Replace template variables
+function replaceTemplateVariables(
+  text: string,
+  data: { customer_name?: string; amount: number; type: string }
+): string {
+  const firstName = data.customer_name?.split(' ')[0] || 'Cliente';
+  const fullName = data.customer_name || 'Cliente';
+  const formattedAmount = `R$ ${Number(data.amount).toFixed(2).replace('.', ',')}`;
+  const typeLabel = data.type === 'boleto' ? 'Boleto' : data.type === 'pix' ? 'PIX' : 'Cartão';
+
+  return text
+    .replace(/{nome}/g, fullName)
+    .replace(/{primeiro_nome}/g, firstName)
+    .replace(/{valor}/g, formattedAmount)
+    .replace(/{tipo}/g, typeLabel);
+}
+
+// Send WirePusher notification
+async function sendWirePusherNotification(
+  supabase: any,
+  eventType: string,
+  transactionData: { customer_name?: string; amount: number; type: string }
+): Promise<void> {
+  try {
+    // Get WirePusher settings
+    const { data: settings, error: settingsError } = await supabase
+      .from('wirepusher_settings')
+      .select('device_id, is_enabled')
+      .maybeSingle();
+
+    if (settingsError) {
+      console.log('[WirePusher] Error fetching settings:', settingsError);
+      return;
+    }
+
+    if (!settings?.is_enabled || !settings?.device_id) {
+      console.log('[WirePusher] Disabled or no device_id configured');
+      return;
+    }
+
+    // Get template for this event type
+    const { data: template, error: templateError } = await supabase
+      .from('wirepusher_notification_templates')
+      .select('*')
+      .eq('event_type', eventType)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (templateError) {
+      console.log('[WirePusher] Error fetching template:', templateError);
+      return;
+    }
+
+    if (!template) {
+      console.log(`[WirePusher] No active template for event: ${eventType}`);
+      return;
+    }
+
+    // Replace variables in template
+    const title = replaceTemplateVariables(template.title, transactionData);
+    const message = replaceTemplateVariables(template.message, transactionData);
+
+    // Build WirePusher URL
+    const url = new URL('https://wirepusher.com/send');
+    url.searchParams.set('id', settings.device_id);
+    url.searchParams.set('title', title);
+    url.searchParams.set('message', message);
+    url.searchParams.set('type', template.notification_type);
+
+    console.log(`[WirePusher] Sending notification: ${url.toString()}`);
+
+    const response = await fetch(url.toString());
+    
+    if (!response.ok) {
+      const text = await response.text();
+      console.error('[WirePusher] Failed:', response.status, text);
+      return;
+    }
+
+    console.log('[WirePusher] Notification sent successfully!');
+  } catch (error) {
+    console.error('[WirePusher] Error:', error);
+  }
+}
+
+// Get event type for WirePusher based on transaction type and status
+function getWirePusherEventType(type: string, status: string): string {
+  return `${type}_${status}`;
 }
 
 // Create VAPID JWT using Web Crypto
@@ -239,6 +337,13 @@ Deno.serve(async (req) => {
 
     const normalizedIncomingId = normalizeExternalId(payload.external_id);
 
+    // Prepare data for notifications
+    const notificationData = {
+      customer_name: payload.customer_name,
+      amount: payload.amount,
+      type: payload.type,
+    };
+
     if (normalizedIncomingId) {
       const { data: transactions, error: fetchError } = await supabase
         .from('transactions')
@@ -274,12 +379,17 @@ Deno.serve(async (req) => {
         const typeLabel = payload.type === 'boleto' ? 'Boleto' : payload.type === 'pix' ? 'PIX' : 'Cartão';
         const amount = `R$ ${Number(data.amount).toFixed(2).replace('.', ',')}`;
         
+        // Send browser push notification
         await sendPushToAllSubscribers(
           supabase,
           `🔔 ${typeLabel} Atualizado`,
-          `[v2] ${payload.customer_name || 'Cliente'} - ${amount}`,
+          `${payload.customer_name || 'Cliente'} - ${amount}`,
           `transaction-${data.id}`
         );
+
+        // Send WirePusher notification (mobile)
+        const wirePusherEventType = getWirePusherEventType(payload.type, status);
+        await sendWirePusherNotification(supabase, wirePusherEventType, notificationData);
 
         return new Response(
           JSON.stringify({ success: true, action: 'updated', transaction_id: data.id }),
@@ -315,12 +425,17 @@ Deno.serve(async (req) => {
     const amount = `R$ ${Number(data.amount).toFixed(2).replace('.', ',')}`;
     console.log('Notification amount formatted:', amount);
     
+    // Send browser push notification
     await sendPushToAllSubscribers(
       supabase,
       `🔔 Nova Transação - ${typeLabel}`,
-      `[v2] ${payload.customer_name || 'Cliente'} - ${amount}`,
+      `${payload.customer_name || 'Cliente'} - ${amount}`,
       `transaction-${data.id}`
     );
+
+    // Send WirePusher notification (mobile)
+    const wirePusherEventType = getWirePusherEventType(payload.type, status);
+    await sendWirePusherNotification(supabase, wirePusherEventType, notificationData);
 
     return new Response(
       JSON.stringify({ success: true, action: 'created', transaction_id: data.id }),

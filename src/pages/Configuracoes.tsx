@@ -5,12 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, Users, DollarSign, MessageSquare, Link as LinkIcon, Shield } from "lucide-react";
+import { Settings, Users, DollarSign, MessageSquare, Link as LinkIcon, Shield, Bell } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { WebhooksSection } from "@/components/dashboard/WebhooksSection";
-import { Trash2, Plus, Loader2, Key } from "lucide-react";
+import { Trash2, Plus, Loader2, Key, Smartphone, Save } from "lucide-react";
 
 interface UserWithPermissions {
   user_id: string;
@@ -19,12 +19,32 @@ interface UserWithPermissions {
   permissions: { permission_key: string; is_allowed: boolean }[];
 }
 
+interface WirePusherTemplate {
+  id: string;
+  event_type: string;
+  title: string;
+  message: string;
+  notification_type: string;
+  is_active: boolean;
+}
+
 const AVAILABLE_PERMISSIONS = [
   { key: "dashboard", label: "Dashboard" },
   { key: "transacoes", label: "Transações" },
   { key: "recuperacao", label: "Recuperação" },
   { key: "gerar_boleto", label: "Gerar Boleto" },
 ];
+
+const EVENT_TYPE_LABELS: Record<string, string> = {
+  boleto_gerado: "📄 Boleto Gerado",
+  boleto_pago: "✅ Boleto Pago",
+  pix_gerado: "🔷 PIX Gerado",
+  pix_pago: "✅ PIX Pago",
+  pix_pendente: "⏳ PIX Pendente",
+  cartao_gerado: "💳 Cartão - Pedido",
+  cartao_pago: "✅ Cartão Pago",
+  cartao_pendente: "⏳ Cartão Pendente",
+};
 
 const Configuracoes = () => {
   const queryClient = useQueryClient();
@@ -36,6 +56,11 @@ const Configuracoes = () => {
   const [boletoWebhook, setBoletoWebhook] = useState("");
   const [newRevenueDescription, setNewRevenueDescription] = useState("");
   const [newRevenueAmount, setNewRevenueAmount] = useState("");
+  
+  // WirePusher states
+  const [wirePusherDeviceId, setWirePusherDeviceId] = useState("");
+  const [wirePusherEnabled, setWirePusherEnabled] = useState(true);
+  const [editedTemplates, setEditedTemplates] = useState<Record<string, WirePusherTemplate>>({});
 
   // Fetch users with their permissions
   const { data: usersWithPermissions, isLoading: isLoadingUsers } = useQuery({
@@ -122,11 +147,54 @@ const Configuracoes = () => {
     },
   });
 
+  // Fetch WirePusher settings
+  const { data: wirePusherSettings } = useQuery({
+    queryKey: ["wirepusher-settings"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("wirepusher_settings")
+        .select("*")
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch WirePusher templates
+  const { data: wirePusherTemplates } = useQuery({
+    queryKey: ["wirepusher-templates"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("wirepusher_notification_templates")
+        .select("*")
+        .order("event_type");
+      if (error) throw error;
+      return data as WirePusherTemplate[];
+    },
+  });
+
   useEffect(() => {
     if (financialSettings) setTaxRate(String(financialSettings.tax_rate || ""));
     if (recoverySettings) setRecoveryMessage(recoverySettings.message || "");
     if (boletoSettings) setBoletoWebhook(boletoSettings.webhook_url || "");
   }, [financialSettings, recoverySettings, boletoSettings]);
+
+  useEffect(() => {
+    if (wirePusherSettings) {
+      setWirePusherDeviceId(wirePusherSettings.device_id || "");
+      setWirePusherEnabled(wirePusherSettings.is_enabled ?? true);
+    }
+  }, [wirePusherSettings]);
+
+  useEffect(() => {
+    if (wirePusherTemplates) {
+      const templatesMap: Record<string, WirePusherTemplate> = {};
+      wirePusherTemplates.forEach(t => {
+        templatesMap[t.id] = { ...t };
+      });
+      setEditedTemplates(templatesMap);
+    }
+  }, [wirePusherTemplates]);
 
   // Update permission mutation
   const updatePermission = useMutation({
@@ -272,6 +340,59 @@ const Configuracoes = () => {
     },
   });
 
+  // Update WirePusher settings mutation
+  const updateWirePusherSettings = useMutation({
+    mutationFn: async ({ deviceId, isEnabled }: { deviceId: string; isEnabled: boolean }) => {
+      const { data: existing } = await supabase
+        .from("wirepusher_settings")
+        .select("id")
+        .maybeSingle();
+
+      if (existing) {
+        const { error } = await supabase
+          .from("wirepusher_settings")
+          .update({ device_id: deviceId, is_enabled: isEnabled })
+          .eq("id", existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("wirepusher_settings")
+          .insert({ device_id: deviceId, is_enabled: isEnabled });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["wirepusher-settings"] });
+      toast.success("Configurações WirePusher salvas");
+    },
+    onError: () => {
+      toast.error("Erro ao salvar configurações");
+    },
+  });
+
+  // Update WirePusher template mutation
+  const updateWirePusherTemplate = useMutation({
+    mutationFn: async (template: WirePusherTemplate) => {
+      const { error } = await supabase
+        .from("wirepusher_notification_templates")
+        .update({
+          title: template.title,
+          message: template.message,
+          notification_type: template.notification_type,
+          is_active: template.is_active,
+        })
+        .eq("id", template.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["wirepusher-templates"] });
+      toast.success("Template atualizado");
+    },
+    onError: () => {
+      toast.error("Erro ao atualizar template");
+    },
+  });
+
   const createUser = async () => {
     if (!newUserEmail || !newUserPassword) {
       toast.error("Preencha email e senha");
@@ -326,6 +447,23 @@ const Configuracoes = () => {
     return perm ? perm.is_allowed : true; // Default to allowed if no record
   };
 
+  const handleTemplateChange = (templateId: string, field: keyof WirePusherTemplate, value: string | boolean) => {
+    setEditedTemplates(prev => ({
+      ...prev,
+      [templateId]: {
+        ...prev[templateId],
+        [field]: value,
+      },
+    }));
+  };
+
+  const saveTemplate = (templateId: string) => {
+    const template = editedTemplates[templateId];
+    if (template) {
+      updateWirePusherTemplate.mutate(template);
+    }
+  };
+
   return (
     <div className="p-4 lg:p-6 animate-fade-in">
       <Tabs defaultValue="users" className="w-full">
@@ -346,6 +484,10 @@ const Configuracoes = () => {
             <TabsTrigger value="recovery" className="gap-2 data-[state=active]:bg-foreground data-[state=active]:text-background text-xs">
               <MessageSquare className="h-3.5 w-3.5" />
               Recuperação
+            </TabsTrigger>
+            <TabsTrigger value="notifications" className="gap-2 data-[state=active]:bg-foreground data-[state=active]:text-background text-xs">
+              <Bell className="h-3.5 w-3.5" />
+              Notificações
             </TabsTrigger>
             <TabsTrigger value="webhooks" className="gap-2 data-[state=active]:bg-foreground data-[state=active]:text-background text-xs">
               <LinkIcon className="h-3.5 w-3.5" />
@@ -534,6 +676,125 @@ const Configuracoes = () => {
                 <Button onClick={() => updateBoletoWebhook.mutate(boletoWebhook)} size="sm" className="h-9">
                   Salvar Webhook
                 </Button>
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="notifications">
+          <div className="space-y-4">
+            {/* WirePusher Settings */}
+            <div className="bg-card/60 border border-border/30 rounded-xl p-5 lg:p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <Smartphone className="h-5 w-5 text-primary" />
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">WirePusher (Mobile)</h3>
+                  <p className="text-xs text-muted-foreground">Notificações push para dispositivos móveis</p>
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/20 border border-border/20">
+                  <div>
+                    <Label className="text-sm font-medium">Ativar WirePusher</Label>
+                    <p className="text-xs text-muted-foreground">Enviar notificações para o app WirePusher</p>
+                  </div>
+                  <Switch
+                    checked={wirePusherEnabled}
+                    onCheckedChange={setWirePusherEnabled}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm">Device ID</Label>
+                  <div className="flex gap-3">
+                    <Input
+                      placeholder="yLy9mpz45"
+                      value={wirePusherDeviceId}
+                      onChange={(e) => setWirePusherDeviceId(e.target.value)}
+                      className="flex-1 bg-secondary/30 border-border/30 h-9 text-sm"
+                    />
+                    <Button 
+                      onClick={() => updateWirePusherSettings.mutate({ deviceId: wirePusherDeviceId, isEnabled: wirePusherEnabled })}
+                      size="sm" 
+                      className="h-9"
+                    >
+                      <Save className="h-3.5 w-3.5 mr-2" />
+                      Salvar
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Encontre seu Device ID no app WirePusher
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Notification Templates */}
+            <div className="bg-card/60 border border-border/30 rounded-xl p-5 lg:p-6">
+              <div className="mb-4">
+                <h3 className="text-sm font-semibold text-foreground">Templates de Notificação</h3>
+                <p className="text-xs text-muted-foreground">
+                  Personalize as mensagens para cada tipo de evento. Variáveis: {"{nome}"}, {"{primeiro_nome}"}, {"{valor}"}, {"{tipo}"}
+                </p>
+              </div>
+              
+              <div className="space-y-3">
+                {Object.values(editedTemplates).map((template) => (
+                  <div key={template.id} className="p-4 rounded-lg bg-secondary/20 border border-border/20 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-medium">
+                          {EVENT_TYPE_LABELS[template.event_type] || template.event_type}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={template.is_active}
+                          onCheckedChange={(checked) => handleTemplateChange(template.id, "is_active", checked)}
+                        />
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => saveTemplate(template.id)}
+                          className="h-8"
+                        >
+                          <Save className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Título</Label>
+                        <Input
+                          value={template.title}
+                          onChange={(e) => handleTemplateChange(template.id, "title", e.target.value)}
+                          className="bg-secondary/30 border-border/30 h-8 text-sm"
+                          disabled={!template.is_active}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Mensagem</Label>
+                        <Input
+                          value={template.message}
+                          onChange={(e) => handleTemplateChange(template.id, "message", e.target.value)}
+                          className="bg-secondary/30 border-border/30 h-8 text-sm"
+                          disabled={!template.is_active}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Tipo (WirePusher)</Label>
+                        <Input
+                          value={template.notification_type}
+                          onChange={(e) => handleTemplateChange(template.id, "notification_type", e.target.value)}
+                          className="bg-secondary/30 border-border/30 h-8 text-sm"
+                          disabled={!template.is_active}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
