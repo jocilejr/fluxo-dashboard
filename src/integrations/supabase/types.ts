@@ -778,6 +778,63 @@ export type Database = {
         }
         Relationships: []
       }
+      wirepusher_notification_templates: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          is_active: boolean
+          message: string
+          notification_type: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          is_active?: boolean
+          message: string
+          notification_type?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          is_active?: boolean
+          message?: string
+          notification_type?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      wirepusher_settings: {
+        Row: {
+          created_at: string
+          device_id: string
+          id: string
+          is_enabled: boolean
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          device_id?: string
+          id?: string
+          is_enabled?: boolean
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          device_id?: string
+          id?: string
+          is_enabled?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
