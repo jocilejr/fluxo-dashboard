@@ -53,8 +53,7 @@ services:
     volumes:
       - ./docker/supabase/kong.yml:/var/lib/kong/kong.yml:ro
     depends_on:
-      db:
-        condition: service_healthy
+      - db
     networks:
       - supabase-network
 
@@ -96,8 +95,7 @@ services:
       GOTRUE_EXTERNAL_PHONE_ENABLED: "false"
       GOTRUE_SMS_AUTOCONFIRM: "true"
     depends_on:
-      db:
-        condition: service_healthy
+      - db
     networks:
       - supabase-network
 
@@ -117,8 +115,7 @@ services:
       PGRST_APP_SETTINGS_JWT_SECRET: ${JWT_SECRET}
       PGRST_APP_SETTINGS_JWT_EXP: ${GOTRUE_JWT_EXPIRY:-3600}
     depends_on:
-      db:
-        condition: service_healthy
+      - db
     networks:
       - supabase-network
 
@@ -146,8 +143,7 @@ services:
       ENABLE_TAILSCALE: "false"
       DNS_NODES: "''"
     depends_on:
-      db:
-        condition: service_healthy
+      - db
     networks:
       - supabase-network
 
@@ -175,10 +171,8 @@ services:
     volumes:
       - ./docker/supabase/volumes/storage:/var/lib/storage
     depends_on:
-      db:
-        condition: service_healthy
-      rest:
-        condition: service_started
+      - db
+      - rest
     networks:
       - supabase-network
 
@@ -214,8 +208,7 @@ services:
       PG_META_DB_USER: supabase_admin
       PG_META_DB_PASSWORD: ${POSTGRES_PASSWORD}
     depends_on:
-      db:
-        condition: service_healthy
+      - db
     networks:
       - supabase-network
 
@@ -298,8 +291,7 @@ services:
       POSTGRES_BACKEND_SCHEMA: _analytics
       LOGFLARE_FEATURE_FLAG_OVERRIDE: multibackend=true
     depends_on:
-      db:
-        condition: service_healthy
+      - db
     networks:
       - supabase-network
 
