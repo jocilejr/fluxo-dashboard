@@ -6,6 +6,7 @@ import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useTransactions } from "@/hooks/useTransactions";
+import { useUnviewedTransactions } from "@/hooks/useUnviewedTransactions";
 import { NotificationPopup } from "./layout/NotificationPopup";
 
 interface AppLayoutProps {
@@ -28,10 +29,10 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userName, setUserName] = useState<string>("");
   const location = useLocation();
-  const { notifications, dismissAllNotifications } = useTransactions();
+  const { transactions, notifications, dismissAllNotifications } = useTransactions();
+  const unviewedCount = useUnviewedTransactions(transactions);
 
   const currentPage = pageConfig[location.pathname] || { title: "Página", subtitle: "" };
-  const unviewedCount = notifications.length;
 
   useEffect(() => {
     const getUser = async () => {
