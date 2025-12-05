@@ -273,6 +273,11 @@ export function MobileTransactions() {
                       <p className="text-[9px] text-muted-foreground">
                         {formatTime(event.created_at)} • {event.event_type === "cart_abandoned" ? "Carrinho" : "Falha"}
                       </p>
+                      {event.customer_document && (
+                        <p className="text-[9px] text-info font-medium mt-0.5">
+                          CPF: {event.customer_document}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
