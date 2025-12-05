@@ -142,9 +142,15 @@ const Dashboard = () => {
     const taxAmount = totalRevenue * (taxRate / 100);
     const netRevenue = totalRevenue - taxAmount;
 
+    // Boletos pendentes = gerado + pago (excluindo expirado e cancelado)
+    const boletosPendentesOuPagos = filteredTransactions.filter(
+      (t) => t.type === "boleto" && (t.status === "gerado" || t.status === "pago")
+    ).length;
+
     return {
       boletosGerados: filteredTransactions.filter((t) => t.type === "boleto").length,
       boletosPagos: filteredTransactions.filter((t) => t.type === "boleto" && t.status === "pago").length,
+      boletosPendentesOuPagos,
       pixGerado: filteredTransactions.filter((t) => t.type === "pix").length,
       pixPago: filteredTransactions.filter((t) => t.type === "pix" && t.status === "pago").length,
       pedidosCartao: filteredTransactions.filter((t) => t.type === "cartao").length,
@@ -190,7 +196,7 @@ const Dashboard = () => {
 
           <div className="grid grid-cols-3 gap-3 lg:gap-4">
             <StatCard title="PIX Pago" value={stats.pixPago.toLocaleString('pt-BR')} subtitle={calculateConversionRate(stats.pixPago, stats.pixGerado)} icon={QrCode} variant="success" delay={150} isLoading={isLoading} />
-            <StatCard title="Boleto Pago" value={stats.boletosPagos.toLocaleString('pt-BR')} subtitle={calculateConversionRate(stats.boletosPagos, stats.boletosGerados)} icon={FileText} variant="success" delay={200} isLoading={isLoading} />
+            <StatCard title="Boleto Pago" value={stats.boletosPagos.toLocaleString('pt-BR')} subtitle={calculateConversionRate(stats.boletosPagos, stats.boletosPendentesOuPagos)} icon={FileText} variant="success" delay={200} isLoading={isLoading} />
             <StatCard title="Cartão Pago" value={stats.cartaoPago.toLocaleString('pt-BR')} subtitle={calculateConversionRate(stats.cartaoPago, stats.pedidosCartao)} icon={CreditCard} variant="success" delay={250} isLoading={isLoading} />
           </div>
 
