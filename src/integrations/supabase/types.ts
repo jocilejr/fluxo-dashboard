@@ -230,6 +230,133 @@ export type Database = {
         }
         Relationships: []
       }
+      delivery_accesses: {
+        Row: {
+          accessed_at: string
+          created_at: string
+          id: string
+          phone: string
+          pixel_fired: boolean | null
+          product_id: string
+          webhook_sent: boolean | null
+        }
+        Insert: {
+          accessed_at?: string
+          created_at?: string
+          id?: string
+          phone: string
+          pixel_fired?: boolean | null
+          product_id: string
+          webhook_sent?: boolean | null
+        }
+        Update: {
+          accessed_at?: string
+          created_at?: string
+          id?: string
+          phone?: string
+          pixel_fired?: boolean | null
+          product_id?: string
+          webhook_sent?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_accesses_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_pixels: {
+        Row: {
+          access_token: string | null
+          created_at: string
+          event_name: string | null
+          id: string
+          is_active: boolean | null
+          pixel_id: string
+          platform: string
+          product_id: string
+        }
+        Insert: {
+          access_token?: string | null
+          created_at?: string
+          event_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          pixel_id: string
+          platform: string
+          product_id: string
+        }
+        Update: {
+          access_token?: string | null
+          created_at?: string
+          event_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          pixel_id?: string
+          platform?: string
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_pixels_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_products: {
+        Row: {
+          created_at: string
+          delivery_webhook_url: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          page_logo: string | null
+          page_message: string | null
+          page_title: string | null
+          redirect_delay: number | null
+          slug: string
+          updated_at: string
+          whatsapp_message: string | null
+          whatsapp_number: string
+        }
+        Insert: {
+          created_at?: string
+          delivery_webhook_url?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          page_logo?: string | null
+          page_message?: string | null
+          page_title?: string | null
+          redirect_delay?: number | null
+          slug: string
+          updated_at?: string
+          whatsapp_message?: string | null
+          whatsapp_number: string
+        }
+        Update: {
+          created_at?: string
+          delivery_webhook_url?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          page_logo?: string | null
+          page_message?: string | null
+          page_title?: string | null
+          redirect_delay?: number | null
+          slug?: string
+          updated_at?: string
+          whatsapp_message?: string | null
+          whatsapp_number?: string
+        }
+        Relationships: []
+      }
       financial_settings: {
         Row: {
           created_at: string
