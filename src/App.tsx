@@ -3,10 +3,15 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
+import { AppLayout } from "./components/AppLayout";
+import Dashboard from "./pages/Dashboard";
+import Transacoes from "./pages/Transacoes";
+import Recuperacao from "./pages/Recuperacao";
+import TypebotRanking from "./pages/TypebotRanking";
+import GerarBoleto from "./pages/GerarBoleto";
+import Configuracoes from "./pages/Configuracoes";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
-import TypebotRanking from "./pages/TypebotRanking";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -23,7 +28,29 @@ const App = () => (
             path="/"
             element={
               <ProtectedRoute>
-                <Index />
+                <AppLayout>
+                  <Dashboard />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/transacoes"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <Transacoes />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/recuperacao"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <Recuperacao />
+                </AppLayout>
               </ProtectedRoute>
             }
           />
@@ -31,7 +58,29 @@ const App = () => (
             path="/typebots"
             element={
               <ProtectedRoute>
-                <TypebotRanking />
+                <AppLayout>
+                  <TypebotRanking />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/gerar-boleto"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <GerarBoleto />
+                </AppLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/configuracoes"
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <Configuracoes />
+                </AppLayout>
               </ProtectedRoute>
             }
           />
