@@ -136,7 +136,7 @@ const ProductForm = ({ open, onClose, product }: ProductFormProps) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.slug || !formData.whatsapp_number) {
+    if (!formData.name || !formData.slug) {
       toast.error("Preencha os campos obrigatórios");
       return;
     }
@@ -188,21 +188,6 @@ const ProductForm = ({ open, onClose, product }: ProductFormProps) => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="whatsapp">Número WhatsApp *</Label>
-                  <Input
-                    id="whatsapp"
-                    value={formData.whatsapp_number}
-                    onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, whatsapp_number: e.target.value }))
-                    }
-                    placeholder="5511999999999"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Número com código do país, sem + ou espaços
-                  </p>
-                </div>
-
-                <div className="space-y-2">
                   <Label htmlFor="message">Mensagem WhatsApp (opcional)</Label>
                   <Textarea
                     id="message"
@@ -213,6 +198,9 @@ const ProductForm = ({ open, onClose, product }: ProductFormProps) => {
                     placeholder="Olá! Vim receber meu produto..."
                     rows={3}
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Será enviada para o número do lead (via URL)
+                  </p>
                 </div>
 
                 <div className="space-y-2">

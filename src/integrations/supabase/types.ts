@@ -323,7 +323,7 @@ export type Database = {
           slug: string
           updated_at: string
           whatsapp_message: string | null
-          whatsapp_number: string
+          whatsapp_number: string | null
         }
         Insert: {
           created_at?: string
@@ -338,7 +338,7 @@ export type Database = {
           slug: string
           updated_at?: string
           whatsapp_message?: string | null
-          whatsapp_number: string
+          whatsapp_number?: string | null
         }
         Update: {
           created_at?: string
@@ -353,7 +353,7 @@ export type Database = {
           slug?: string
           updated_at?: string
           whatsapp_message?: string | null
-          whatsapp_number?: string
+          whatsapp_number?: string | null
         }
         Relationships: []
       }
