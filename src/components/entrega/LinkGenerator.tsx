@@ -30,7 +30,7 @@ const LinkGenerator = ({ open, onClose, product }: LinkGeneratorProps) => {
   const baseUrl = window.location.origin;
   const cleanPhone = phone.replace(/\D/g, "");
   const generatedUrl = cleanPhone
-    ? `${baseUrl}/e/${product?.slug}?telefone=${cleanPhone}`
+    ? `${baseUrl}/${product?.slug}?telefone=${cleanPhone}`
     : "";
 
   const handleCopy = async () => {
@@ -70,7 +70,7 @@ const LinkGenerator = ({ open, onClose, product }: LinkGeneratorProps) => {
             <Label>Produto</Label>
             <p className="text-sm font-medium">{product?.name}</p>
             <code className="text-xs text-muted-foreground block bg-muted p-2 rounded">
-              /e/{product?.slug}?telefone=XXXXX
+              /{product?.slug}?telefone=XXXXX
             </code>
           </div>
 
