@@ -1,5 +1,6 @@
 import { useMemo, useEffect, useState } from "react";
 import { Transaction } from "./useTransactions";
+import { startOfDay, endOfDay, isWithinInterval } from "date-fns";
 
 const VIEWED_STORAGE_KEY = "viewed_transactions";
 
@@ -29,7 +30,7 @@ export function useUnviewedTransactions(transactions: Transaction[]) {
     };
 
     // Check storage periodically since storage event doesn't fire in same tab
-    const interval = setInterval(handleStorageChange, 1000);
+    const interval = setInterval(handleStorageChange, 500);
     window.addEventListener("storage", handleStorageChange);
 
     return () => {
@@ -38,12 +39,26 @@ export function useUnviewedTransactions(transactions: Transaction[]) {
     };
   }, []);
 
+  // Filter transactions by "today" (matching the default filter in TransactionsTable)
+  const todayTransactions = useMemo(() => {
+    const now = new Date();
+    const todayStart = startOfDay(now);
+    const todayEnd = endOfDay(now);
+    
+    return transactions.filter((t) => {
+      // For paid transactions, use paid_at if available, otherwise use created_at
+      const dateStr = t.status === "pago" && t.paid_at ? t.paid_at : t.created_at;
+      const date = new Date(dateStr);
+      return isWithinInterval(date, { start: todayStart, end: todayEnd });
+    });
+  }, [transactions]);
+
   // Categorize transactions by tab
   const tabTransactions = useMemo(() => ({
-    aprovados: transactions.filter(t => t.status === "pago"),
-    "boletos-gerados": transactions.filter(t => t.type === "boleto" && t.status === "gerado"),
-    "pix-cartao-pendentes": transactions.filter(t => (t.type === "pix" || t.type === "cartao") && t.status === "pendente"),
-  }), [transactions]);
+    aprovados: todayTransactions.filter(t => t.status === "pago"),
+    "boletos-gerados": todayTransactions.filter(t => t.type === "boleto" && t.status === "gerado"),
+    "pix-cartao-pendentes": todayTransactions.filter(t => (t.type === "pix" || t.type === "cartao") && t.status === "pendente"),
+  }), [todayTransactions]);
 
   // Calculate total unviewed count across all tabs
   const totalUnviewed = useMemo(() => {
