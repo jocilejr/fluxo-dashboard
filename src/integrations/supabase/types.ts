@@ -364,6 +364,154 @@ export type Database = {
         }
         Relationships: []
       }
+      mind_map_connections: {
+        Row: {
+          color: string | null
+          created_at: string
+          id: string
+          project_id: string
+          source_node_id: string
+          style: string | null
+          target_node_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          project_id: string
+          source_node_id: string
+          style?: string | null
+          target_node_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          project_id?: string
+          source_node_id?: string
+          style?: string | null
+          target_node_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mind_map_connections_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "mind_map_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mind_map_connections_source_node_id_fkey"
+            columns: ["source_node_id"]
+            isOneToOne: false
+            referencedRelation: "mind_map_nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mind_map_connections_target_node_id_fkey"
+            columns: ["target_node_id"]
+            isOneToOne: false
+            referencedRelation: "mind_map_nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mind_map_nodes: {
+        Row: {
+          bg_color: string | null
+          color: string | null
+          created_at: string
+          font_size: number | null
+          id: string
+          label: string
+          parent_id: string | null
+          position_x: number
+          position_y: number
+          project_id: string
+          shape: string | null
+          updated_at: string
+          width: number | null
+        }
+        Insert: {
+          bg_color?: string | null
+          color?: string | null
+          created_at?: string
+          font_size?: number | null
+          id?: string
+          label: string
+          parent_id?: string | null
+          position_x?: number
+          position_y?: number
+          project_id: string
+          shape?: string | null
+          updated_at?: string
+          width?: number | null
+        }
+        Update: {
+          bg_color?: string | null
+          color?: string | null
+          created_at?: string
+          font_size?: number | null
+          id?: string
+          label?: string
+          parent_id?: string | null
+          position_x?: number
+          position_y?: number
+          project_id?: string
+          shape?: string | null
+          updated_at?: string
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mind_map_nodes_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "mind_map_nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mind_map_nodes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "mind_map_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mind_map_projects: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          section: string | null
+          theme: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          section?: string | null
+          theme?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          section?: string | null
+          theme?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       pix_card_recovery_clicks: {
         Row: {
           clicked_at: string

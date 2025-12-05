@@ -14,15 +14,10 @@ import {
   Copy,
   CheckCircle2,
   SkipForward,
-  X,
   User,
-  Calendar,
-  Banknote,
   Barcode,
   AlertTriangle,
   FileText,
-  Clock,
-  ArrowRight,
 } from "lucide-react";
 
 interface BoletoRecoveryQueueProps {
