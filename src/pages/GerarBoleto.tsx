@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -14,8 +14,7 @@ interface ManualBoletoFormData {
   cpf: string;
 }
 
-export function ManualBoletoGenerator() {
-  const [open, setOpen] = useState(false);
+const GerarBoleto = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [webhookUrl, setWebhookUrl] = useState<string | null>(null);
   const [formData, setFormData] = useState<ManualBoletoFormData>({
@@ -26,16 +25,14 @@ export function ManualBoletoGenerator() {
   });
 
   useEffect(() => {
-    if (open) {
-      fetchWebhookUrl();
-    }
-  }, [open]);
+    fetchWebhookUrl();
+  }, []);
 
   const fetchWebhookUrl = async () => {
     const { data, error } = await supabase
       .from("manual_boleto_settings")
       .select("webhook_url")
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error("Error fetching webhook URL:", error);
@@ -49,19 +46,16 @@ export function ManualBoletoGenerator() {
   };
 
   const formatPhone = (value: string) => {
-    // Remove non-digits
     const digits = value.replace(/\D/g, "");
     return digits;
   };
 
   const formatCPF = (value: string) => {
-    // Remove non-digits and limit to 11 digits
     const digits = value.replace(/\D/g, "").slice(0, 11);
     return digits;
   };
 
   const handleSubmit = async () => {
-    // Validate
     if (!formData.nome.trim()) {
       toast.error("Nome é obrigatório");
       return;
@@ -106,7 +100,6 @@ export function ManualBoletoGenerator() {
 
       toast.success("Boleto gerado com sucesso!");
       setFormData({ nome: "", telefone: "", valor: "", cpf: "" });
-      setOpen(false);
     } catch (error) {
       console.error("Error generating boleto:", error);
       toast.error("Erro ao gerar boleto. Verifique o webhook.");
@@ -116,22 +109,20 @@ export function ManualBoletoGenerator() {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" className="gap-2">
-          <FileText className="h-4 w-4" />
-          Gerar Boleto
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+    <div className="p-4 sm:p-6">
+      <h1 className="text-2xl font-bold mb-6">Gerar Boleto</h1>
+      
+      <Card className="max-w-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-primary" />
             Gerar Boleto Manualmente
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-4 py-4">
+          </CardTitle>
+          <CardDescription>
+            Preencha os dados do cliente para gerar um novo boleto
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
           {!webhookUrl && (
             <div className="p-3 rounded-lg bg-warning/10 border border-warning/30 text-warning text-sm">
               Webhook não configurado. Configure nas configurações para gerar boletos.
@@ -195,8 +186,10 @@ export function ManualBoletoGenerator() {
               "Gerar Boleto"
             )}
           </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </CardContent>
+      </Card>
+    </div>
   );
-}
+};
+
+export default GerarBoleto;
