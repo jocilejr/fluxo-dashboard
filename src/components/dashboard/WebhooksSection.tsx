@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Copy, Check, Trash2, Loader2, CreditCard, Users, ShoppingCart, AlertTriangle, ChevronDown } from "lucide-react";
+import { Copy, Check, Trash2, Loader2, CreditCard, Users, ShoppingCart, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 
 function WebhookUrlCard({ url, label }: { url: string; label: string }) {
@@ -37,17 +36,20 @@ function PayloadExample({ title, payload, defaultOpen = false }: { title: string
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-secondary/10 rounded-lg hover:bg-secondary/20 transition-colors text-left">
+    <div className="rounded-lg overflow-hidden">
+      <button 
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center justify-between w-full p-3 bg-secondary/10 hover:bg-secondary/20 transition-colors text-left"
+      >
         <span className="text-xs font-medium">{title}</span>
-        <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
-      </CollapsibleTrigger>
-      <CollapsibleContent>
-        <pre className="bg-secondary/30 p-3 rounded-b-lg text-xs overflow-x-auto border-x border-b border-border/20 font-mono">
+        {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+      </button>
+      {isOpen && (
+        <pre className="bg-secondary/30 p-3 text-xs overflow-x-auto border-x border-b border-border/20 font-mono">
           {JSON.stringify(payload, null, 2)}
         </pre>
-      </CollapsibleContent>
-    </Collapsible>
+      )}
+    </div>
   );
 }
 
