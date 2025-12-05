@@ -223,6 +223,21 @@ generate_credentials() {
     print_success "Logflare API Key gerada"
 }
 
+# Configura kong.yml com as chaves JWT reais
+configure_kong_yml() {
+    print_header "Configurando Kong API Gateway"
+    
+    # Verifica se o arquivo existe
+    if [[ -f "docker/supabase/kong.yml" ]]; then
+        # Substitui variáveis pelas chaves JWT reais
+        sed -i "s|\${ANON_KEY}|${ANON_KEY}|g" docker/supabase/kong.yml
+        sed -i "s|\${SERVICE_ROLE_KEY}|${SERVICE_ROLE_KEY}|g" docker/supabase/kong.yml
+        print_success "Kong configurado com chaves JWT"
+    else
+        print_warning "Arquivo kong.yml não encontrado, será usado valores do .env"
+    fi
+}
+
 # Cria estrutura de diretórios
 create_directories() {
     print_header "Criando Estrutura de Diretórios"
@@ -832,6 +847,7 @@ main() {
     check_requirements
     collect_user_input
     generate_credentials
+    configure_kong_yml
     create_directories
     create_env_file
     create_main_function
