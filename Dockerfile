@@ -52,19 +52,24 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 # Copia configuração do nginx como template
 COPY docker/nginx/nginx.conf /etc/nginx/nginx.conf.template
 
-# Cria diretórios para SSL e conf.d
-RUN mkdir -p /etc/nginx/ssl /var/run/nginx
+# Cria diretórios necessários
+RUN mkdir -p /etc/nginx/ssl /var/run/nginx /tmp/nginx
 
-# Cria diretório gravável para o nginx.conf processado
-RUN mkdir -p /etc/nginx/conf.d && \
-    chmod 755 /etc/nginx /etc/nginx/conf.d
+# Copia mime.types para /tmp para uso com config customizado
+RUN cp /etc/nginx/mime.types /tmp/nginx/mime.types
 
-# Script de inicialização - escreve em /tmp e copia
+# Script de inicialização - gera config em /tmp e usa nginx -c
 RUN echo '#!/bin/sh' > /docker-entrypoint.sh && \
     echo 'set -e' >> /docker-entrypoint.sh && \
-    echo 'envsubst "\$DOMAIN \$HTTPS_PORT" < /etc/nginx/nginx.conf.template > /tmp/nginx.conf' >> /docker-entrypoint.sh && \
-    echo 'cat /tmp/nginx.conf > /etc/nginx/nginx.conf' >> /docker-entrypoint.sh && \
-    echo 'exec nginx -g "daemon off;"' >> /docker-entrypoint.sh && \
+    echo '' >> /docker-entrypoint.sh && \
+    echo '# Substitui variáveis no template' >> /docker-entrypoint.sh && \
+    echo 'envsubst "\$DOMAIN \$HTTPS_PORT" < /etc/nginx/nginx.conf.template > /tmp/nginx/nginx.conf' >> /docker-entrypoint.sh && \
+    echo '' >> /docker-entrypoint.sh && \
+    echo '# Ajusta path do mime.types no config' >> /docker-entrypoint.sh && \
+    echo 'sed -i "s|include /etc/nginx/mime.types|include /tmp/nginx/mime.types|g" /tmp/nginx/nginx.conf' >> /docker-entrypoint.sh && \
+    echo '' >> /docker-entrypoint.sh && \
+    echo '# Inicia nginx com config de /tmp' >> /docker-entrypoint.sh && \
+    echo 'exec nginx -c /tmp/nginx/nginx.conf -g "daemon off;"' >> /docker-entrypoint.sh && \
     chmod +x /docker-entrypoint.sh
 
 # Expõe portas
