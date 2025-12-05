@@ -8,6 +8,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useUnviewedTransactions } from "@/hooks/useUnviewedTransactions";
 import { useAbandonedEvents } from "@/hooks/useAbandonedEvents";
+import { useUnviewedAbandonedEvents } from "@/hooks/useUnviewedAbandonedEvents";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -32,15 +33,9 @@ export function AppLayout({ children }: AppLayoutProps) {
   const { transactions } = useTransactions();
   const unviewedCount = useUnviewedTransactions(transactions);
   const { events: abandonedEvents } = useAbandonedEvents();
+  const unviewedAbandonedCount = useUnviewedAbandonedEvents(abandonedEvents);
   
-  // Count today's abandoned events
-  const todayAbandonedCount = abandonedEvents.filter(event => {
-    const eventDate = new Date(event.created_at);
-    const today = new Date();
-    return eventDate.toDateString() === today.toDateString();
-  }).length;
-  
-  const totalNotifications = unviewedCount + todayAbandonedCount;
+  const totalNotifications = unviewedCount + unviewedAbandonedCount;
 
   const currentPage = pageConfig[location.pathname] || { title: "Página", subtitle: "" };
 
