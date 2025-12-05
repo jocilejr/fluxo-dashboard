@@ -326,6 +326,15 @@ services:
       - ./docker/nginx/ssl:/etc/nginx/ssl:ro
       - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf.template:ro
       - /var/www/certbot:/var/www/certbot:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.dashboard.entrypoints=web"
+      - "traefik.http.routers.dashboard-secure.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.dashboard-secure.entrypoints=websecure"
+      - "traefik.http.routers.dashboard-secure.tls=true"
+      - "traefik.http.routers.dashboard-secure.tls.certresolver=letsencrypt"
+      - "traefik.http.services.dashboard.loadbalancer.server.port=80"
     depends_on:
       - kong
     networks:
