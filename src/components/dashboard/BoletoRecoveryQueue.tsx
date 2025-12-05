@@ -151,14 +151,9 @@ export function BoletoRecoveryQueue({
                 <p className="text-xs text-muted-foreground">Fila de contatos pendentes</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="font-mono text-xs px-3 py-1">
-                {safeIndex + 1} de {boletos.length}
-              </Badge>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleClose}>
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+            <Badge variant="outline" className="font-mono text-xs px-3 py-1">
+              {safeIndex + 1} de {boletos.length}
+            </Badge>
           </div>
 
           {/* Progress Bar */}
