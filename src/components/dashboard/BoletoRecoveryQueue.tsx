@@ -3,7 +3,6 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { BoletoWithRecovery } from "@/hooks/useBoletoRecovery";
 import { useWhatsAppExtension } from "@/hooks/useWhatsAppExtension";
@@ -41,13 +40,11 @@ export function BoletoRecoveryQueue({
 }: BoletoRecoveryQueueProps) {
   const { toast } = useToast();
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [notes, setNotes] = useState("");
   const { extensionStatus, sendText } = useWhatsAppExtension();
 
   useEffect(() => {
     if (open) {
       setCurrentIndex(0);
-      setNotes("");
     }
   }, [open]);
 
@@ -97,10 +94,8 @@ export function BoletoRecoveryQueue({
     onMarkContacted(
       currentBoleto.id,
       currentBoleto.applicableRule?.id,
-      notes || undefined
+      undefined
     );
-    
-    setNotes("");
     
     if (safeIndex < boletos.length - 1) {
       setCurrentIndex(safeIndex + 1);
@@ -108,12 +103,11 @@ export function BoletoRecoveryQueue({
       onOpenChange(false);
       toast({ title: "Parabéns!", description: "Você concluiu a recuperação de hoje! 🎉" });
     }
-  }, [currentBoleto, safeIndex, boletos.length, notes, onMarkContacted, onOpenChange, toast]);
+  }, [currentBoleto, safeIndex, boletos.length, onMarkContacted, onOpenChange, toast]);
 
   const handleSkip = useCallback(() => {
     if (safeIndex < boletos.length - 1) {
       setCurrentIndex(safeIndex + 1);
-      setNotes("");
     } else {
       onOpenChange(false);
     }
@@ -121,7 +115,6 @@ export function BoletoRecoveryQueue({
 
   const handleClose = () => {
     setCurrentIndex(0);
-    setNotes("");
     onOpenChange(false);
   };
 
@@ -278,17 +271,6 @@ export function BoletoRecoveryQueue({
             </div>
           )}
 
-          {/* Notes */}
-          <div className="space-y-2">
-            <h4 className="text-sm font-medium">Observações</h4>
-            <Textarea
-              placeholder="Adicione notas sobre o contato (opcional)..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={2}
-              className="resize-none text-sm bg-muted/20 border-border/50 focus:border-primary/50"
-            />
-          </div>
         </div>
 
         {/* Footer Actions */}
