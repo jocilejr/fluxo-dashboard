@@ -259,7 +259,7 @@ export function MobileTransactions() {
             filteredAbandoned.map((event) => (
               <div 
                 key={event.id}
-                className="bg-card border-l-2 border-l-destructive rounded-lg p-3 space-y-2"
+                className="bg-card border-l-2 border-l-destructive rounded-lg p-3"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -275,19 +275,20 @@ export function MobileTransactions() {
                       </p>
                     </div>
                   </div>
-                  <p className="text-xs font-bold text-destructive">
-                    {event.amount ? formatCurrency(event.amount) : "-"}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs font-bold text-destructive">
+                      {event.amount ? formatCurrency(event.amount) : "-"}
+                    </p>
+                    {event.customer_phone && (
+                      <button
+                        onClick={() => openWhatsAppBusiness(event.customer_phone)}
+                        className="h-9 w-9 rounded-lg bg-success/15 flex items-center justify-center text-success"
+                      >
+                        <MessageSquare className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
-                {event.customer_phone && (
-                  <button
-                    onClick={() => openWhatsAppBusiness(event.customer_phone)}
-                    className="w-full flex items-center justify-center gap-1.5 py-2 bg-success/15 text-success rounded-lg text-[10px] font-semibold"
-                  >
-                    <MessageSquare className="h-3.5 w-3.5" />
-                    WhatsApp Business
-                  </button>
-                )}
               </div>
             ))
           )
@@ -301,6 +302,7 @@ export function MobileTransactions() {
             filteredTransactions.map((transaction) => {
               const Icon = getTypeIcon(transaction.type);
               const isPaid = transaction.status === "pago";
+              const displayDate = isPaid && transaction.paid_at ? transaction.paid_at : transaction.created_at;
               
               return (
                 <div 
@@ -328,38 +330,38 @@ export function MobileTransactions() {
                         <div className="flex items-center gap-1 text-[9px] text-muted-foreground">
                           <span className="uppercase">{transaction.type}</span>
                           <span>•</span>
-                          <span>{formatTime(transaction.created_at)}</span>
+                          <span>{formatTime(displayDate)}</span>
                         </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className={cn(
-                        "text-xs font-bold",
-                        isPaid ? "text-success" : "text-foreground"
-                      )}>
-                        {formatCurrency(Number(transaction.amount))}
-                      </p>
-                      <div className={cn(
-                        "inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold",
-                        isPaid 
-                          ? "bg-success/15 text-success" 
-                          : "bg-warning/15 text-warning"
-                      )}>
-                        {isPaid ? <CheckCircle2 className="h-2.5 w-2.5" /> : <Clock className="h-2.5 w-2.5" />}
-                        {isPaid ? "Pago" : "Pendente"}
+                    <div className="flex items-center gap-2">
+                      <div className="text-right">
+                        <p className={cn(
+                          "text-xs font-bold",
+                          isPaid ? "text-success" : "text-foreground"
+                        )}>
+                          {formatCurrency(Number(transaction.amount))}
+                        </p>
+                        <div className={cn(
+                          "inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold",
+                          isPaid 
+                            ? "bg-success/15 text-success" 
+                            : "bg-warning/15 text-warning"
+                        )}>
+                          {isPaid ? <CheckCircle2 className="h-2.5 w-2.5" /> : <Clock className="h-2.5 w-2.5" />}
+                          {isPaid ? "Pago" : "Pendente"}
+                        </div>
                       </div>
+                      {!isPaid && transaction.customer_phone && (
+                        <button
+                          onClick={() => openWhatsAppBusiness(transaction.customer_phone)}
+                          className="h-9 w-9 rounded-lg bg-success/15 flex items-center justify-center text-success"
+                        >
+                          <MessageSquare className="h-4 w-4" />
+                        </button>
+                      )}
                     </div>
                   </div>
-                  
-                  {!isPaid && transaction.customer_phone && (
-                    <button
-                      onClick={() => openWhatsAppBusiness(transaction.customer_phone)}
-                      className="w-full flex items-center justify-center gap-1.5 mt-2 py-2 bg-success/15 text-success rounded-lg text-[10px] font-semibold"
-                    >
-                      <MessageSquare className="h-3.5 w-3.5" />
-                      WhatsApp Business
-                    </button>
-                  )}
                 </div>
               );
             })
