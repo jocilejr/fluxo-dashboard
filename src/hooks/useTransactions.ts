@@ -38,7 +38,6 @@ export interface TransactionNotification {
 
 export function useTransactions() {
   const { notifyNewTransaction } = useTabNotification();
-  const initialLoadRef = useRef(true);
   const [notifications, setNotifications] = useState<TransactionNotification[]>([]);
   
   // Store callback in ref to avoid re-subscriptions
@@ -62,8 +61,17 @@ export function useTransactions() {
     },
   });
 
+  // Track seen transaction IDs to avoid duplicate notifications
+  const seenTransactionIdsRef = useRef<Set<string>>(new Set());
+
   // Subscribe to realtime updates with notifications
   useEffect(() => {
+    // Pre-populate seen IDs with existing transactions
+    if (transactions && transactions.length > 0 && seenTransactionIdsRef.current.size === 0) {
+      transactions.forEach(t => seenTransactionIdsRef.current.add(`${t.id}-${t.status}`));
+      console.log("[Realtime] Pre-populated seen IDs:", seenTransactionIdsRef.current.size);
+    }
+
     const channel = supabase
       .channel("transactions-changes")
       .on(
@@ -74,8 +82,7 @@ export function useTransactions() {
           table: "transactions",
         },
         (payload) => {
-          console.log("Realtime update:", payload);
-          console.log("initialLoadRef.current:", initialLoadRef.current);
+          console.log("[Realtime] Update received:", payload.eventType, payload);
           refetch();
 
           // Handle notifications for INSERT and UPDATE events
@@ -84,7 +91,17 @@ export function useTransactions() {
           const newData = payload.new as Transaction;
           const oldData = payload.old as Transaction | null;
           
-          if (!newData || !newData.type || !newData.status || initialLoadRef.current) return;
+          if (!newData || !newData.type || !newData.status) {
+            console.log("[Realtime] Invalid payload data, skipping notification");
+            return;
+          }
+
+          // Check if we've already seen this transaction+status combination
+          const transactionKey = `${newData.id}-${newData.status}`;
+          if (seenTransactionIdsRef.current.has(transactionKey)) {
+            console.log("[Realtime] Already seen this transaction, skipping:", transactionKey);
+            return;
+          }
 
           // Determine notification type
           let shouldNotify = false;
@@ -103,6 +120,10 @@ export function useTransactions() {
           }
 
           if (shouldNotify) {
+            // Mark as seen
+            seenTransactionIdsRef.current.add(transactionKey);
+            console.log("[Realtime] Creating notification for:", transactionKey);
+
             const notification: TransactionNotification = {
               id: newData.id,
               type: newData.type,
@@ -112,7 +133,11 @@ export function useTransactions() {
               timestamp: new Date(),
             };
 
-            setNotifications(prev => [notification, ...prev.slice(0, 9)]);
+            setNotifications(prev => {
+              const updated = [notification, ...prev.slice(0, 9)];
+              console.log("[Realtime] Notifications updated, count:", updated.length);
+              return updated;
+            });
 
             // Notify tab title when in background
             notifyNewTransactionRef.current();
@@ -137,18 +162,14 @@ export function useTransactions() {
           }
         }
       )
-      .subscribe();
-
-    // Mark initial load as complete after first subscription
-    setTimeout(() => {
-      console.log("Setting initialLoadRef to false");
-      initialLoadRef.current = false;
-    }, 2000);
+      .subscribe((status) => {
+        console.log("[Realtime] Subscription status:", status);
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [refetch]);
+  }, [refetch, transactions]);
 
   // Calculate stats
   const stats: TransactionStats = {
