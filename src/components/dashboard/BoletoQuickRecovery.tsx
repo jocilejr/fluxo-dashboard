@@ -60,23 +60,46 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
   const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [imageBlob, setImageBlob] = useState<Blob | null>(null);
   const [isDragging, setIsDragging] = useState<string | null>(null);
+  const [clickCount, setClickCount] = useState(0);
 
   const { extensionAvailable, extensionStatus, openChat, sendText, sendImage, retryConnection } = useWhatsAppExtension();
 
   useEffect(() => {
-    if (open) {
+    if (open && transaction) {
       fetchDefaultTemplate();
-      if (transaction) {
-        loadPdf();
-      }
-    } else {
+      loadPdf();
+      fetchClickCount();
+    } else if (!open) {
       if (pdfBlobUrl) URL.revokeObjectURL(pdfBlobUrl);
       if (imageBlobUrl) URL.revokeObjectURL(imageBlobUrl);
       setPdfBlobUrl(null);
       setImageBlobUrl(null);
       setPdfArrayBuffer(null);
+      setClickCount(0);
     }
   }, [open, transaction]);
+
+  const fetchClickCount = async () => {
+    if (!transaction) return;
+    const { count } = await supabase
+      .from("boleto_recovery_contacts")
+      .select("*", { count: "exact", head: true })
+      .eq("transaction_id", transaction.id);
+    setClickCount(count || 0);
+  };
+
+  const registerClick = async () => {
+    if (!transaction) return;
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData.user) return;
+    
+    await supabase.from("boleto_recovery_contacts").insert({
+      transaction_id: transaction.id,
+      user_id: userData.user.id,
+      contact_method: "whatsapp",
+    });
+    setClickCount((prev) => prev + 1);
+  };
 
   const fetchDefaultTemplate = async () => {
     setIsLoading(true);
@@ -485,9 +508,16 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
         <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] min-h-0">
           {/* Left side - Boleto Info */}
           <div className="p-6 bg-muted/20 border-b lg:border-b-0 lg:border-r border-border/50">
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">
-              Dados do Cliente
-            </h4>
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Dados do Cliente
+              </h4>
+              {clickCount > 0 && (
+                <Badge variant="secondary" className="text-xs">
+                  {clickCount} contato{clickCount > 1 ? "s" : ""}
+                </Badge>
+              )}
+            </div>
             
             <div className="space-y-3">
               {/* Cliente */}
@@ -572,7 +602,8 @@ export function BoletoQuickRecovery({ open, onOpenChange, transaction }: BoletoQ
               {transaction.customer_phone && (
                 <Button
                   className="w-full gap-2 h-11 mt-4 bg-[#25D366] hover:bg-[#20BD5A] text-white font-medium shadow-lg shadow-[#25D366]/25"
-                  onClick={() => {
+                  onClick={async () => {
+                    await registerClick();
                     if (extensionAvailable) {
                       openChat(transaction.customer_phone!).catch(() => {
                         window.open(`https://web.whatsapp.com/send?phone=${transaction.customer_phone?.replace(/\D/g, "")}`, "_blank");
