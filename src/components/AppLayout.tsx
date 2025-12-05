@@ -2,10 +2,11 @@ import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { AppSidebar } from "./AppSidebar";
 import { supabase } from "@/integrations/supabase/client";
-import { Menu, Bell } from "lucide-react";
+import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useTransactions } from "@/hooks/useTransactions";
+import { NotificationPopup } from "./layout/NotificationPopup";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -27,7 +28,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userName, setUserName] = useState<string>("");
   const location = useLocation();
-  const { notifications } = useTransactions();
+  const { notifications, dismissAllNotifications } = useTransactions();
 
   const currentPage = pageConfig[location.pathname] || { title: "Página", subtitle: "" };
   const unviewedCount = notifications.length;
@@ -90,9 +91,11 @@ export function AppLayout({ children }: AppLayoutProps) {
 
           {/* Right Actions */}
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground">
-              <Bell className="h-[18px] w-[18px]" />
-            </Button>
+            {/* Notification Popup */}
+            <NotificationPopup 
+              notifications={notifications}
+              onDismiss={dismissAllNotifications}
+            />
             
             <div className="hidden sm:flex items-center gap-2 pl-2 border-l border-border/50">
               <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
