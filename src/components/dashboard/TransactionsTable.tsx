@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Transaction } from "@/hooks/useTransactions";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trash2, Download, Search, ChevronDown, ChevronUp, Users, Clock, CheckCircle2, AlertCircle, RefreshCw, CalendarIcon, MessageSquare, Settings2 } from "lucide-react";
+import { Trash2, Download, Search, ChevronDown, ChevronUp, Users, Clock, CheckCircle2, AlertCircle, RefreshCw, CalendarIcon, MessageSquare, Settings2, ShoppingCart, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -36,6 +36,8 @@ import { BoletoQuickRecovery } from "./BoletoQuickRecovery";
 import { BoletoRecoveryIcon } from "./BoletoRecoveryIcon";
 import { PixCardQuickRecovery } from "./PixCardQuickRecovery";
 import { PixCardRecoverySettings } from "./PixCardRecoverySettings";
+import { AbandonedEventsTab } from "./AbandonedEventsTab";
+import { useAbandonedEvents } from "@/hooks/useAbandonedEvents";
 
 interface TransactionsTableProps {
   transactions: Transaction[];
@@ -81,14 +83,16 @@ const typeStyles = {
 };
 
 const VIEWED_STORAGE_KEY = "viewed_transactions";
+const VIEWED_ABANDONED_KEY = "viewed_abandoned_events";
 
-type TabKey = "aprovados" | "boletos-gerados" | "pix-cartao-pendentes";
+type TabKey = "aprovados" | "boletos-gerados" | "pix-cartao-pendentes" | "abandono-falha";
 type SortField = "created_at" | "amount" | "customer_name";
 type SortDirection = "asc" | "desc";
 
 export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin = false }: TransactionsTableProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<TabKey>("aprovados");
+  const { events: abandonedEvents } = useAbandonedEvents();
   const [sortField, setSortField] = useState<SortField>("created_at");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [visibleCount, setVisibleCount] = useState(15);
@@ -111,9 +115,14 @@ export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin =
   const [viewedIds, setViewedIds] = useState<Record<TabKey, string[]>>(() => {
     try {
       const stored = localStorage.getItem(VIEWED_STORAGE_KEY);
-      return stored ? JSON.parse(stored) : { aprovados: [], "boletos-gerados": [], "pix-cartao-pendentes": [] };
+      const abandonedStored = localStorage.getItem(VIEWED_ABANDONED_KEY);
+      const base = stored ? JSON.parse(stored) : { aprovados: [], "boletos-gerados": [], "pix-cartao-pendentes": [] };
+      return {
+        ...base,
+        "abandono-falha": abandonedStored ? JSON.parse(abandonedStored) : [],
+      };
     } catch {
-      return { aprovados: [], "boletos-gerados": [], "pix-cartao-pendentes": [] };
+      return { aprovados: [], "boletos-gerados": [], "pix-cartao-pendentes": [], "abandono-falha": [] };
     }
   });
 
@@ -220,19 +229,38 @@ export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin =
       aprovados: 0,
       "boletos-gerados": 0,
       "pix-cartao-pendentes": 0,
+      "abandono-falha": 0,
     };
     
-    (Object.keys(tabTransactions) as TabKey[]).forEach((tab) => {
+    (Object.keys(tabTransactions) as (keyof typeof tabTransactions)[]).forEach((tab) => {
       const tabTxIds = tabTransactions[tab].map(t => t.id);
       const viewedInTab = viewedIds[tab] || [];
       counts[tab] = tabTxIds.filter(id => !viewedInTab.includes(id)).length;
     });
+
+    // Calculate abandoned events unviewed count
+    const abandonedViewedIds = viewedIds["abandono-falha"] || [];
+    counts["abandono-falha"] = abandonedEvents.filter(e => !abandonedViewedIds.includes(e.id)).length;
     
     return counts;
-  }, [tabTransactions, viewedIds]);
+  }, [tabTransactions, viewedIds, abandonedEvents]);
 
   // Mark current tab's transactions as viewed
   const markAsViewed = useCallback((tab: TabKey) => {
+    if (tab === "abandono-falha") {
+      // Handle abandoned events separately
+      const abandonedIds = abandonedEvents.map(e => e.id);
+      setViewedIds(prev => {
+        const updated = {
+          ...prev,
+          "abandono-falha": [...new Set([...(prev["abandono-falha"] || []), ...abandonedIds])],
+        };
+        localStorage.setItem(VIEWED_ABANDONED_KEY, JSON.stringify(updated["abandono-falha"]));
+        return updated;
+      });
+      return;
+    }
+    
     const tabTxIds = tabTransactions[tab].map(t => t.id);
     
     setViewedIds(prev => {
@@ -240,17 +268,25 @@ export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin =
         ...prev,
         [tab]: [...new Set([...(prev[tab] || []), ...tabTxIds])],
       };
-      localStorage.setItem(VIEWED_STORAGE_KEY, JSON.stringify(updated));
+      localStorage.setItem(VIEWED_STORAGE_KEY, JSON.stringify({
+        aprovados: updated.aprovados,
+        "boletos-gerados": updated["boletos-gerados"],
+        "pix-cartao-pendentes": updated["pix-cartao-pendentes"],
+      }));
       return updated;
     });
-  }, [tabTransactions]);
+  }, [tabTransactions, abandonedEvents]);
 
   // Mark as viewed when tab changes or transactions load
   useEffect(() => {
-    if (tabTransactions[activeTab].length > 0) {
+    if (activeTab === "abandono-falha") {
+      if (abandonedEvents.length > 0) {
+        markAsViewed(activeTab);
+      }
+    } else if (tabTransactions[activeTab]?.length > 0) {
       markAsViewed(activeTab);
     }
-  }, [activeTab, tabTransactions, markAsViewed]);
+  }, [activeTab, tabTransactions, abandonedEvents, markAsViewed]);
 
   // Reset visible count when tab changes
   useEffect(() => {
@@ -258,7 +294,7 @@ export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin =
   }, [activeTab]);
 
   // Filter transactions by active tab
-  const tabFilteredTransactions = tabTransactions[activeTab];
+  const tabFilteredTransactions = activeTab === "abandono-falha" ? [] : tabTransactions[activeTab];
 
   // Apply search filter and sorting
   const filteredTransactions = useMemo(() => {
@@ -838,10 +874,11 @@ export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin =
       
       <Tabs value={activeTab} onValueChange={handleTabChange} className="mb-4">
         <div className="flex items-center gap-2">
-          <TabsList className="grid flex-1 grid-cols-3 gap-1">
+          <TabsList className="grid flex-1 grid-cols-4 gap-1">
             {renderTabTrigger("aprovados", "Aprovados")}
             {renderTabTrigger("boletos-gerados", "Boletos Gerados")}
             {renderTabTrigger("pix-cartao-pendentes", "PIX/Cartão Pend.")}
+            {renderTabTrigger("abandono-falha", "Abandono/Falha")}
           </TabsList>
           {activeTab === "boletos-gerados" && (
             <TooltipProvider>
@@ -868,20 +905,26 @@ export function TransactionsTable({ transactions, isLoading, onDelete, isAdmin =
         </div>
       </Tabs>
 
-      <div className="flex flex-col sm:flex-row gap-3 mb-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome, telefone, email ou código..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 text-sm"
-          />
-        </div>
-      </div>
-      
-      {renderMobileView()}
-      {renderDesktopView()}
+      {activeTab === "abandono-falha" ? (
+        <AbandonedEventsTab isAdmin={isAdmin} />
+      ) : (
+        <>
+          <div className="flex flex-col sm:flex-row gap-3 mb-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nome, telefone, email ou código..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 text-sm"
+              />
+            </div>
+          </div>
+          
+          {renderMobileView()}
+          {renderDesktopView()}
+        </>
+      )}
 
       <BoletoQuickRecovery
         open={quickRecoveryOpen}
