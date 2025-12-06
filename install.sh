@@ -547,10 +547,12 @@ setup_functions_volume() {
     print_success "Edge Functions configuradas no volume"
 }
 
-# Obtém container ID do serviço no Swarm
+# Obtém container ID do serviço no Swarm (busca parcial no nome)
 get_container_id() {
     local service_name=$1
-    docker ps -q -f "name=${service_name}" | head -1
+    # No Swarm, containers têm nomes como: dash-origem-viva_db.1.xxxxx
+    # Usamos grep para busca mais flexível
+    docker ps --format '{{.ID}} {{.Names}}' 2>/dev/null | grep -E "${service_name}\." | awk '{print $1}' | head -1
 }
 
 # Aguarda container ficar disponível
@@ -566,10 +568,17 @@ wait_for_container() {
             # Verifica se container está rodando
             local status=$(docker inspect -f '{{.State.Running}}' "$container_id" 2>/dev/null)
             if [[ "$status" == "true" ]]; then
-                print_success "Container ${service_name} disponível"
+                print_success "Container ${service_name} disponível (ID: ${container_id:0:12})"
                 return 0
             fi
         fi
+        
+        # Debug: mostra containers existentes a cada 10 tentativas
+        if (( i % 10 == 0 )); then
+            print_info "Containers Swarm ativos:"
+            docker ps --format '{{.Names}}' 2>/dev/null | grep "dash-origem-viva" || echo "(nenhum)"
+        fi
+        
         sleep 2
     done
     
@@ -582,21 +591,36 @@ wait_for_postgres() {
     print_info "Aguardando PostgreSQL inicializar completamente..."
     
     # Primeiro aguarda container existir
-    wait_for_container "dash-origem-viva_db" 120 || return 1
+    wait_for_container "dash-origem-viva_db" 180 || return 1
     
     local container_id=$(get_container_id "dash-origem-viva_db")
     
+    if [[ -z "$container_id" ]]; then
+        print_error "Não foi possível obter ID do container PostgreSQL"
+        return 1
+    fi
+    
+    print_info "Container PostgreSQL: ${container_id:0:12}"
+    
     # Aguarda PostgreSQL estar pronto para conexões
-    for i in $(seq 1 60); do
-        if docker exec "$container_id" pg_isready -U postgres -h localhost 2>/dev/null | grep -q "accepting connections"; then
+    for i in $(seq 1 90); do
+        local result=$(docker exec "$container_id" pg_isready -U postgres -h localhost 2>&1)
+        if echo "$result" | grep -q "accepting connections"; then
             print_success "PostgreSQL pronto para conexões"
             return 0
         fi
-        print_info "Tentativa $i/60 - PostgreSQL ainda inicializando..."
-        sleep 3
+        
+        # Mostra progresso
+        if (( i % 5 == 0 )); then
+            print_info "Tentativa $i/90 - PostgreSQL inicializando... ($result)"
+        fi
+        sleep 2
     done
     
-    print_error "Timeout aguardando PostgreSQL"
+    print_error "Timeout aguardando PostgreSQL aceitar conexões"
+    # Debug final
+    print_info "Logs do container PostgreSQL:"
+    docker logs "$container_id" --tail 30 2>&1 | head -20
     return 1
 }
 
@@ -953,9 +977,19 @@ main() {
     setup_functions_volume
     deploy_stack
     
-    # Aguarda serviços estabilizarem
-    print_info "Aguardando serviços estabilizarem (60 segundos)..."
-    sleep 60
+    # Aguarda serviços estabilizarem (PostgreSQL precisa de mais tempo)
+    print_header "Aguardando Serviços Estabilizarem"
+    print_info "Aguardando containers subirem (90 segundos)..."
+    
+    for i in $(seq 1 9); do
+        sleep 10
+        print_info "$((i * 10)) segundos... Verificando serviços:"
+        docker stack services dash-origem-viva --format "{{.Name}}: {{.Replicas}}" 2>/dev/null || true
+    done
+    
+    # Mostra status atual
+    print_info "Status dos serviços:"
+    docker stack services dash-origem-viva
     
     # Inicialização do banco e usuário
     init_database
