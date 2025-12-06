@@ -325,17 +325,16 @@ services:
         delay: 5s
       labels:
         - "traefik.enable=true"
-        - "traefik.http.routers.dashboard.rule=Host(`${DOMAIN}`)"
+        - "traefik.http.routers.dashboard.rule=Host(`dashboard.origemviva.cloud`)"
         - "traefik.http.routers.dashboard.entrypoints=web"
-        - "traefik.http.routers.dashboard-secure.rule=Host(`${DOMAIN}`)"
+        - "traefik.http.routers.dashboard-secure.rule=Host(`dashboard.origemviva.cloud`)"
         - "traefik.http.routers.dashboard-secure.entrypoints=websecure"
         - "traefik.http.routers.dashboard-secure.tls=true"
         - "traefik.http.routers.dashboard-secure.tls.certresolver=letsencryptresolver"
         - "traefik.http.services.dashboard.loadbalancer.server.port=80"
-    environment:
-      DOMAIN: ${DOMAIN}
     networks:
       - supabase-network
+      - traefik-network
 
 # ═══════════════════════════════════════════════════════════════════════════════
 #  CONFIGS (para Docker Swarm)
@@ -362,3 +361,6 @@ networks:
   supabase-network:
     driver: overlay
     attachable: true
+  traefik-network:
+    external: true
+    name: PrincipalNet
