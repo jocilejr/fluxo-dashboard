@@ -20,9 +20,9 @@ services:
         max_attempts: 3
     environment:
       POSTGRES_HOST: /var/run/postgresql
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB:-postgres}
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: Hollywood123@qA
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
     volumes:
       - db-data:/var/lib/postgresql/data
     healthcheck:
@@ -79,7 +79,7 @@ services:
       GOTRUE_API_PORT: 9999
       API_EXTERNAL_URL: https://dashboard.origemviva.cloud
       GOTRUE_DB_DRIVER: postgres
-      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-postgres}
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:Hollywood123@qA@db:5432/postgres
       GOTRUE_SITE_URL: https://dashboard.origemviva.cloud
       GOTRUE_URI_ALLOW_LIST: "https://dashboard.origemviva.cloud,https://dashboard.origemviva.cloud/**"
       GOTRUE_DISABLE_SIGNUP: ${GOTRUE_DISABLE_SIGNUP:-false}
@@ -112,7 +112,7 @@ services:
         condition: on-failure
         delay: 5s
     environment:
-      PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-postgres}
+      PGRST_DB_URI: postgres://authenticator:Hollywood123@qA@db:5432/postgres
       PGRST_DB_SCHEMAS: public,storage,graphql_public
       PGRST_DB_ANON_ROLE: anon
       PGRST_JWT_SECRET: ${JWT_SECRET}
@@ -138,8 +138,8 @@ services:
       DB_HOST: db
       DB_PORT: 5432
       DB_USER: supabase_admin
-      DB_PASSWORD: ${POSTGRES_PASSWORD}
-      DB_NAME: ${POSTGRES_DB:-postgres}
+      DB_PASSWORD: Hollywood123@qA
+      DB_NAME: postgres
       DB_AFTER_CONNECT_QUERY: 'SET search_path TO _realtime'
       DB_ENC_KEY: supabaserealtime
       API_JWT_SECRET: ${JWT_SECRET}
@@ -168,7 +168,7 @@ services:
       SERVICE_KEY: ${SERVICE_ROLE_KEY}
       POSTGREST_URL: http://rest:3000
       PGRST_JWT_SECRET: ${JWT_SECRET}
-      DATABASE_URL: postgres://supabase_storage_admin:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-postgres}
+      DATABASE_URL: postgres://supabase_storage_admin:Hollywood123@qA@db:5432/postgres
       FILE_SIZE_LIMIT: 52428800
       STORAGE_BACKEND: file
       FILE_STORAGE_BACKEND_PATH: /var/lib/storage
@@ -218,9 +218,9 @@ services:
       PG_META_PORT: 8080
       PG_META_DB_HOST: db
       PG_META_DB_PORT: 5432
-      PG_META_DB_NAME: ${POSTGRES_DB:-postgres}
+      PG_META_DB_NAME: postgres
       PG_META_DB_USER: supabase_admin
-      PG_META_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      PG_META_DB_PASSWORD: Hollywood123@qA
     networks:
       - supabase-network
 
@@ -240,7 +240,7 @@ services:
       SUPABASE_URL: http://kong:8000
       SUPABASE_ANON_KEY: ${ANON_KEY}
       SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
-      SUPABASE_DB_URL: postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-postgres}
+      SUPABASE_DB_URL: postgresql://postgres:Hollywood123@qA@db:5432/postgres
       VERIFY_JWT: "false"
       FUNCTIONS_PATH: /home/deno/functions
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
@@ -265,7 +265,7 @@ services:
       - "${STUDIO_PORT:-3000}:3000"
     environment:
       STUDIO_PG_META_URL: http://meta:8080
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: Hollywood123@qA
       DEFAULT_ORGANIZATION_NAME: "Origem Viva"
       DEFAULT_PROJECT_NAME: "Dashboard"
       SUPABASE_URL: http://kong:8000
@@ -293,15 +293,15 @@ services:
     environment:
       LOGFLARE_NODE_HOST: 127.0.0.1
       DB_USERNAME: supabase_admin
-      DB_DATABASE: ${POSTGRES_DB:-postgres}
+      DB_DATABASE: postgres
       DB_HOSTNAME: db
       DB_PORT: 5432
-      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_PASSWORD: Hollywood123@qA
       DB_SCHEMA: _analytics
       LOGFLARE_API_KEY: ${LOGFLARE_API_KEY:-your-super-secret-and-long-logflare-key}
       LOGFLARE_SINGLE_TENANT: "true"
       LOGFLARE_SUPABASE_MODE: "true"
-      POSTGRES_BACKEND_URL: postgresql://supabase_admin:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-postgres}
+      POSTGRES_BACKEND_URL: postgresql://supabase_admin:Hollywood123@qA@db:5432/postgres
       POSTGRES_BACKEND_SCHEMA: _analytics
       LOGFLARE_FEATURE_FLAG_OVERRIDE: multibackend=true
     networks:
