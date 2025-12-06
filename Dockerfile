@@ -45,49 +45,8 @@ FROM nginx:alpine AS production
 # Copia arquivos buildados
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Configuração do Nginx inline (simples, sem template)
-RUN echo 'server { \
-    listen 80; \
-    server_name _; \
-    root /usr/share/nginx/html; \
-    index index.html; \
-    \
-    # Gzip \
-    gzip on; \
-    gzip_types text/plain text/css application/json application/javascript text/xml application/xml text/javascript; \
-    \
-    # Cache para assets estáticos \
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ { \
-        expires 1y; \
-        add_header Cache-Control "public, immutable"; \
-    } \
-    \
-    # Health check \
-    location /health { \
-        return 200 "OK"; \
-        add_header Content-Type text/plain; \
-    } \
-    \
-    # SPA fallback \
-    location / { \
-        try_files $uri $uri/ /index.html; \
-    } \
-    \
-    # Proxy para API Supabase (Kong) \
-    location /api/ { \
-        proxy_pass http://kong:8000/; \
-        proxy_http_version 1.1; \
-        proxy_set_header Upgrade $http_upgrade; \
-        proxy_set_header Connection "upgrade"; \
-        proxy_set_header Host $host; \
-        proxy_set_header X-Real-IP $remote_addr; \
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; \
-        proxy_set_header X-Forwarded-Proto $scheme; \
-    } \
-}' > /etc/nginx/conf.d/default.conf
-
-# Remove config default que conflita
-RUN rm -f /etc/nginx/conf.d/default.conf.bak 2>/dev/null || true
+# Copia configuração do Nginx
+COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
 
 # Expõe porta
 EXPOSE 80
