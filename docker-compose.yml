@@ -225,20 +225,16 @@ services:
       - supabase-network
 
   # ═══════════════════════════════════════════════════════════════════════════
-  #  EDGE FUNCTIONS (Deno Runtime)
+  #  EDGE FUNCTIONS (Deno Runtime) - Imagem customizada com functions embutidas
   # ═══════════════════════════════════════════════════════════════════════════
   functions:
-    image: supabase/edge-runtime:v1.45.2
+    image: dash-origem-viva-functions:latest
     deploy:
       mode: replicated
       replicas: 1
       restart_policy:
         condition: on-failure
         delay: 5s
-    command:
-      - start
-      - --main-service
-      - main
     environment:
       JWT_SECRET: ${JWT_SECRET}
       SUPABASE_URL: http://kong:8000
@@ -250,11 +246,6 @@ services:
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
       TYPEBOT_API_TOKEN: ${TYPEBOT_API_TOKEN:-}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
-    volumes:
-      - type: bind
-        source: /root/fluxo-dashboard/supabase/functions
-        target: /home/deno/functions
-        read_only: true
     networks:
       - supabase-network
 

@@ -802,25 +802,21 @@ services:
         condition: on-failure
 
   # ─────────────────────────────────────────────────────────────────────────────
-  #  Edge Functions
+  #  Edge Functions (Imagem customizada com functions embutidas)
   # ─────────────────────────────────────────────────────────────────────────────
   functions:
-    image: supabase/edge-runtime:v1.45.2
+    image: dash-origem-viva-functions:latest
     environment:
-      JWT_SECRET: ${JWT_SECRET}
+      JWT_SECRET: \${JWT_SECRET}
       SUPABASE_URL: http://kong:8000
-      SUPABASE_ANON_KEY: ${ANON_KEY}
-      SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
-      SUPABASE_DB_URL: postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/postgres
+      SUPABASE_ANON_KEY: \${ANON_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: \${SERVICE_ROLE_KEY}
+      SUPABASE_DB_URL: postgresql://postgres:\${POSTGRES_PASSWORD}@db:5432/postgres
       VERIFY_JWT: "false"
-      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
-      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
-    volumes:
-      - ${INSTALL_DIR}/functions:/home/deno/functions:ro
-    command:
-      - start
-      - --main-service
-      - /home/deno/functions/main
+      VAPID_PUBLIC_KEY: \${VAPID_PUBLIC_KEY}
+      VAPID_PRIVATE_KEY: \${VAPID_PRIVATE_KEY}
+      TYPEBOT_API_TOKEN: \${TYPEBOT_API_TOKEN:-}
+      RESEND_API_KEY: \${RESEND_API_KEY:-}
     networks:
       - internal
     depends_on:
@@ -871,10 +867,10 @@ EOF
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  BUILD DA IMAGEM
+#  BUILD DAS IMAGENS
 # ═══════════════════════════════════════════════════════════════════════════════
 build_docker_image() {
-    print_header "Construindo Imagem Docker"
+    print_header "Construindo Imagens Docker"
     
     # Cria .env temporário para o build
     cat > .env.build << EOF
@@ -884,6 +880,8 @@ VITE_SUPABASE_PROJECT_ID=self-hosted
 VITE_VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY}
 EOF
     
+    # Build da imagem do frontend
+    print_info "Construindo imagem do frontend..."
     docker build \
         --build-arg VITE_SUPABASE_URL="https://${DOMAIN}/api" \
         --build-arg VITE_SUPABASE_PUBLISHABLE_KEY="${ANON_KEY}" \
@@ -894,6 +892,15 @@ EOF
     
     rm -f .env.build
     print_success "Imagem construída: dash-origem-viva:latest"
+    
+    # Build da imagem das Edge Functions
+    print_info "Construindo imagem das Edge Functions..."
+    docker build \
+        -t dash-origem-viva-functions:latest \
+        -f docker/functions/Dockerfile \
+        .
+    
+    print_success "Imagem construída: dash-origem-viva-functions:latest"
 }
 
 # ═══════════════════════════════════════════════════════════════════════════════
