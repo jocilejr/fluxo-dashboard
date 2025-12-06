@@ -583,44 +583,58 @@ wait_for_container() {
     done
     
     print_error "Timeout aguardando container ${service_name}"
+    # Debug: mostra status do serviço
+    print_info "Status do serviço no Swarm:"
+    docker service ps dash-origem-viva_db --no-trunc 2>&1 | head -10 || true
+    print_info "Logs do serviço:"
+    docker service logs dash-origem-viva_db --tail 20 2>&1 | head -20 || true
     return 1
 }
 
-# Aguarda PostgreSQL com verificação completa
+# Aguarda PostgreSQL estar pronto
 wait_for_postgres() {
     print_info "Aguardando PostgreSQL inicializar completamente..."
     
-    # Primeiro aguarda container existir
-    wait_for_container "dash-origem-viva_db" 180 || return 1
+    # Primeiro verifica se o serviço existe e está running
+    print_info "Verificando status do serviço db..."
+    docker service ps dash-origem-viva_db --format "{{.CurrentState}}" 2>/dev/null | head -5 || true
+    
+    # Aguarda container existir (timeout maior para db)
+    wait_for_container "dash-origem-viva_db" 240 || {
+        print_error "Container db não subiu. Verificando erros..."
+        docker service ps dash-origem-viva_db --no-trunc 2>&1 || true
+        docker service logs dash-origem-viva_db --tail 30 2>&1 || true
+        return 1
+    }
     
     local container_id=$(get_container_id "dash-origem-viva_db")
     
     if [[ -z "$container_id" ]]; then
         print_error "Não foi possível obter ID do container PostgreSQL"
+        docker service ps dash-origem-viva_db --no-trunc 2>&1 || true
         return 1
     fi
     
-    print_info "Container PostgreSQL: ${container_id:0:12}"
+    print_success "Container PostgreSQL encontrado: ${container_id:0:12}"
     
     # Aguarda PostgreSQL estar pronto para conexões
-    for i in $(seq 1 90); do
+    for i in $(seq 1 120); do
         local result=$(docker exec "$container_id" pg_isready -U postgres -h localhost 2>&1)
         if echo "$result" | grep -q "accepting connections"; then
             print_success "PostgreSQL pronto para conexões"
             return 0
         fi
         
-        # Mostra progresso
-        if (( i % 5 == 0 )); then
-            print_info "Tentativa $i/90 - PostgreSQL inicializando... ($result)"
+        # Mostra progresso a cada 10 tentativas
+        if (( i % 10 == 0 )); then
+            print_info "Tentativa $i/120 - Aguardando PostgreSQL... ($result)"
         fi
         sleep 2
     done
     
     print_error "Timeout aguardando PostgreSQL aceitar conexões"
-    # Debug final
     print_info "Logs do container PostgreSQL:"
-    docker logs "$container_id" --tail 30 2>&1 | head -20
+    docker logs "$container_id" --tail 50 2>&1 | head -30
     return 1
 }
 
