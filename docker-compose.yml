@@ -25,6 +25,7 @@ services:
       POSTGRES_USER: postgres
     volumes:
       - db-data:/var/lib/postgresql/data
+      - ./docker/supabase/init:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "postgres", "-h", "localhost"]
       interval: 10s
