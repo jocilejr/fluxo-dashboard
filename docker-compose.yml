@@ -79,7 +79,7 @@ services:
       GOTRUE_API_PORT: 9999
       API_EXTERNAL_URL: https://dashboard.origemviva.cloud
       GOTRUE_DB_DRIVER: postgres
-      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:Hollywood123@qA@db:5432/postgres
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:Hollywood123%40qA@db:5432/postgres
       GOTRUE_SITE_URL: https://dashboard.origemviva.cloud
       GOTRUE_URI_ALLOW_LIST: "https://dashboard.origemviva.cloud,https://dashboard.origemviva.cloud/**"
       GOTRUE_DISABLE_SIGNUP: ${GOTRUE_DISABLE_SIGNUP:-false}
@@ -112,7 +112,7 @@ services:
         condition: on-failure
         delay: 5s
     environment:
-      PGRST_DB_URI: postgres://authenticator:Hollywood123@qA@db:5432/postgres
+      PGRST_DB_URI: postgres://authenticator:Hollywood123%40qA@db:5432/postgres
       PGRST_DB_SCHEMAS: public,storage,graphql_public
       PGRST_DB_ANON_ROLE: anon
       PGRST_JWT_SECRET: ${JWT_SECRET}
@@ -168,7 +168,7 @@ services:
       SERVICE_KEY: ${SERVICE_ROLE_KEY}
       POSTGREST_URL: http://rest:3000
       PGRST_JWT_SECRET: ${JWT_SECRET}
-      DATABASE_URL: postgres://supabase_storage_admin:Hollywood123@qA@db:5432/postgres
+      DATABASE_URL: postgres://supabase_storage_admin:Hollywood123%40qA@db:5432/postgres
       FILE_SIZE_LIMIT: 52428800
       STORAGE_BACKEND: file
       FILE_STORAGE_BACKEND_PATH: /var/lib/storage
@@ -240,7 +240,7 @@ services:
       SUPABASE_URL: http://kong:8000
       SUPABASE_ANON_KEY: ${ANON_KEY}
       SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
-      SUPABASE_DB_URL: postgresql://postgres:Hollywood123@qA@db:5432/postgres
+      SUPABASE_DB_URL: postgresql://postgres:Hollywood123%40qA@db:5432/postgres
       VERIFY_JWT: "false"
       FUNCTIONS_PATH: /home/deno/functions
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
@@ -301,7 +301,7 @@ services:
       LOGFLARE_API_KEY: ${LOGFLARE_API_KEY:-your-super-secret-and-long-logflare-key}
       LOGFLARE_SINGLE_TENANT: "true"
       LOGFLARE_SUPABASE_MODE: "true"
-      POSTGRES_BACKEND_URL: postgresql://supabase_admin:Hollywood123@qA@db:5432/postgres
+      POSTGRES_BACKEND_URL: postgresql://supabase_admin:Hollywood123%40qA@db:5432/postgres
       POSTGRES_BACKEND_SCHEMA: _analytics
       LOGFLARE_FEATURE_FLAG_OVERRIDE: multibackend=true
     networks:
