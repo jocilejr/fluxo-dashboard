@@ -2,7 +2,7 @@
 
 # ╔════════════════════════════════════════════════════════════════════════════╗
 # ║                    DASH ORIGEM VIVA - INSTALADOR                           ║
-# ║              Supabase Self-Hosted + Aplicação Automatizado                 ║
+# ║         Supabase Self-Hosted + Aplicação (Docker Swarm/Portainer)          ║
 # ╚════════════════════════════════════════════════════════════════════════════╝
 
 set -e
@@ -62,21 +62,20 @@ check_requirements() {
         print_success "Docker instalado com sucesso"
     fi
     
-    # Docker Compose
-    if command -v docker-compose &> /dev/null || docker compose version &> /dev/null; then
-        print_success "Docker Compose instalado"
+    # Verifica/Inicializa Docker Swarm
+    if docker info 2>/dev/null | grep -q "Swarm: active"; then
+        print_success "Docker Swarm já está ativo"
     else
-        print_info "Docker Compose não encontrado. Instalando..."
-        apt-get update
-        apt-get install -y docker-compose-plugin
-        print_success "Docker Compose instalado com sucesso"
+        print_info "Inicializando Docker Swarm..."
+        docker swarm init --advertise-addr $(hostname -I | awk '{print $1}') 2>/dev/null || true
+        print_success "Docker Swarm inicializado"
     fi
     
     # OpenSSL
     if command -v openssl &> /dev/null; then
         print_success "OpenSSL instalado"
     else
-        apt-get install -y openssl
+        apt-get update && apt-get install -y openssl
         print_success "OpenSSL instalado"
     fi
     
@@ -177,15 +176,7 @@ collect_user_input() {
     done
     
     # Telefone (opcional)
-    read -p "$(echo -e ${CYAN}📱 Telefone do administrador${NC} [opcional, pressione Enter para pular]: )" ADMIN_PHONE
-    
-    # Porta HTTP (opcional)
-    read -p "$(echo -e ${CYAN}🌐 Porta HTTP${NC} [padrão: 80]: )" HTTP_PORT
-    HTTP_PORT=${HTTP_PORT:-80}
-    
-    # Porta HTTPS (opcional)
-    read -p "$(echo -e ${CYAN}🔒 Porta HTTPS${NC} [padrão: 443]: )" HTTPS_PORT
-    HTTPS_PORT=${HTTPS_PORT:-443}
+    read -p "$(echo -e ${CYAN}📱 Telefone do administrador${NC} [opcional]: )" ADMIN_PHONE
 }
 
 # Gera todas as credenciais
@@ -223,40 +214,155 @@ generate_credentials() {
     print_success "Logflare API Key gerada"
 }
 
-# Configura kong.yml com as chaves JWT reais
-configure_kong_yml() {
-    print_header "Configurando Kong API Gateway"
-    
-    # Verifica se o arquivo existe
-    if [[ -f "docker/supabase/kong.yml" ]]; then
-        # Substitui variáveis pelas chaves JWT reais
-        sed -i "s|\${ANON_KEY}|${ANON_KEY}|g" docker/supabase/kong.yml
-        sed -i "s|\${SERVICE_ROLE_KEY}|${SERVICE_ROLE_KEY}|g" docker/supabase/kong.yml
-        print_success "Kong configurado com chaves JWT"
-    else
-        print_warning "Arquivo kong.yml não encontrado, será usado valores do .env"
-    fi
-}
-
 # Cria estrutura de diretórios
 create_directories() {
     print_header "Criando Estrutura de Diretórios"
     
-    mkdir -p docker/nginx/ssl
-    mkdir -p docker/supabase/volumes/db/data
-    mkdir -p docker/supabase/volumes/storage
-    mkdir -p docker/supabase/volumes/functions
-    mkdir -p docker/supabase/init
+    mkdir -p docker/supabase
     mkdir -p backups
     mkdir -p logs
-    mkdir -p supabase/functions/main
     
     print_success "Diretórios criados"
 }
 
+# Cria kong.yml com chaves JWT reais
+create_kong_config() {
+    print_header "Criando Configuração do Kong API Gateway"
+    
+    cat > docker/supabase/kong.yml << EOF
+_format_version: "2.1"
+_transform: true
+
+consumers:
+  - username: DASHBOARD
+  - username: anon
+    keyauth_credentials:
+      - key: ${ANON_KEY}
+  - username: service_role
+    keyauth_credentials:
+      - key: ${SERVICE_ROLE_KEY}
+
+acls:
+  - consumer: anon
+    group: anon
+  - consumer: service_role
+    group: admin
+
+services:
+  ## Auth Service
+  - name: auth-v1-open
+    url: http://auth:9999/verify
+    routes:
+      - name: auth-v1-open
+        strip_path: true
+        paths:
+          - /auth/v1/verify
+    plugins:
+      - name: cors
+  - name: auth-v1-open-callback
+    url: http://auth:9999/callback
+    routes:
+      - name: auth-v1-open-callback
+        strip_path: true
+        paths:
+          - /auth/v1/callback
+    plugins:
+      - name: cors
+  - name: auth-v1-open-authorize
+    url: http://auth:9999/authorize
+    routes:
+      - name: auth-v1-open-authorize
+        strip_path: true
+        paths:
+          - /auth/v1/authorize
+    plugins:
+      - name: cors
+  - name: auth-v1
+    url: http://auth:9999
+    routes:
+      - name: auth-v1
+        strip_path: true
+        paths:
+          - /auth/v1/
+    plugins:
+      - name: cors
+      - name: key-auth
+        config:
+          hide_credentials: false
+
+  ## REST Service
+  - name: rest-v1
+    url: http://rest:3000/
+    routes:
+      - name: rest-v1
+        strip_path: true
+        paths:
+          - /rest/v1/
+    plugins:
+      - name: cors
+      - name: key-auth
+        config:
+          hide_credentials: false
+
+  ## Realtime Service
+  - name: realtime-v1
+    url: http://realtime:4000/socket
+    routes:
+      - name: realtime-v1
+        strip_path: true
+        paths:
+          - /realtime/v1/
+    plugins:
+      - name: cors
+      - name: key-auth
+        config:
+          hide_credentials: false
+
+  ## Storage Service
+  - name: storage-v1
+    url: http://storage:5000/
+    routes:
+      - name: storage-v1
+        strip_path: true
+        paths:
+          - /storage/v1/
+    plugins:
+      - name: cors
+      - name: key-auth
+        config:
+          hide_credentials: false
+
+  ## Meta Service
+  - name: meta
+    url: http://meta:8080/
+    routes:
+      - name: meta
+        strip_path: true
+        paths:
+          - /pg/
+    plugins:
+      - name: key-auth
+        config:
+          hide_credentials: false
+
+  ## Edge Functions Service
+  - name: functions-v1
+    url: http://functions:9000/
+    routes:
+      - name: functions-v1
+        strip_path: true
+        paths:
+          - /functions/v1/
+    plugins:
+      - name: cors
+EOF
+
+    print_success "kong.yml criado com chaves JWT"
+}
+
 # Cria arquivo .env
 create_env_file() {
-    print_header "Criando Arquivo de Configuração"
+    print_header "Criando Arquivo de Configuração .env"
     
     cat > .env << EOF
 ############################################################
@@ -274,8 +380,6 @@ API_EXTERNAL_URL=https://${DOMAIN}
 # ═══════════════════════════════════════════════════════════
 # PORTAS
 # ═══════════════════════════════════════════════════════════
-HTTP_PORT=${HTTP_PORT}
-HTTPS_PORT=${HTTPS_PORT}
 KONG_HTTP_PORT=8000
 STUDIO_PORT=3000
 
@@ -348,13 +452,13 @@ EOF
     print_success "Arquivo .env criado"
 }
 
-# Cria arquivo main/index.ts para Edge Functions
+# Cria main function para Edge Runtime
 create_main_function() {
-    print_header "Criando Main Function para Edge Runtime"
+    print_header "Criando Edge Functions"
     
-    # Verifica se já existe
-    if [[ ! -f "supabase/functions/main/index.ts" ]]; then
-        cat > supabase/functions/main/index.ts << 'EOF'
+    mkdir -p supabase/functions/main
+    
+    cat > supabase/functions/main/index.ts << 'EOF'
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -363,7 +467,6 @@ const corsHeaders = {
 };
 
 serve(async (req: Request) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -371,7 +474,6 @@ serve(async (req: Request) => {
   const url = new URL(req.url);
   const functionName = url.pathname.split('/')[1];
 
-  // Lista de funções disponíveis
   const availableFunctions = [
     'webhook-receiver',
     'webhook-groups', 
@@ -380,10 +482,10 @@ serve(async (req: Request) => {
     'admin-create-user',
     'admin-delete-user',
     'admin-reset-password',
-    'setup-totp',
-    'verify-totp',
     'delivery-access',
-    'pdf-proxy'
+    'pdf-proxy',
+    'import-transactions',
+    'import-abandoned-events'
   ];
 
   if (!functionName || functionName === 'main') {
@@ -402,14 +504,12 @@ serve(async (req: Request) => {
   }
 
   try {
-    // Dynamic import da função
     const functionModule = await import(`../${functionName}/index.ts`);
     
     if (typeof functionModule.default === 'function') {
       return await functionModule.default(req);
     }
     
-    // Se não tiver default export, tenta chamar serve
     return new Response(
       JSON.stringify({ error: 'Function not properly exported' }),
       { 
@@ -433,73 +533,98 @@ serve(async (req: Request) => {
   }
 });
 EOF
-        print_success "Main function criada"
+
+    print_success "Edge Functions criadas"
+}
+
+# Build da imagem da aplicação
+build_app_image() {
+    print_header "Construindo Imagem da Aplicação"
+    
+    print_info "Isso pode levar alguns minutos..."
+    
+    # Build com argumentos
+    docker build \
+        --build-arg VITE_SUPABASE_URL="https://${DOMAIN}/api" \
+        --build-arg VITE_SUPABASE_PUBLISHABLE_KEY="${ANON_KEY}" \
+        --build-arg VITE_SUPABASE_PROJECT_ID="self-hosted" \
+        --build-arg VITE_VAPID_PUBLIC_KEY="${VAPID_PUBLIC_KEY}" \
+        -t dash-origem-viva:latest \
+        . 2>&1 | while read line; do
+            echo -e "  ${BLUE}│${NC} $line"
+        done
+    
+    if [[ ${PIPESTATUS[0]} -eq 0 ]]; then
+        print_success "Imagem construída com sucesso"
     else
-        print_info "Main function já existe"
+        print_error "Erro ao construir imagem"
+        exit 1
     fi
 }
 
-# Cria certificado SSL autoassinado temporário
-create_temp_ssl() {
-    print_header "Criando Certificado SSL Temporário"
+# Copia Edge Functions para volume
+setup_functions_volume() {
+    print_header "Configurando Volume de Edge Functions"
     
-    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-        -keyout docker/nginx/ssl/key.pem \
-        -out docker/nginx/ssl/cert.pem \
-        -subj "/CN=${DOMAIN}" 2>/dev/null
+    # Cria volume se não existir
+    docker volume create dash-origem-viva_functions-data 2>/dev/null || true
     
-    print_success "Certificado temporário criado"
-    print_warning "Execute './scripts/setup-ssl.sh' depois para obter certificado Let's Encrypt"
+    # Copia arquivos para o volume usando container temporário
+    docker run --rm \
+        -v "$(pwd)/supabase/functions:/src:ro" \
+        -v dash-origem-viva_functions-data:/dest \
+        alpine sh -c "cp -r /src/* /dest/" 2>/dev/null || true
+    
+    print_success "Edge Functions configuradas no volume"
 }
 
-# Cria script de inicialização de roles do PostgreSQL
-create_db_init_script() {
-    print_header "Criando Script de Inicialização do Banco"
+# Inicializa banco de dados
+init_database() {
+    print_header "Inicializando Banco de Dados"
     
-    cat > docker/supabase/init/99-create-roles.sh << 'EOF'
-#!/bin/bash
-set -e
-
-psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+    print_info "Aguardando PostgreSQL iniciar..."
+    
+    # Aguarda DB ficar pronto
+    for i in {1..60}; do
+        if docker exec $(docker ps -q -f name=dash-origem-viva_db) pg_isready -U postgres 2>/dev/null; then
+            print_success "PostgreSQL pronto"
+            break
+        fi
+        if [[ $i -eq 60 ]]; then
+            print_error "Timeout aguardando PostgreSQL"
+            return 1
+        fi
+        sleep 2
+    done
+    
+    # Script SQL para criar roles e schemas
+    docker exec -i $(docker ps -q -f name=dash-origem-viva_db) psql -U postgres << 'EOSQL'
     -- Cria roles necessárias para o Supabase
-    DO \$\$
+    DO $$
     BEGIN
-        -- Role anon (acesso anônimo)
         IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'anon') THEN
             CREATE ROLE anon NOLOGIN NOINHERIT;
         END IF;
-        
-        -- Role authenticated (usuários autenticados)
         IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'authenticated') THEN
             CREATE ROLE authenticated NOLOGIN NOINHERIT;
         END IF;
-        
-        -- Role service_role (acesso total)
         IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'service_role') THEN
             CREATE ROLE service_role NOLOGIN NOINHERIT BYPASSRLS;
         END IF;
-        
-        -- Role authenticator (usado pelo PostgREST)
-        IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'authenticator') THEN
-            CREATE ROLE authenticator NOINHERIT LOGIN PASSWORD '$POSTGRES_PASSWORD';
-        END IF;
-        
-        -- Role supabase_admin
         IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'supabase_admin') THEN
-            CREATE ROLE supabase_admin LOGIN PASSWORD '$POSTGRES_PASSWORD' SUPERUSER;
+            CREATE ROLE supabase_admin LOGIN SUPERUSER;
         END IF;
-        
-        -- Role supabase_auth_admin
         IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'supabase_auth_admin') THEN
-            CREATE ROLE supabase_auth_admin LOGIN PASSWORD '$POSTGRES_PASSWORD' NOINHERIT;
+            CREATE ROLE supabase_auth_admin NOLOGIN NOINHERIT;
         END IF;
-        
-        -- Role supabase_storage_admin
         IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'supabase_storage_admin') THEN
-            CREATE ROLE supabase_storage_admin LOGIN PASSWORD '$POSTGRES_PASSWORD' NOINHERIT;
+            CREATE ROLE supabase_storage_admin NOLOGIN NOINHERIT;
+        END IF;
+        IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'authenticator') THEN
+            CREATE ROLE authenticator NOLOGIN NOINHERIT;
         END IF;
     END
-    \$\$;
+    $$;
     
     -- Grants
     GRANT anon TO authenticator;
@@ -507,20 +632,16 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
     GRANT service_role TO authenticator;
     GRANT supabase_admin TO authenticator;
     
-    -- Schema auth
+    -- Schemas
     CREATE SCHEMA IF NOT EXISTS auth;
     GRANT ALL ON SCHEMA auth TO supabase_auth_admin;
     GRANT USAGE ON SCHEMA auth TO anon, authenticated, service_role;
     
-    -- Schema storage
     CREATE SCHEMA IF NOT EXISTS storage;
     GRANT ALL ON SCHEMA storage TO supabase_storage_admin;
     GRANT USAGE ON SCHEMA storage TO anon, authenticated, service_role;
     
-    -- Schema realtime
     CREATE SCHEMA IF NOT EXISTS _realtime;
-    
-    -- Schema analytics
     CREATE SCHEMA IF NOT EXISTS _analytics;
     GRANT ALL ON SCHEMA _analytics TO supabase_admin;
     
@@ -534,93 +655,34 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
     ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;
     ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
     ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON ROUTINES TO anon, authenticated, service_role;
+    
+    -- Extensões
+    CREATE EXTENSION IF NOT EXISTS "uuid-ossp" SCHEMA public;
+    CREATE EXTENSION IF NOT EXISTS "pgcrypto" SCHEMA public;
+    
+    -- Configuração de senha para roles
 EOSQL
+
+    # Configura senhas
+    docker exec -i $(docker ps -q -f name=dash-origem-viva_db) psql -U postgres << EOF
+    ALTER ROLE supabase_auth_admin WITH PASSWORD '${POSTGRES_PASSWORD}';
+    ALTER ROLE supabase_storage_admin WITH PASSWORD '${POSTGRES_PASSWORD}';
+    ALTER ROLE authenticator WITH PASSWORD '${POSTGRES_PASSWORD}';
+    ALTER ROLE supabase_admin WITH PASSWORD '${POSTGRES_PASSWORD}';
 EOF
-    
-    chmod +x docker/supabase/init/99-create-roles.sh
-    print_success "Script de inicialização do banco criado"
-}
 
-# Inicia os containers
-start_containers() {
-    print_header "Iniciando Containers"
-    
-    print_info "Baixando imagens Docker (pode demorar alguns minutos)..."
-    docker compose pull
-    
-    print_info "Iniciando serviços..."
-    docker compose up -d
-    
-    print_success "Containers iniciados"
-}
-
-# Aguarda serviços ficarem prontos
-wait_for_services() {
-    print_header "Aguardando Serviços Ficarem Prontos"
-    
-    # Aguarda PostgreSQL
-    print_info "Aguardando PostgreSQL..."
-    for i in {1..60}; do
-        if docker compose exec -T db pg_isready -U postgres &>/dev/null; then
-            print_success "PostgreSQL pronto"
-            break
-        fi
-        if [[ $i -eq 60 ]]; then
-            print_error "Timeout aguardando PostgreSQL"
-            print_info "Verificando logs: docker compose logs db --tail=50"
-        fi
-        sleep 2
-    done
-    
-    # Aguarda Kong (API Gateway)
-    print_info "Aguardando API Gateway..."
-    for i in {1..60}; do
-        if curl -sf http://localhost:8000/health &>/dev/null || curl -sf http://localhost:8000 &>/dev/null; then
-            print_success "API Gateway pronto"
-            break
-        fi
-        if [[ $i -eq 60 ]]; then
-            print_warning "API Gateway pode não estar totalmente pronto"
-        fi
-        sleep 2
-    done
-    
-    # Aguarda GoTrue (Auth)
-    print_info "Aguardando Auth Service..."
-    for i in {1..60}; do
-        if curl -sf http://localhost:9999/health &>/dev/null; then
-            print_success "Auth Service pronto"
-            break
-        fi
-        if [[ $i -eq 60 ]]; then
-            print_warning "Auth Service pode não estar totalmente pronto"
-        fi
-        sleep 2
-    done
-    
-    # Aguarda Edge Functions
-    print_info "Aguardando Edge Functions..."
-    for i in {1..30}; do
-        if docker compose ps functions | grep -q "Up"; then
-            print_success "Edge Functions rodando"
-            break
-        fi
-        sleep 2
-    done
-    
-    sleep 10
-    print_info "Aguardando estabilização dos serviços..."
+    print_success "Banco de dados inicializado"
 }
 
 # Executa migrações
 run_migrations() {
-    print_header "Executando Migrações do Banco de Dados"
+    print_header "Executando Migrações"
     
     if [[ -d "supabase/migrations" ]] && [[ -n "$(ls -A supabase/migrations/*.sql 2>/dev/null)" ]]; then
         for file in $(ls supabase/migrations/*.sql 2>/dev/null | sort); do
             filename=$(basename "$file")
             print_info "Executando: $filename"
-            docker compose exec -T db psql -U postgres -d postgres -f "/docker-entrypoint-initdb.d/migrations/$filename" 2>/dev/null || true
+            docker exec -i $(docker ps -q -f name=dash-origem-viva_db) psql -U postgres < "$file" 2>/dev/null || true
         done
         print_success "Migrações executadas"
     else
@@ -632,27 +694,22 @@ run_migrations() {
 create_admin_user() {
     print_header "Criando Usuário Administrador"
     
-    # Verifica se auth está realmente acessível
-    print_info "Verificando serviço de autenticação..."
-    local auth_ready=false
-    for i in {1..30}; do
+    print_info "Aguardando serviço de autenticação..."
+    
+    for i in {1..60}; do
         if curl -sf http://localhost:9999/health > /dev/null 2>&1; then
-            auth_ready=true
+            print_success "Serviço de autenticação disponível"
             break
+        fi
+        if [[ $i -eq 60 ]]; then
+            print_warning "Serviço de auth não respondeu. Admin será criado depois."
+            return 0
         fi
         sleep 2
     done
     
-    if [[ "$auth_ready" != "true" ]]; then
-        print_error "Serviço de autenticação não está respondendo"
-        print_info "Verifique: docker compose logs auth --tail=50"
-        print_warning "Você pode criar o admin manualmente depois"
-        return 1
-    fi
-    print_success "Serviço de autenticação disponível"
-    
-    # Cria usuário via API do GoTrue
     print_info "Criando usuário ${ADMIN_EMAIL}..."
+    
     RESPONSE=$(curl -s --max-time 30 -X POST "http://localhost:9999/admin/users" \
         -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
         -H "Content-Type: application/json" \
@@ -666,19 +723,13 @@ create_admin_user() {
             }
         }" 2>/dev/null)
     
-    # Debug da resposta
-    if [[ -z "$RESPONSE" ]]; then
-        print_error "Sem resposta do servidor de autenticação"
-        return 1
-    fi
-    
     USER_ID=$(echo "$RESPONSE" | jq -r '.id // empty' 2>/dev/null)
     
     if [[ -n "$USER_ID" && "$USER_ID" != "null" ]]; then
         print_success "Usuário criado: ${ADMIN_EMAIL}"
         
         # Adiciona role admin
-        docker compose exec -T db psql -U postgres -d postgres << EOF
+        docker exec -i $(docker ps -q -f name=dash-origem-viva_db) psql -U postgres << EOF
 INSERT INTO public.user_roles (user_id, role)
 VALUES ('${USER_ID}', 'admin')
 ON CONFLICT (user_id, role) DO NOTHING;
@@ -691,49 +742,31 @@ EOF
         print_success "Role admin atribuída"
     else
         ERROR_MSG=$(echo "$RESPONSE" | jq -r '.error // .msg // .message // "erro desconhecido"' 2>/dev/null)
-        print_warning "Não foi possível criar usuário: $ERROR_MSG"
+        print_warning "Não foi possível criar usuário automaticamente: $ERROR_MSG"
         print_info "Você pode criar o admin manualmente via Supabase Studio"
     fi
 }
 
-# Configura secrets nas Edge Functions
-configure_edge_functions() {
-    print_header "Configurando Edge Functions"
+# Deploy do stack via Docker Swarm
+deploy_stack() {
+    print_header "Fazendo Deploy do Stack"
     
-    # Cria arquivo de secrets para as functions (opcional, as envs já estão no docker-compose)
-    cat > docker/supabase/functions.env << EOF
-SUPABASE_URL=http://kong:8000
-SUPABASE_ANON_KEY=${ANON_KEY}
-SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}
-SUPABASE_DB_URL=postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/postgres
-VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY}
-VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY}
-TYPEBOT_API_TOKEN=${TYPEBOT_API_TOKEN:-}
-RESEND_API_KEY=${RESEND_API_KEY:-}
-EOF
-
-    print_success "Secrets das Edge Functions configurados"
-}
-
-# Verifica status dos containers
-check_containers_status() {
-    print_header "Verificando Status dos Containers"
+    # Remove stack antigo se existir
+    docker stack rm dash-origem-viva 2>/dev/null || true
+    sleep 10
     
-    local all_running=true
-    local containers=("supabase-db" "supabase-kong" "supabase-auth" "supabase-rest" "supabase-realtime" "supabase-storage" "supabase-functions" "supabase-studio" "dash-origem-viva")
+    # Deploy
+    print_info "Iniciando deploy..."
+    docker stack deploy -c docker-compose.yml dash-origem-viva
     
-    for container in "${containers[@]}"; do
-        if docker ps --format '{{.Names}}' | grep -q "^${container}$"; then
-            print_success "$container: Rodando"
-        else
-            print_error "$container: Não está rodando"
-            all_running=false
-        fi
-    done
+    print_success "Stack deployado"
     
-    if [[ "$all_running" != "true" ]]; then
-        print_warning "Alguns containers não estão rodando. Verifique os logs."
-    fi
+    # Aguarda serviços
+    print_info "Aguardando serviços iniciarem (pode levar 2-3 minutos)..."
+    sleep 30
+    
+    # Verifica status
+    docker stack services dash-origem-viva
 }
 
 # Exibe resumo final
@@ -762,13 +795,15 @@ show_summary() {
     echo
     echo -e "  1. ${CYAN}Configure DNS:${NC} Aponte ${DOMAIN} para o IP desta VPS"
     echo
-    echo -e "  2. ${CYAN}Configure SSL:${NC} Execute './scripts/setup-ssl.sh'"
+    echo -e "  2. ${CYAN}Configure Traefik:${NC} Certifique-se que Traefik está configurado"
     echo
-    echo -e "  3. ${CYAN}Configure integrações:${NC} Edite o arquivo .env e adicione:"
-    echo -e "     - TYPEBOT_API_TOKEN (para analytics de Typebots)"
-    echo -e "     - RESEND_API_KEY (para envio de emails)"
+    echo -e "  3. ${CYAN}Verifique os serviços:${NC}"
+    echo -e "     docker stack services dash-origem-viva"
     echo
-    echo -e "  4. ${CYAN}Reinicie após configurar:${NC} docker compose restart"
+    echo -e "  4. ${CYAN}Ver logs:${NC}"
+    echo -e "     docker service logs dash-origem-viva_db -f"
+    echo -e "     docker service logs dash-origem-viva_auth -f"
+    echo -e "     docker service logs dash-origem-viva_app -f"
     echo
     echo -e "${GREEN}════════════════════════════════════════════════════════════════${NC}"
     echo
@@ -798,8 +833,7 @@ Anon Key: ${ANON_KEY}
 
 POSTGRESQL
 ----------
-Host: localhost
-Porta: 5433
+Host: db (interno ao Docker)
 Database: postgres
 Usuário: postgres
 Senha: ${POSTGRES_PASSWORD}
@@ -807,6 +841,10 @@ Senha: ${POSTGRES_PASSWORD}
 JWT SECRET
 ----------
 ${JWT_SECRET}
+
+SERVICE ROLE KEY
+----------------
+${SERVICE_ROLE_KEY}
 
 VAPID KEYS
 ----------
@@ -837,7 +875,7 @@ main() {
     echo "║     ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝     ╚═════╝   ╚═══╝                 ║"
     echo "║                                                                            ║"
     echo "║                    ORIGEM VIVA - INSTALADOR                               ║"
-    echo "║              Supabase Self-Hosted + Aplicação                             ║"
+    echo "║         Supabase Self-Hosted + Docker Swarm/Portainer                     ║"
     echo "║                                                                            ║"
     echo "╚════════════════════════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
@@ -847,18 +885,20 @@ main() {
     check_requirements
     collect_user_input
     generate_credentials
-    configure_kong_yml
     create_directories
+    create_kong_config
     create_env_file
     create_main_function
-    create_db_init_script
-    create_temp_ssl
-    start_containers
-    wait_for_services
+    build_app_image
+    setup_functions_volume
+    deploy_stack
+    
+    # Aguarda um pouco antes de inicializar DB
+    sleep 30
+    
+    init_database
     run_migrations
     create_admin_user
-    configure_edge_functions
-    check_containers_status
     show_summary
 }
 

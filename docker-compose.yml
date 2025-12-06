@@ -1,7 +1,7 @@
 version: "3.8"
 
 # ═══════════════════════════════════════════════════════════════════════════════
-#  DASH ORIGEM VIVA - DOCKER COMPOSE
+#  DASH ORIGEM VIVA - DOCKER COMPOSE (Docker Swarm / Portainer)
 #  Supabase Self-Hosted + Aplicação
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -11,19 +11,20 @@ services:
   # ═══════════════════════════════════════════════════════════════════════════
   db:
     image: supabase/postgres:15.1.1.78
-    container_name: supabase-db
-    restart: unless-stopped
-    ports:
-      - "5433:5432"
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
     environment:
       POSTGRES_HOST: /var/run/postgresql
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB:-postgres}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
     volumes:
-      - ./docker/supabase/volumes/db/data:/var/lib/postgresql/data
-      - ./docker/supabase/init/99-create-roles.sh:/docker-entrypoint-initdb.d/99-create-roles.sh:ro
-      - ./supabase/migrations:/docker-entrypoint-initdb.d/migrations:ro
+      - db-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "postgres", "-h", "localhost"]
       interval: 10s
@@ -37,11 +38,14 @@ services:
   # ═══════════════════════════════════════════════════════════════════════════
   kong:
     image: kong:2.8.1
-    container_name: supabase-kong
-    restart: unless-stopped
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
     ports:
-      - "${KONG_HTTP_PORT:-8000}:8000/tcp"
-      - "8443:8443/tcp"
+      - "${KONG_HTTP_PORT:-8000}:8000"
     environment:
       KONG_DATABASE: "off"
       KONG_DECLARATIVE_CONFIG: /var/lib/kong/kong.yml
@@ -50,10 +54,9 @@ services:
       KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
       KONG_NGINX_PROXY_PROXY_BUFFERS: 64 160k
       KONG_LOG_LEVEL: warn
-    volumes:
-      - ./docker/supabase/kong.yml:/var/lib/kong/kong.yml:ro
-    depends_on:
-      - db
+    configs:
+      - source: kong-config
+        target: /var/lib/kong/kong.yml
     networks:
       - supabase-network
 
@@ -62,28 +65,29 @@ services:
   # ═══════════════════════════════════════════════════════════════════════════
   auth:
     image: supabase/gotrue:v2.143.0
-    container_name: supabase-auth
-    restart: unless-stopped
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 5
     ports:
       - "9999:9999"
     environment:
       GOTRUE_API_HOST: 0.0.0.0
       GOTRUE_API_PORT: 9999
       API_EXTERNAL_URL: ${API_EXTERNAL_URL}
-      
       GOTRUE_DB_DRIVER: postgres
       GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-postgres}
-      
       GOTRUE_SITE_URL: ${SITE_URL}
       GOTRUE_URI_ALLOW_LIST: ${GOTRUE_URI_ALLOW_LIST:-}
       GOTRUE_DISABLE_SIGNUP: ${GOTRUE_DISABLE_SIGNUP:-false}
-      
       GOTRUE_JWT_ADMIN_ROLES: service_role
       GOTRUE_JWT_AUD: authenticated
       GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
       GOTRUE_JWT_EXP: ${GOTRUE_JWT_EXPIRY:-3600}
       GOTRUE_JWT_SECRET: ${JWT_SECRET}
-      
       GOTRUE_EXTERNAL_EMAIL_ENABLED: "true"
       GOTRUE_MAILER_AUTOCONFIRM: ${GOTRUE_MAILER_AUTOCONFIRM:-true}
       GOTRUE_SMTP_ADMIN_EMAIL: ${ADMIN_EMAIL}
@@ -91,11 +95,8 @@ services:
       GOTRUE_MAILER_URLPATHS_CONFIRMATION: /auth/v1/verify
       GOTRUE_MAILER_URLPATHS_RECOVERY: /auth/v1/verify
       GOTRUE_MAILER_URLPATHS_EMAIL_CHANGE: /auth/v1/verify
-      
       GOTRUE_EXTERNAL_PHONE_ENABLED: "false"
       GOTRUE_SMS_AUTOCONFIRM: "true"
-    depends_on:
-      - db
     networks:
       - supabase-network
 
@@ -104,8 +105,12 @@ services:
   # ═══════════════════════════════════════════════════════════════════════════
   rest:
     image: postgrest/postgrest:v12.0.1
-    container_name: supabase-rest
-    restart: unless-stopped
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
     environment:
       PGRST_DB_URI: postgres://authenticator:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-postgres}
       PGRST_DB_SCHEMAS: public,storage,graphql_public
@@ -114,8 +119,6 @@ services:
       PGRST_DB_USE_LEGACY_GUCS: "false"
       PGRST_APP_SETTINGS_JWT_SECRET: ${JWT_SECRET}
       PGRST_APP_SETTINGS_JWT_EXP: ${GOTRUE_JWT_EXPIRY:-3600}
-    depends_on:
-      - db
     networks:
       - supabase-network
 
@@ -124,8 +127,12 @@ services:
   # ═══════════════════════════════════════════════════════════════════════════
   realtime:
     image: supabase/realtime:v2.28.32
-    container_name: supabase-realtime
-    restart: unless-stopped
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
     environment:
       PORT: 4000
       DB_HOST: db
@@ -142,8 +149,6 @@ services:
       ERL_AFLAGS: -proto_dist inet_tcp
       ENABLE_TAILSCALE: "false"
       DNS_NODES: "''"
-    depends_on:
-      - db
     networks:
       - supabase-network
 
@@ -152,8 +157,12 @@ services:
   # ═══════════════════════════════════════════════════════════════════════════
   storage:
     image: supabase/storage-api:v0.46.4
-    container_name: supabase-storage
-    restart: unless-stopped
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
     environment:
       ANON_KEY: ${ANON_KEY}
       SERVICE_KEY: ${SERVICE_ROLE_KEY}
@@ -169,10 +178,7 @@ services:
       ENABLE_IMAGE_TRANSFORMATION: "true"
       IMGPROXY_URL: http://imgproxy:5001
     volumes:
-      - ./docker/supabase/volumes/storage:/var/lib/storage
-    depends_on:
-      - db
-      - rest
+      - storage-data:/var/lib/storage
     networks:
       - supabase-network
 
@@ -181,15 +187,19 @@ services:
   # ═══════════════════════════════════════════════════════════════════════════
   imgproxy:
     image: darthsim/imgproxy:v3.8.0
-    container_name: supabase-imgproxy
-    restart: unless-stopped
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
     environment:
       IMGPROXY_BIND: ":5001"
       IMGPROXY_LOCAL_FILESYSTEM_ROOT: /
       IMGPROXY_USE_ETAG: "true"
       IMGPROXY_ENABLE_WEBP_DETECTION: "true"
     volumes:
-      - ./docker/supabase/volumes/storage:/var/lib/storage:ro
+      - storage-data:/var/lib/storage:ro
     networks:
       - supabase-network
 
@@ -198,8 +208,12 @@ services:
   # ═══════════════════════════════════════════════════════════════════════════
   meta:
     image: supabase/postgres-meta:v0.80.0
-    container_name: supabase-meta
-    restart: unless-stopped
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
     environment:
       PG_META_PORT: 8080
       PG_META_DB_HOST: db
@@ -207,8 +221,6 @@ services:
       PG_META_DB_NAME: ${POSTGRES_DB:-postgres}
       PG_META_DB_USER: supabase_admin
       PG_META_DB_PASSWORD: ${POSTGRES_PASSWORD}
-    depends_on:
-      - db
     networks:
       - supabase-network
 
@@ -217,8 +229,12 @@ services:
   # ═══════════════════════════════════════════════════════════════════════════
   functions:
     image: supabase/edge-runtime:v1.45.2
-    container_name: supabase-functions
-    restart: unless-stopped
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
     command:
       - start
       - --main-service
@@ -235,9 +251,7 @@ services:
       TYPEBOT_API_TOKEN: ${TYPEBOT_API_TOKEN:-}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
     volumes:
-      - ./supabase/functions:/home/deno/functions:ro
-    depends_on:
-      - kong
+      - functions-data:/home/deno/functions:ro
     networks:
       - supabase-network
 
@@ -246,10 +260,14 @@ services:
   # ═══════════════════════════════════════════════════════════════════════════
   studio:
     image: supabase/studio:20240422-5cf8f30
-    container_name: supabase-studio
-    restart: unless-stopped
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
     ports:
-      - "${STUDIO_PORT:-3000}:3000/tcp"
+      - "${STUDIO_PORT:-3000}:3000"
     environment:
       STUDIO_PG_META_URL: http://meta:8080
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -263,9 +281,6 @@ services:
       LOGFLARE_URL: http://analytics:4000
       NEXT_PUBLIC_ENABLE_LOGS: "true"
       NEXT_ANALYTICS_BACKEND_PROVIDER: postgres
-    depends_on:
-      - kong
-      - meta
     networks:
       - supabase-network
 
@@ -274,8 +289,12 @@ services:
   # ═══════════════════════════════════════════════════════════════════════════
   analytics:
     image: supabase/logflare:1.4.0
-    container_name: supabase-analytics
-    restart: unless-stopped
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
     environment:
       LOGFLARE_NODE_HOST: 127.0.0.1
       DB_USERNAME: supabase_admin
@@ -290,8 +309,6 @@ services:
       POSTGRES_BACKEND_URL: postgresql://supabase_admin:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-postgres}
       POSTGRES_BACKEND_SCHEMA: _analytics
       LOGFLARE_FEATURE_FLAG_OVERRIDE: multibackend=true
-    depends_on:
-      - db
     networks:
       - supabase-network
 
@@ -300,34 +317,47 @@ services:
   # ═══════════════════════════════════════════════════════════════════════════
   app:
     image: dash-origem-viva:latest
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
-        - VITE_SUPABASE_PUBLISHABLE_KEY=${VITE_SUPABASE_PUBLISHABLE_KEY}
-        - VITE_SUPABASE_PROJECT_ID=${VITE_SUPABASE_PROJECT_ID}
-        - VITE_VAPID_PUBLIC_KEY=${VITE_VAPID_PUBLIC_KEY}
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.dashboard.rule=Host(`${DOMAIN}`)"
+        - "traefik.http.routers.dashboard.entrypoints=web"
+        - "traefik.http.routers.dashboard-secure.rule=Host(`${DOMAIN}`)"
+        - "traefik.http.routers.dashboard-secure.entrypoints=websecure"
+        - "traefik.http.routers.dashboard-secure.tls=true"
+        - "traefik.http.routers.dashboard-secure.tls.certresolver=letsencryptresolver"
+        - "traefik.http.services.dashboard.loadbalancer.server.port=80"
     environment:
-      - DOMAIN=${DOMAIN}
-    volumes:
-      - ./docker/nginx/ssl:/etc/nginx/ssl:ro
-      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf.template:ro
-      - /var/www/certbot:/var/www/certbot:ro
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.dashboard.rule=Host(`${DOMAIN}`)"
-      - "traefik.http.routers.dashboard.entrypoints=web"
-      - "traefik.http.routers.dashboard-secure.rule=Host(`${DOMAIN}`)"
-      - "traefik.http.routers.dashboard-secure.entrypoints=websecure"
-      - "traefik.http.routers.dashboard-secure.tls=true"
-      - "traefik.http.routers.dashboard-secure.tls.certresolver=letsencrypt"
-      - "traefik.http.services.dashboard.loadbalancer.server.port=80"
-    depends_on:
-      - kong
+      DOMAIN: ${DOMAIN}
     networks:
       - supabase-network
 
+# ═══════════════════════════════════════════════════════════════════════════════
+#  CONFIGS (para Docker Swarm)
+# ═══════════════════════════════════════════════════════════════════════════════
+configs:
+  kong-config:
+    file: ./docker/supabase/kong.yml
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  VOLUMES
+# ═══════════════════════════════════════════════════════════════════════════════
+volumes:
+  db-data:
+    driver: local
+  storage-data:
+    driver: local
+  functions-data:
+    driver: local
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  NETWORKS
+# ═══════════════════════════════════════════════════════════════════════════════
 networks:
   supabase-network:
     driver: overlay
