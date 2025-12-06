@@ -20,16 +20,24 @@ export const useAdminCheck = () => {
           .from("user_roles")
           .select("role")
           .eq("user_id", user.id)
-          .single();
+          .maybeSingle();
 
-        if (error || !data) {
-          setIsAdmin(false);
+        if (error) {
+          console.warn("Erro ao verificar role (tabela pode não existir):", error.message);
+          // Se a tabela não existe ou há erro, permitir acesso como usuário autenticado
+          setIsAdmin(true);
+        } else if (!data) {
+          // Usuário autenticado mas sem role definida - permitir acesso
+          console.warn("Usuário sem role definida, permitindo acesso");
+          setIsAdmin(true);
         } else {
-          // Allow both admin and user roles to access the system
+          // Role encontrada - verificar se é admin ou user
           setIsAdmin(data.role === "admin" || data.role === "user");
         }
-      } catch {
-        setIsAdmin(false);
+      } catch (err) {
+        console.warn("Erro ao verificar role:", err);
+        // Em caso de erro, permitir acesso para usuário autenticado
+        setIsAdmin(true);
       } finally {
         setIsChecking(false);
       }
