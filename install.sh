@@ -201,11 +201,11 @@ generate_credentials() {
     
     # VAPID Keys
     VAPID_KEYS=$(generate_vapid_keys)
-    VAPID_PUBLIC_KEY=$(echo "$VAPID_KEYS" | cut -d'|' -f1)
-    VAPID_PRIVATE_KEY=$(echo "$VAPID_KEYS" | cut -d'|' -f2)
-    print_success "VAPID Keys geradas (Push Notifications)"
+    VAPID_PUBLIC_KEY=$(echo $VAPID_KEYS | cut -d'|' -f1)
+    VAPID_PRIVATE_KEY=$(echo $VAPID_KEYS | cut -d'|' -f2)
+    print_success "VAPID Keys geradas"
     
-    # Dashboard Password (para Supabase Studio)
+    # Dashboard Password (para Studio)
     DASHBOARD_PASSWORD=$(generate_random_string 24)
     print_success "Senha do Dashboard gerada"
     
@@ -214,27 +214,26 @@ generate_credentials() {
     print_success "Logflare API Key gerada"
 }
 
-# Cria estrutura de diretórios
+# Cria diretórios necessários
 create_directories() {
-    print_header "Criando Estrutura de Diretórios"
+    print_header "Criando Diretórios"
     
     mkdir -p docker/supabase
+    mkdir -p supabase/functions/main
     mkdir -p backups
     mkdir -p logs
     
     print_success "Diretórios criados"
 }
 
-# Cria kong.yml com chaves JWT reais
+# Cria arquivo kong.yml
 create_kong_config() {
-    print_header "Criando Configuração do Kong API Gateway"
+    print_header "Criando Configuração do Kong"
     
     cat > docker/supabase/kong.yml << EOF
-_format_version: "2.1"
-_transform: true
+_format_version: "1.1"
 
 consumers:
-  - username: DASHBOARD
   - username: anon
     keyauth_credentials:
       - key: ${ANON_KEY}
@@ -249,7 +248,6 @@ acls:
     group: admin
 
 services:
-  ## Auth Service
   - name: auth-v1-open
     url: http://auth:9999/verify
     routes:
@@ -259,6 +257,7 @@ services:
           - /auth/v1/verify
     plugins:
       - name: cors
+
   - name: auth-v1-open-callback
     url: http://auth:9999/callback
     routes:
@@ -268,6 +267,7 @@ services:
           - /auth/v1/callback
     plugins:
       - name: cors
+
   - name: auth-v1-open-authorize
     url: http://auth:9999/authorize
     routes:
@@ -277,6 +277,7 @@ services:
           - /auth/v1/authorize
     plugins:
       - name: cors
+
   - name: auth-v1
     url: http://auth:9999
     routes:
@@ -289,10 +290,15 @@ services:
       - name: key-auth
         config:
           hide_credentials: false
+      - name: acl
+        config:
+          hide_groups_header: true
+          allow:
+            - admin
+            - anon
 
-  ## REST Service
   - name: rest-v1
-    url: http://rest:3000/
+    url: http://rest:3000
     routes:
       - name: rest-v1
         strip_path: true
@@ -303,8 +309,13 @@ services:
       - name: key-auth
         config:
           hide_credentials: false
+      - name: acl
+        config:
+          hide_groups_header: true
+          allow:
+            - admin
+            - anon
 
-  ## Realtime Service
   - name: realtime-v1
     url: http://realtime:4000/socket
     routes:
@@ -317,10 +328,15 @@ services:
       - name: key-auth
         config:
           hide_credentials: false
+      - name: acl
+        config:
+          hide_groups_header: true
+          allow:
+            - admin
+            - anon
 
-  ## Storage Service
   - name: storage-v1
-    url: http://storage:5000/
+    url: http://storage:5000
     routes:
       - name: storage-v1
         strip_path: true
@@ -331,23 +347,15 @@ services:
       - name: key-auth
         config:
           hide_credentials: false
-
-  ## Meta Service
-  - name: meta
-    url: http://meta:8080/
-    routes:
-      - name: meta
-        strip_path: true
-        paths:
-          - /pg/
-    plugins:
-      - name: key-auth
+      - name: acl
         config:
-          hide_credentials: false
+          hide_groups_header: true
+          allow:
+            - admin
+            - anon
 
-  ## Edge Functions Service
   - name: functions-v1
-    url: http://functions:9000/
+    url: http://functions:9000
     routes:
       - name: functions-v1
         strip_path: true
@@ -362,173 +370,134 @@ EOF
 
 # Cria arquivo .env
 create_env_file() {
-    print_header "Criando Arquivo de Configuração .env"
+    print_header "Criando Arquivo .env"
     
     cat > .env << EOF
-############################################################
-# CONFIGURAÇÕES GERADAS AUTOMATICAMENTE
-# Data: $(date '+%Y-%m-%d %H:%M:%S')
-############################################################
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║                    DASH ORIGEM VIVA - CONFIGURAÇÕES                        ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
 
-# ═══════════════════════════════════════════════════════════
-# DOMÍNIO E URLs
-# ═══════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════════════════════
+#  CONFIGURAÇÕES GERAIS
+# ═══════════════════════════════════════════════════════════════════════════════
 DOMAIN=${DOMAIN}
 SITE_URL=https://${DOMAIN}
 API_EXTERNAL_URL=https://${DOMAIN}
 
-# ═══════════════════════════════════════════════════════════
-# PORTAS
-# ═══════════════════════════════════════════════════════════
-KONG_HTTP_PORT=8000
-STUDIO_PORT=3000
-
-# ═══════════════════════════════════════════════════════════
-# POSTGRESQL
-# ═══════════════════════════════════════════════════════════
-POSTGRES_HOST=db
-POSTGRES_PORT=5432
+# ═══════════════════════════════════════════════════════════════════════════════
+#  POSTGRESQL
+# ═══════════════════════════════════════════════════════════════════════════════
+POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
 POSTGRES_DB=postgres
 POSTGRES_USER=postgres
-POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
 
-# ═══════════════════════════════════════════════════════════
-# JWT (NÃO ALTERAR - Gerados automaticamente)
-# ═══════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════════════════════
+#  JWT / AUTENTICAÇÃO
+# ═══════════════════════════════════════════════════════════════════════════════
 JWT_SECRET=${JWT_SECRET}
 ANON_KEY=${ANON_KEY}
 SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}
 
-# ═══════════════════════════════════════════════════════════
-# VAPID KEYS (Push Notifications)
-# ═══════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════════════════════
+#  GOTRUE (Auth)
+# ═══════════════════════════════════════════════════════════════════════════════
+GOTRUE_JWT_EXPIRY=3600
+GOTRUE_DISABLE_SIGNUP=true
+GOTRUE_MAILER_AUTOCONFIRM=true
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  ADMINISTRADOR
+# ═══════════════════════════════════════════════════════════════════════════════
+ADMIN_EMAIL=${ADMIN_EMAIL}
+ADMIN_PASSWORD=${ADMIN_PASSWORD}
+ADMIN_PHONE=${ADMIN_PHONE:-}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  PUSH NOTIFICATIONS (VAPID)
+# ═══════════════════════════════════════════════════════════════════════════════
 VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY}
 VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY}
 
-# ═══════════════════════════════════════════════════════════
-# ADMINISTRADOR INICIAL
-# ═══════════════════════════════════════════════════════════
-ADMIN_EMAIL=${ADMIN_EMAIL}
-ADMIN_PASSWORD=${ADMIN_PASSWORD}
-ADMIN_PHONE=${ADMIN_PHONE}
+# ═══════════════════════════════════════════════════════════════════════════════
+#  PORTAS
+# ═══════════════════════════════════════════════════════════════════════════════
+KONG_HTTP_PORT=8000
+STUDIO_PORT=3000
 
-# ═══════════════════════════════════════════════════════════
-# SUPABASE STUDIO
-# ═══════════════════════════════════════════════════════════
-DASHBOARD_USERNAME=admin
+# ═══════════════════════════════════════════════════════════════════════════════
+#  DASHBOARD / STUDIO
+# ═══════════════════════════════════════════════════════════════════════════════
 DASHBOARD_PASSWORD=${DASHBOARD_PASSWORD}
-
-# ═══════════════════════════════════════════════════════════
-# LOGFLARE (Analytics)
-# ═══════════════════════════════════════════════════════════
 LOGFLARE_API_KEY=${LOGFLARE_API_KEY}
 
-# ═══════════════════════════════════════════════════════════
-# SUPABASE AUTH (GoTrue)
-# ═══════════════════════════════════════════════════════════
-GOTRUE_SITE_URL=https://${DOMAIN}
-GOTRUE_URI_ALLOW_LIST=https://${DOMAIN}
-GOTRUE_DISABLE_SIGNUP=false
-GOTRUE_JWT_EXPIRY=3600
-GOTRUE_JWT_DEFAULT_GROUP_NAME=authenticated
-GOTRUE_MAILER_AUTOCONFIRM=true
-
-# ═══════════════════════════════════════════════════════════
-# INTEGRAÇÕES (Configurar manualmente depois)
-# ═══════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════════════════════
+#  INTEGRAÇÕES (configure depois se necessário)
+# ═══════════════════════════════════════════════════════════════════════════════
 TYPEBOT_API_TOKEN=
 RESEND_API_KEY=
 
-# ═══════════════════════════════════════════════════════════
-# VARIÁVEIS PARA BUILD DA APLICAÇÃO (Vite)
-# ═══════════════════════════════════════════════════════════
-VITE_SUPABASE_URL=https://${DOMAIN}/api
+# ═══════════════════════════════════════════════════════════════════════════════
+#  VITE (para build da aplicação)
+# ═══════════════════════════════════════════════════════════════════════════════
+VITE_SUPABASE_URL=https://${DOMAIN}
 VITE_SUPABASE_PUBLISHABLE_KEY=${ANON_KEY}
 VITE_SUPABASE_PROJECT_ID=self-hosted
 VITE_VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY}
 EOF
 
-    chmod 600 .env
     print_success "Arquivo .env criado"
 }
 
-# Cria main function para Edge Runtime
+# Cria o main function para edge functions
 create_main_function() {
     print_header "Criando Edge Functions"
-    
-    mkdir -p supabase/functions/main
     
     cat > supabase/functions/main/index.ts << 'EOF'
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
 };
 
-serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
-
+serve(async (req) => {
   const url = new URL(req.url);
-  const functionName = url.pathname.split('/')[1];
-
-  const availableFunctions = [
-    'webhook-receiver',
-    'webhook-groups', 
-    'webhook-abandoned',
-    'typebot-stats',
-    'admin-create-user',
-    'admin-delete-user',
-    'admin-reset-password',
-    'delivery-access',
-    'pdf-proxy',
-    'import-transactions',
-    'import-abandoned-events'
-  ];
-
-  if (!functionName || functionName === 'main') {
+  const path = url.pathname;
+  
+  // Handle CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+  
+  // Extract function name from path
+  const functionMatch = path.match(/^\/([^\/]+)/);
+  const functionName = functionMatch ? functionMatch[1] : null;
+  
+  if (!functionName) {
     return new Response(
-      JSON.stringify({ 
-        status: 'ok', 
-        message: 'Supabase Edge Functions Running',
-        available_functions: availableFunctions,
-        timestamp: new Date().toISOString()
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200 
-      }
+      JSON.stringify({ error: "Function name required" }),
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
-
+  
   try {
-    const functionModule = await import(`../${functionName}/index.ts`);
+    // Dynamic import of the function
+    const module = await import(`../${functionName}/index.ts`);
     
-    if (typeof functionModule.default === 'function') {
-      return await functionModule.default(req);
+    if (typeof module.default === "function") {
+      return await module.default(req);
     }
     
     return new Response(
-      JSON.stringify({ error: 'Function not properly exported' }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500 
-      }
+      JSON.stringify({ error: "Function not found" }),
+      { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error(`Error loading function ${functionName}:`, error);
     return new Response(
-      JSON.stringify({ 
-        error: 'Function not found or error loading',
-        function: functionName,
-        message: error.message 
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 404 
-      }
+      JSON.stringify({ error: `Function '${functionName}' not found`, details: error.message }),
+      { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
@@ -537,15 +506,15 @@ EOF
     print_success "Edge Functions criadas"
 }
 
-# Build da imagem da aplicação
+# Constrói imagem Docker da aplicação
 build_app_image() {
-    print_header "Construindo Imagem da Aplicação"
+    print_header "Construindo Imagem Docker da Aplicação"
     
     print_info "Isso pode levar alguns minutos..."
     
-    # Build com argumentos
+    # Build com argumentos de ambiente
     docker build \
-        --build-arg VITE_SUPABASE_URL="https://${DOMAIN}/api" \
+        --build-arg VITE_SUPABASE_URL="https://${DOMAIN}" \
         --build-arg VITE_SUPABASE_PUBLISHABLE_KEY="${ANON_KEY}" \
         --build-arg VITE_SUPABASE_PROJECT_ID="self-hosted" \
         --build-arg VITE_VAPID_PUBLIC_KEY="${VAPID_PUBLIC_KEY}" \
@@ -578,27 +547,72 @@ setup_functions_volume() {
     print_success "Edge Functions configuradas no volume"
 }
 
-# Inicializa banco de dados
-init_database() {
-    print_header "Inicializando Banco de Dados"
+# Obtém container ID do serviço no Swarm
+get_container_id() {
+    local service_name=$1
+    docker ps -q -f "name=${service_name}" | head -1
+}
+
+# Aguarda container ficar disponível
+wait_for_container() {
+    local service_name=$1
+    local max_attempts=${2:-120}
     
-    print_info "Aguardando PostgreSQL iniciar..."
+    print_info "Aguardando container ${service_name}..."
     
-    # Aguarda DB ficar pronto
-    for i in {1..60}; do
-        if docker exec $(docker ps -q -f name=dash-origem-viva_db) pg_isready -U postgres 2>/dev/null; then
-            print_success "PostgreSQL pronto"
-            break
-        fi
-        if [[ $i -eq 60 ]]; then
-            print_error "Timeout aguardando PostgreSQL"
-            return 1
+    for i in $(seq 1 $max_attempts); do
+        local container_id=$(get_container_id "$service_name")
+        if [[ -n "$container_id" ]]; then
+            # Verifica se container está rodando
+            local status=$(docker inspect -f '{{.State.Running}}' "$container_id" 2>/dev/null)
+            if [[ "$status" == "true" ]]; then
+                print_success "Container ${service_name} disponível"
+                return 0
+            fi
         fi
         sleep 2
     done
     
+    print_error "Timeout aguardando container ${service_name}"
+    return 1
+}
+
+# Aguarda PostgreSQL com verificação completa
+wait_for_postgres() {
+    print_info "Aguardando PostgreSQL inicializar completamente..."
+    
+    # Primeiro aguarda container existir
+    wait_for_container "dash-origem-viva_db" 120 || return 1
+    
+    local container_id=$(get_container_id "dash-origem-viva_db")
+    
+    # Aguarda PostgreSQL estar pronto para conexões
+    for i in $(seq 1 60); do
+        if docker exec "$container_id" pg_isready -U postgres -h localhost 2>/dev/null | grep -q "accepting connections"; then
+            print_success "PostgreSQL pronto para conexões"
+            return 0
+        fi
+        print_info "Tentativa $i/60 - PostgreSQL ainda inicializando..."
+        sleep 3
+    done
+    
+    print_error "Timeout aguardando PostgreSQL"
+    return 1
+}
+
+# Inicializa banco de dados
+init_database() {
+    print_header "Inicializando Banco de Dados"
+    
+    # Aguarda PostgreSQL
+    wait_for_postgres || return 1
+    
+    local container_id=$(get_container_id "dash-origem-viva_db")
+    
+    print_info "Criando roles e schemas..."
+    
     # Script SQL para criar roles e schemas
-    docker exec -i $(docker ps -q -f name=dash-origem-viva_db) psql -U postgres << 'EOSQL'
+    docker exec -i "$container_id" psql -U postgres << 'EOSQL'
     -- Cria roles necessárias para o Supabase
     DO $$
     BEGIN
@@ -626,18 +640,26 @@ init_database() {
     END
     $$;
     
-    -- Grants
+    -- Configura herança de roles
     GRANT anon TO authenticator;
     GRANT authenticated TO authenticator;
     GRANT service_role TO authenticator;
     GRANT supabase_admin TO authenticator;
     
+    -- Login para roles que precisam
+    ALTER ROLE supabase_auth_admin WITH LOGIN;
+    ALTER ROLE supabase_storage_admin WITH LOGIN;
+    ALTER ROLE authenticator WITH LOGIN;
+    ALTER ROLE supabase_admin WITH LOGIN;
+    
     -- Schemas
     CREATE SCHEMA IF NOT EXISTS auth;
+    ALTER SCHEMA auth OWNER TO supabase_auth_admin;
     GRANT ALL ON SCHEMA auth TO supabase_auth_admin;
     GRANT USAGE ON SCHEMA auth TO anon, authenticated, service_role;
     
     CREATE SCHEMA IF NOT EXISTS storage;
+    ALTER SCHEMA storage OWNER TO supabase_storage_admin;
     GRANT ALL ON SCHEMA storage TO supabase_storage_admin;
     GRANT USAGE ON SCHEMA storage TO anon, authenticated, service_role;
     
@@ -646,30 +668,40 @@ init_database() {
     GRANT ALL ON SCHEMA _analytics TO supabase_admin;
     
     -- Public schema
+    GRANT ALL ON SCHEMA public TO postgres, supabase_admin;
     GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+    GRANT ALL ON ALL TABLES IN SCHEMA public TO postgres, supabase_admin;
     GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
+    GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO postgres, supabase_admin;
     GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
+    GRANT ALL ON ALL ROUTINES IN SCHEMA public TO postgres, supabase_admin;
     GRANT ALL ON ALL ROUTINES IN SCHEMA public TO anon, authenticated, service_role;
     
+    -- Database permissions
+    GRANT ALL ON DATABASE postgres TO postgres, supabase_admin;
+    GRANT CONNECT ON DATABASE postgres TO anon, authenticated, service_role;
+    GRANT CONNECT ON DATABASE postgres TO supabase_auth_admin, supabase_storage_admin, authenticator;
+    
     -- Default privileges
-    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;
-    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
-    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON ROUTINES TO anon, authenticated, service_role;
+    ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;
+    ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
+    ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON ROUTINES TO anon, authenticated, service_role;
+    ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;
+    ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
+    ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public GRANT ALL ON ROUTINES TO anon, authenticated, service_role;
     
     -- Extensões
     CREATE EXTENSION IF NOT EXISTS "uuid-ossp" SCHEMA public;
     CREATE EXTENSION IF NOT EXISTS "pgcrypto" SCHEMA public;
-    
-    -- Configuração de senha para roles
+    CREATE EXTENSION IF NOT EXISTS "pgjwt" SCHEMA public;
 EOSQL
 
-    # Configura senhas
-    docker exec -i $(docker ps -q -f name=dash-origem-viva_db) psql -U postgres << EOF
-    ALTER ROLE supabase_auth_admin WITH PASSWORD '${POSTGRES_PASSWORD}';
-    ALTER ROLE supabase_storage_admin WITH PASSWORD '${POSTGRES_PASSWORD}';
-    ALTER ROLE authenticator WITH PASSWORD '${POSTGRES_PASSWORD}';
-    ALTER ROLE supabase_admin WITH PASSWORD '${POSTGRES_PASSWORD}';
-EOF
+    # Configura senhas usando variáveis de ambiente (não usar heredoc com variáveis)
+    docker exec "$container_id" psql -U postgres -c "ALTER ROLE supabase_auth_admin WITH PASSWORD '${POSTGRES_PASSWORD}';"
+    docker exec "$container_id" psql -U postgres -c "ALTER ROLE supabase_storage_admin WITH PASSWORD '${POSTGRES_PASSWORD}';"
+    docker exec "$container_id" psql -U postgres -c "ALTER ROLE authenticator WITH PASSWORD '${POSTGRES_PASSWORD}';"
+    docker exec "$container_id" psql -U postgres -c "ALTER ROLE supabase_admin WITH PASSWORD '${POSTGRES_PASSWORD}';"
+    docker exec "$container_id" psql -U postgres -c "ALTER ROLE postgres WITH PASSWORD '${POSTGRES_PASSWORD}';"
 
     print_success "Banco de dados inicializado"
 }
@@ -678,11 +710,18 @@ EOF
 run_migrations() {
     print_header "Executando Migrações"
     
+    local container_id=$(get_container_id "dash-origem-viva_db")
+    
+    if [[ -z "$container_id" ]]; then
+        print_warning "Container do banco não encontrado, pulando migrações"
+        return 1
+    fi
+    
     if [[ -d "supabase/migrations" ]] && [[ -n "$(ls -A supabase/migrations/*.sql 2>/dev/null)" ]]; then
         for file in $(ls supabase/migrations/*.sql 2>/dev/null | sort); do
             filename=$(basename "$file")
             print_info "Executando: $filename"
-            docker exec -i $(docker ps -q -f name=dash-origem-viva_db) psql -U postgres < "$file" 2>/dev/null || true
+            docker exec -i "$container_id" psql -U postgres < "$file" 2>/dev/null || true
         done
         print_success "Migrações executadas"
     else
@@ -690,82 +729,111 @@ run_migrations() {
     fi
 }
 
+# Aguarda serviço Auth
+wait_for_auth() {
+    print_info "Aguardando serviço de autenticação..."
+    
+    for i in $(seq 1 60); do
+        if curl -sf http://localhost:9999/health > /dev/null 2>&1; then
+            print_success "Serviço de autenticação pronto"
+            return 0
+        fi
+        print_info "Tentativa $i/60 - Auth ainda inicializando..."
+        sleep 3
+    done
+    
+    print_warning "Serviço de autenticação não respondeu, tentando criar usuário mesmo assim..."
+    return 1
+}
+
 # Cria usuário administrador
 create_admin_user() {
     print_header "Criando Usuário Administrador"
     
-    print_info "Aguardando serviço de autenticação..."
+    # Aguarda serviço de auth (não falha se timeout)
+    wait_for_auth
     
-    for i in {1..60}; do
-        if curl -sf http://localhost:9999/health > /dev/null 2>&1; then
-            print_success "Serviço de autenticação disponível"
-            break
-        fi
-        if [[ $i -eq 60 ]]; then
-            print_warning "Serviço de auth não respondeu. Admin será criado depois."
-            return 0
-        fi
-        sleep 2
-    done
+    # Monta o payload JSON
+    local payload=$(cat << EOF
+{
+    "email": "${ADMIN_EMAIL}",
+    "password": "${ADMIN_PASSWORD}",
+    "email_confirm": true,
+    "user_metadata": {
+        "name": "Administrador",
+        "phone": "${ADMIN_PHONE:-}"
+    }
+}
+EOF
+    )
     
-    print_info "Criando usuário ${ADMIN_EMAIL}..."
-    
-    RESPONSE=$(curl -s --max-time 30 -X POST "http://localhost:9999/admin/users" \
+    # Tenta criar via Auth API
+    local response=$(curl -sf -X POST \
+        "http://localhost:9999/admin/users" \
         -H "Authorization: Bearer ${SERVICE_ROLE_KEY}" \
         -H "Content-Type: application/json" \
-        -d "{
-            \"email\": \"${ADMIN_EMAIL}\",
-            \"password\": \"${ADMIN_PASSWORD}\",
-            \"email_confirm\": true,
-            \"user_metadata\": {
-                \"name\": \"Administrador\",
-                \"phone\": \"${ADMIN_PHONE}\"
-            }
-        }" 2>/dev/null)
+        -H "apikey: ${SERVICE_ROLE_KEY}" \
+        -d "$payload" 2>/dev/null)
     
-    USER_ID=$(echo "$RESPONSE" | jq -r '.id // empty' 2>/dev/null)
-    
-    if [[ -n "$USER_ID" && "$USER_ID" != "null" ]]; then
-        print_success "Usuário criado: ${ADMIN_EMAIL}"
+    if [[ -n "$response" ]] && echo "$response" | jq -e '.id' > /dev/null 2>&1; then
+        local user_id=$(echo "$response" | jq -r '.id')
+        print_success "Usuário administrador criado (ID: $user_id)"
         
-        # Adiciona role admin
-        docker exec -i $(docker ps -q -f name=dash-origem-viva_db) psql -U postgres << EOF
-INSERT INTO public.user_roles (user_id, role)
-VALUES ('${USER_ID}', 'admin')
-ON CONFLICT (user_id, role) DO NOTHING;
-
-INSERT INTO public.profiles (user_id, name, phone)
-VALUES ('${USER_ID}', 'Administrador', '${ADMIN_PHONE}')
-ON CONFLICT (user_id) DO UPDATE SET name = 'Administrador', phone = '${ADMIN_PHONE}';
-EOF
-        
-        print_success "Role admin atribuída"
+        # Adiciona role de admin
+        local container_id=$(get_container_id "dash-origem-viva_db")
+        if [[ -n "$container_id" ]]; then
+            docker exec "$container_id" psql -U postgres -c \
+                "INSERT INTO public.user_roles (user_id, role) VALUES ('$user_id', 'admin') ON CONFLICT DO NOTHING;" 2>/dev/null || true
+            print_success "Role de administrador atribuída"
+        fi
     else
-        ERROR_MSG=$(echo "$RESPONSE" | jq -r '.error // .msg // .message // "erro desconhecido"' 2>/dev/null)
-        print_warning "Não foi possível criar usuário automaticamente: $ERROR_MSG"
-        print_info "Você pode criar o admin manualmente via Supabase Studio"
+        print_warning "Não foi possível criar usuário via API"
+        print_info "Você pode criar o usuário manualmente após a instalação"
     fi
 }
 
-# Deploy do stack via Docker Swarm
+# Remove stack existente
+remove_existing_stack() {
+    print_header "Removendo Instalação Anterior (se existir)"
+    
+    if docker stack ls 2>/dev/null | grep -q "dash-origem-viva"; then
+        print_info "Removendo stack existente..."
+        docker stack rm dash-origem-viva 2>/dev/null || true
+        
+        # Aguarda remoção completa
+        print_info "Aguardando remoção completa..."
+        for i in $(seq 1 30); do
+            if ! docker network ls 2>/dev/null | grep -q "dash-origem-viva"; then
+                break
+            fi
+            sleep 2
+        done
+        
+        print_success "Stack anterior removida"
+    else
+        print_info "Nenhuma instalação anterior encontrada"
+    fi
+}
+
+# Deploy do stack
 deploy_stack() {
     print_header "Fazendo Deploy do Stack"
     
-    # Remove stack antigo se existir
-    docker stack rm dash-origem-viva 2>/dev/null || true
-    sleep 10
+    # Remove stack existente primeiro
+    remove_existing_stack
     
-    # Deploy
-    print_info "Iniciando deploy..."
+    # Aguarda um pouco para garantir limpeza
+    sleep 5
+    
+    print_info "Iniciando deploy via Docker Swarm..."
+    
     docker stack deploy -c docker-compose.yml dash-origem-viva
     
     print_success "Stack deployado"
+    print_info "Aguardando serviços iniciarem..."
     
-    # Aguarda serviços
-    print_info "Aguardando serviços iniciarem (pode levar 2-3 minutos)..."
-    sleep 30
-    
-    # Verifica status
+    # Mostra status dos serviços
+    sleep 10
     docker stack services dash-origem-viva
 }
 
@@ -773,114 +841,106 @@ deploy_stack() {
 show_summary() {
     print_header "Instalação Concluída!"
     
-    echo -e "${GREEN}╔════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${GREEN}║${NC}                    ${CYAN}RESUMO DA INSTALAÇÃO${NC}                    ${GREEN}║${NC}"
-    echo -e "${GREEN}╚════════════════════════════════════════════════════════════╝${NC}"
-    echo
-    echo -e "  ${CYAN}📌 Aplicação:${NC}        https://${DOMAIN}"
-    echo -e "  ${CYAN}🔧 Supabase Studio:${NC}  https://${DOMAIN}:3000"
-    echo -e "  ${CYAN}🔌 API Supabase:${NC}     https://${DOMAIN}/api"
-    echo
-    echo -e "  ${CYAN}👤 Login Admin:${NC}"
-    echo -e "     Email: ${ADMIN_EMAIL}"
-    echo -e "     Senha: ********** (a que você definiu)"
-    echo
-    echo -e "  ${CYAN}🔧 Supabase Studio:${NC}"
-    echo -e "     Usuário: admin"
-    echo -e "     Senha: ${DASHBOARD_PASSWORD}"
-    echo
-    echo -e "${YELLOW}╔════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${YELLOW}║${NC}                    ${CYAN}PRÓXIMOS PASSOS${NC}                         ${YELLOW}║${NC}"
-    echo -e "${YELLOW}╚════════════════════════════════════════════════════════════╝${NC}"
-    echo
-    echo -e "  1. ${CYAN}Configure DNS:${NC} Aponte ${DOMAIN} para o IP desta VPS"
-    echo
-    echo -e "  2. ${CYAN}Configure Traefik:${NC} Certifique-se que Traefik está configurado"
-    echo
-    echo -e "  3. ${CYAN}Verifique os serviços:${NC}"
-    echo -e "     docker stack services dash-origem-viva"
-    echo
-    echo -e "  4. ${CYAN}Ver logs:${NC}"
-    echo -e "     docker service logs dash-origem-viva_db -f"
-    echo -e "     docker service logs dash-origem-viva_auth -f"
-    echo -e "     docker service logs dash-origem-viva_app -f"
-    echo
-    echo -e "${GREEN}════════════════════════════════════════════════════════════════${NC}"
-    echo
+    echo -e "\n${GREEN}═══════════════════════════════════════════════════════════════════${NC}"
+    echo -e "${GREEN}                    INSTALAÇÃO CONCLUÍDA COM SUCESSO!              ${NC}"
+    echo -e "${GREEN}═══════════════════════════════════════════════════════════════════${NC}\n"
     
-    # Salva resumo em arquivo
+    echo -e "${CYAN}📍 URLs de Acesso:${NC}"
+    echo -e "   Dashboard:     ${GREEN}https://${DOMAIN}${NC}"
+    echo -e "   Supabase API:  ${GREEN}https://${DOMAIN}${NC}"
+    echo -e "   Studio:        ${GREEN}http://<IP_DO_SERVIDOR>:3000${NC}"
+    echo ""
+    
+    echo -e "${CYAN}👤 Credenciais do Administrador:${NC}"
+    echo -e "   Email:    ${GREEN}${ADMIN_EMAIL}${NC}"
+    echo -e "   Senha:    ${GREEN}${ADMIN_PASSWORD}${NC}"
+    echo ""
+    
+    echo -e "${CYAN}🔑 Chaves Supabase:${NC}"
+    echo -e "   Anon Key:         ${YELLOW}${ANON_KEY:0:50}...${NC}"
+    echo -e "   Service Role Key: ${YELLOW}${SERVICE_ROLE_KEY:0:50}...${NC}"
+    echo ""
+    
+    echo -e "${CYAN}📝 Comandos Úteis:${NC}"
+    echo -e "   Ver serviços:     ${BLUE}docker stack services dash-origem-viva${NC}"
+    echo -e "   Ver logs:         ${BLUE}docker service logs dash-origem-viva_<service>${NC}"
+    echo -e "   Reiniciar:        ${BLUE}docker stack deploy -c docker-compose.yml dash-origem-viva${NC}"
+    echo -e "   Parar:            ${BLUE}docker stack rm dash-origem-viva${NC}"
+    echo ""
+    
+    # Salva credenciais em arquivo
     cat > CREDENCIAIS.txt << EOF
-═══════════════════════════════════════════════════════════════
-           CREDENCIAIS - DASH ORIGEM VIVA
-           Gerado em: $(date '+%Y-%m-%d %H:%M:%S')
-═══════════════════════════════════════════════════════════════
+╔════════════════════════════════════════════════════════════════════════════╗
+║                    DASH ORIGEM VIVA - CREDENCIAIS                          ║
+║                    Gerado em: $(date)                      
+╚════════════════════════════════════════════════════════════════════════════╝
 
-APLICAÇÃO
----------
-URL: https://${DOMAIN}
-Email Admin: ${ADMIN_EMAIL}
+DOMÍNIO: ${DOMAIN}
 
-SUPABASE STUDIO
----------------
-URL: https://${DOMAIN}:3000
-Usuário: admin
-Senha: ${DASHBOARD_PASSWORD}
+═══════════════════════════════════════════════════════════════════════════════
+ ADMINISTRADOR
+═══════════════════════════════════════════════════════════════════════════════
+Email: ${ADMIN_EMAIL}
+Senha: ${ADMIN_PASSWORD}
 
-API SUPABASE
-------------
-URL: https://${DOMAIN}/api
-Anon Key: ${ANON_KEY}
-
-POSTGRESQL
-----------
-Host: db (interno ao Docker)
+═══════════════════════════════════════════════════════════════════════════════
+ BANCO DE DADOS
+═══════════════════════════════════════════════════════════════════════════════
+Host: localhost:5432
 Database: postgres
-Usuário: postgres
-Senha: ${POSTGRES_PASSWORD}
+User: postgres
+Password: ${POSTGRES_PASSWORD}
 
-JWT SECRET
-----------
-${JWT_SECRET}
+═══════════════════════════════════════════════════════════════════════════════
+ CHAVES SUPABASE
+═══════════════════════════════════════════════════════════════════════════════
+JWT Secret: ${JWT_SECRET}
+Anon Key: ${ANON_KEY}
+Service Role Key: ${SERVICE_ROLE_KEY}
 
-SERVICE ROLE KEY
-----------------
-${SERVICE_ROLE_KEY}
+═══════════════════════════════════════════════════════════════════════════════
+ VAPID KEYS (Push Notifications)
+═══════════════════════════════════════════════════════════════════════════════
+Public Key: ${VAPID_PUBLIC_KEY}
+Private Key: ${VAPID_PRIVATE_KEY}
 
-VAPID KEYS
-----------
-Public: ${VAPID_PUBLIC_KEY}
-Private: ${VAPID_PRIVATE_KEY}
+═══════════════════════════════════════════════════════════════════════════════
+ DASHBOARD / STUDIO
+═══════════════════════════════════════════════════════════════════════════════
+Password: ${DASHBOARD_PASSWORD}
+Logflare API Key: ${LOGFLARE_API_KEY}
 
-═══════════════════════════════════════════════════════════════
-IMPORTANTE: Guarde este arquivo em local seguro e delete-o
-após anotar as credenciais!
-═══════════════════════════════════════════════════════════════
+═══════════════════════════════════════════════════════════════════════════════
+ IMPORTANTE
+═══════════════════════════════════════════════════════════════════════════════
+- Guarde este arquivo em local seguro
+- Após anotar as credenciais, recomenda-se deletar este arquivo
+- As chaves JWT e service role são sensíveis - não compartilhe!
 EOF
 
     chmod 600 CREDENCIAIS.txt
-    print_warning "Credenciais salvas em CREDENCIAIS.txt - GUARDE E DELETE ESTE ARQUIVO!"
+    
+    print_warning "Credenciais salvas em CREDENCIAIS.txt (chmod 600)"
+    print_warning "Após anotar as credenciais, delete este arquivo por segurança!"
 }
 
-# Função principal
+# ═══════════════════════════════════════════════════════════════════════════════
+#  MAIN
+# ═══════════════════════════════════════════════════════════════════════════════
+
 main() {
     clear
     echo -e "${CYAN}"
     echo "╔════════════════════════════════════════════════════════════════════════════╗"
     echo "║                                                                            ║"
-    echo "║     ██████╗  █████╗ ███████╗██╗  ██╗     ██████╗ ██╗   ██╗               ║"
-    echo "║     ██╔══██╗██╔══██╗██╔════╝██║  ██║    ██╔═══██╗██║   ██║               ║"
-    echo "║     ██║  ██║███████║███████╗███████║    ██║   ██║██║   ██║               ║"
-    echo "║     ██║  ██║██╔══██║╚════██║██╔══██║    ██║   ██║╚██╗ ██╔╝               ║"
-    echo "║     ██████╔╝██║  ██║███████║██║  ██║    ╚██████╔╝ ╚████╔╝                ║"
-    echo "║     ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝     ╚═════╝   ╚═══╝                 ║"
+    echo "║                      DASH ORIGEM VIVA - INSTALADOR                         ║"
     echo "║                                                                            ║"
-    echo "║                    ORIGEM VIVA - INSTALADOR                               ║"
-    echo "║         Supabase Self-Hosted + Docker Swarm/Portainer                     ║"
+    echo "║         Supabase Self-Hosted + Aplicação (Docker Swarm/Portainer)          ║"
     echo "║                                                                            ║"
     echo "╚════════════════════════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
-    echo
     
+    # Etapas de instalação
     check_root
     check_requirements
     collect_user_input
@@ -893,12 +953,16 @@ main() {
     setup_functions_volume
     deploy_stack
     
-    # Aguarda um pouco antes de inicializar DB
-    sleep 30
+    # Aguarda serviços estabilizarem
+    print_info "Aguardando serviços estabilizarem (60 segundos)..."
+    sleep 60
     
+    # Inicialização do banco e usuário
     init_database
     run_migrations
     create_admin_user
+    
+    # Resumo final
     show_summary
 }
 
