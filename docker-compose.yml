@@ -242,6 +242,7 @@ services:
       SUPABASE_SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
       SUPABASE_DB_URL: postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-postgres}
       VERIFY_JWT: "false"
+      FUNCTIONS_PATH: /home/deno/functions
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
       TYPEBOT_API_TOKEN: ${TYPEBOT_API_TOKEN:-}
