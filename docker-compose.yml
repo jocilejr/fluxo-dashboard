@@ -238,7 +238,7 @@ services:
     command:
       - start
       - --main-service
-      - /home/deno/functions/main
+      - main
     environment:
       JWT_SECRET: ${JWT_SECRET}
       SUPABASE_URL: http://kong:8000
