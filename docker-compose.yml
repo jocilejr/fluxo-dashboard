@@ -251,7 +251,10 @@ services:
       TYPEBOT_API_TOKEN: ${TYPEBOT_API_TOKEN:-}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
     volumes:
-      - /root/fluxo-dashboard/supabase/functions:/home/deno/functions:ro
+      - type: bind
+        source: /root/fluxo-dashboard/supabase/functions
+        target: /home/deno/functions
+        read_only: true
     networks:
       - supabase-network
 
