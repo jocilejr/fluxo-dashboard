@@ -15,7 +15,6 @@ RUN apk add --no-cache python3 make g++
 
 # Copia arquivos de dependências
 COPY package*.json ./
-COPY bun.lockb* ./
 
 # Instala dependências
 RUN npm ci --legacy-peer-deps
@@ -43,41 +42,59 @@ RUN npm run build
 # ─────────────────────────────────────────────────────────────────────────────
 FROM nginx:alpine AS production
 
-# Instala envsubst para substituição de variáveis
-RUN apk add --no-cache gettext
-
 # Copia arquivos buildados
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Copia configuração do nginx como template
-COPY docker/nginx/nginx.conf /etc/nginx/nginx.conf.template
+# Configuração do Nginx inline (simples, sem template)
+RUN echo 'server { \
+    listen 80; \
+    server_name _; \
+    root /usr/share/nginx/html; \
+    index index.html; \
+    \
+    # Gzip \
+    gzip on; \
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml text/javascript; \
+    \
+    # Cache para assets estáticos \
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ { \
+        expires 1y; \
+        add_header Cache-Control "public, immutable"; \
+    } \
+    \
+    # Health check \
+    location /health { \
+        return 200 "OK"; \
+        add_header Content-Type text/plain; \
+    } \
+    \
+    # SPA fallback \
+    location / { \
+        try_files $uri $uri/ /index.html; \
+    } \
+    \
+    # Proxy para API Supabase (Kong) \
+    location /api/ { \
+        proxy_pass http://kong:8000/; \
+        proxy_http_version 1.1; \
+        proxy_set_header Upgrade $http_upgrade; \
+        proxy_set_header Connection "upgrade"; \
+        proxy_set_header Host $host; \
+        proxy_set_header X-Real-IP $remote_addr; \
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; \
+        proxy_set_header X-Forwarded-Proto $scheme; \
+    } \
+}' > /etc/nginx/conf.d/default.conf
 
-# Cria diretórios necessários
-RUN mkdir -p /etc/nginx/ssl /var/run/nginx /tmp/nginx
+# Remove config default que conflita
+RUN rm -f /etc/nginx/conf.d/default.conf.bak 2>/dev/null || true
 
-# Copia mime.types para /tmp para uso com config customizado
-RUN cp /etc/nginx/mime.types /tmp/nginx/mime.types
-
-# Script de inicialização - gera config em /tmp e usa nginx -c
-RUN echo '#!/bin/sh' > /docker-entrypoint.sh && \
-    echo 'set -e' >> /docker-entrypoint.sh && \
-    echo '' >> /docker-entrypoint.sh && \
-    echo '# Substitui variáveis no template' >> /docker-entrypoint.sh && \
-    echo 'envsubst "\$DOMAIN \$HTTPS_PORT" < /etc/nginx/nginx.conf.template > /tmp/nginx/nginx.conf' >> /docker-entrypoint.sh && \
-    echo '' >> /docker-entrypoint.sh && \
-    echo '# Ajusta path do mime.types no config' >> /docker-entrypoint.sh && \
-    echo 'sed -i "s|include /etc/nginx/mime.types|include /tmp/nginx/mime.types|g" /tmp/nginx/nginx.conf' >> /docker-entrypoint.sh && \
-    echo '' >> /docker-entrypoint.sh && \
-    echo '# Inicia nginx com config de /tmp' >> /docker-entrypoint.sh && \
-    echo 'exec nginx -c /tmp/nginx/nginx.conf -g "daemon off;"' >> /docker-entrypoint.sh && \
-    chmod +x /docker-entrypoint.sh
-
-# Expõe portas
-EXPOSE 80 443
+# Expõe porta
+EXPOSE 80
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD wget --quiet --tries=1 --spider http://localhost/health || exit 1
 
 # Comando de inicialização
-CMD ["/docker-entrypoint.sh"]
+CMD ["nginx", "-g", "daemon off;"]
